@@ -218,10 +218,10 @@ class ApplicantsServiceClass {
         sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
         sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
         educational_background, civil_service_eligibility, work_experience, voluntary_work,
-        learning_and_development, other_information, questionnaire_responses
+        learning_and_development, other_information, questionnaire_responses, family_background
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26
+        $20, $21, $22, $23, $24, $25, $26, $27
       ) RETURNING *
     `, [
       passwordHash,
@@ -249,7 +249,8 @@ class ApplicantsServiceClass {
       JSON.stringify(data.voluntary_work || []),
       JSON.stringify(data.learning_and_development || []),
       JSON.stringify(data.other_information || {}),
-      questionnaire_responses
+      questionnaire_responses,
+      data.family_background ? JSON.stringify(data.family_background) : null
     ]);
 
     const applicant = result.rows[0];

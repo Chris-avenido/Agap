@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {
@@ -82,7 +82,6 @@ export default function ApplicantJobList() {
   const [birthDate, setBirthDate] = useState<Date | null>(new Date(1997, 7, 11)); // Default Aug 11, 1997 per reference
   const [sameAsResidential, setSameAsResidential] = useState(false);
   const [currentStep, setCurrentStep] = useState('Personal Information');
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Personal Info States
@@ -153,13 +152,9 @@ export default function ApplicantJobList() {
   const itemsPerPage = 5;
 
   const totalSteps = 9;
-  const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
   const handlePersonalInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Personal Information')) {
-      setCompletedSteps(prev => [...prev, 'Personal Information']);
-    }
     setCurrentStep('Family Background');
   };
 
@@ -168,17 +163,11 @@ export default function ApplicantJobList() {
 
   const handleFamilyBackgroundSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Family Background')) {
-      setCompletedSteps(prev => [...prev, 'Family Background']);
-    }
     setCurrentStep('Educational Background');
   };
 
   const handleEducationalBackgroundSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Educational Background')) {
-      setCompletedSteps(prev => [...prev, 'Educational Background']);
-    }
     setCurrentStep('Civil Service Eligibility');
   };
 
@@ -186,9 +175,6 @@ export default function ApplicantJobList() {
 
   const handleCivilServiceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Civil Service Eligibility')) {
-      setCompletedSteps(prev => [...prev, 'Civil Service Eligibility']);
-    }
     setCurrentStep('Work Experience');
   };
 
@@ -196,9 +182,6 @@ export default function ApplicantJobList() {
 
   const handleWorkExperienceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Work Experience')) {
-      setCompletedSteps(prev => [...prev, 'Work Experience']);
-    }
     setCurrentStep('Voluntary Work');
   };
 
@@ -206,9 +189,6 @@ export default function ApplicantJobList() {
 
   const handleVoluntaryWorkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Voluntary Work')) {
-      setCompletedSteps(prev => [...prev, 'Voluntary Work']);
-    }
     setCurrentStep('Learning & Development');
   };
 
@@ -216,9 +196,6 @@ export default function ApplicantJobList() {
 
   const handleLearningDevelopmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Learning & Development')) {
-      setCompletedSteps(prev => [...prev, 'Learning & Development']);
-    }
     setCurrentStep('Other Information');
   };
 
@@ -228,9 +205,6 @@ export default function ApplicantJobList() {
 
   const handleOtherInformationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Other Information')) {
-      setCompletedSteps(prev => [...prev, 'Other Information']);
-    }
     setCurrentStep('Legal Questionnaire');
   };
 
@@ -238,11 +212,29 @@ export default function ApplicantJobList() {
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
   const [governmentId, setGovernmentId] = useState({ type: '', idNo: '', datePlace: '' });
 
+  const completedSteps = useMemo(() => {
+    const steps: string[] = [];
+    if (firstName.trim() && lastName.trim() && placeOfBirth.trim() && sex && civilStatus && citizenship) steps.push('Personal Information');
+    if (motherSurname.trim() || motherFirst.trim() || fatherSurname.trim() || fatherFirst.trim() || spouseSurname.trim() || spouseFirst.trim()) steps.push('Family Background');
+    if (Object.values(educationalDates).some(ed => ed.school.trim() !== '')) steps.push('Educational Background');
+    if (civilServiceList.some(cs => cs.eligibility.trim() !== '')) steps.push('Civil Service Eligibility');
+    if (workExperienceList.some(we => we.company.trim() !== '' || we.positionTitle.trim() !== '')) steps.push('Work Experience');
+    if (voluntaryWorkList.some(vw => vw.nameAddress.trim() !== '')) steps.push('Voluntary Work');
+    if (learningDevelopmentList.some(ld => ld.title.trim() !== '')) steps.push('Learning & Development');
+    if (skillsList.some(s => s.value.trim() !== '') || distinctionsList.some(d => d.value.trim() !== '') || membershipsList.some(m => m.value.trim() !== '')) steps.push('Other Information');
+    if (Object.keys(questionnaire).length > 0) steps.push('Legal Questionnaire');
+    return steps;
+  }, [
+    firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
+    motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
+    educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
+    skillsList, distinctionsList, membershipsList, questionnaire
+  ]);
+
+  const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
+
   const handleLegalQuestionnaireSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!completedSteps.includes('Legal Questionnaire')) {
-      setCompletedSteps(prev => [...prev, 'Legal Questionnaire']);
-    }
 
     try {
       const sessionStr = localStorage.getItem('session_data');
@@ -357,7 +349,7 @@ export default function ApplicantJobList() {
         } else {
           Swal.fire('Success', 'Profile updated successfully!', 'success');
         }
-        
+
         setActiveTab('job-board');
         setApplyingJob(null);
       } else {
@@ -484,23 +476,23 @@ export default function ApplicantJobList() {
               setMotherMiddle(fb.mother.middle_name || '');
             }
           }
-          
+
           if (p.educational_background) {
             let edParsed = Array.isArray(p.educational_background) ? p.educational_background : (typeof p.educational_background === 'string' ? JSON.parse(p.educational_background) : p.educational_background);
-            const newEd = {...educationalDates};
-            if(Array.isArray(edParsed)) {
+            const newEd = { ...educationalDates };
+            if (Array.isArray(edParsed)) {
               edParsed.forEach((ed: any) => {
-                  if (ed.level) {
-                     newEd[ed.level] = { 
-                       school: ed.school || '',
-                       degree: ed.degree || '',
-                       from: ed.from || '', 
-                       to: ed.to || '',
-                       units: ed.units || '',
-                       year: ed.year || '',
-                       honors: ed.honors || ''
-                     };
-                  }
+                if (ed.level) {
+                  newEd[ed.level] = {
+                    school: ed.school || '',
+                    degree: ed.degree || '',
+                    from: ed.from || '',
+                    to: ed.to || '',
+                    units: ed.units || '',
+                    year: ed.year || '',
+                    honors: ed.honors || ''
+                  };
+                }
               });
               setEducationalDates(newEd);
             }
@@ -509,37 +501,25 @@ export default function ApplicantJobList() {
           if (p.work_experience) setWorkExperienceList(Array.isArray(p.work_experience) ? p.work_experience : (typeof p.work_experience === 'string' ? JSON.parse(p.work_experience) : p.work_experience));
           if (p.voluntary_work) setVoluntaryWorkList(Array.isArray(p.voluntary_work) ? p.voluntary_work : (typeof p.voluntary_work === 'string' ? JSON.parse(p.voluntary_work) : p.voluntary_work));
           if (p.learning_and_development) setLearningDevelopmentList(Array.isArray(p.learning_and_development) ? p.learning_and_development : (typeof p.learning_and_development === 'string' ? JSON.parse(p.learning_and_development) : p.learning_and_development));
-          
+
           if (p.other_information) {
-             const oi = typeof p.other_information === 'string' ? JSON.parse(p.other_information) : p.other_information;
-             if (oi.extensionName) setExtensionName(oi.extensionName);
-             if (oi.height) setHeight(oi.height);
-             if (oi.weight) setWeight(oi.weight);
-             if (oi.agencyEmployeeNo) setAgencyEmployeeNo(oi.agencyEmployeeNo);
-             if (oi.citizenshipType) setCitizenshipType(oi.citizenshipType);
-             if (oi.skills) setSkillsList(oi.skills);
-             if (oi.distinctions) setDistinctionsList(oi.distinctions);
-             if (oi.memberships) setMembershipsList(oi.memberships);
-             if (oi.references) setReferencesList(oi.references);
-             if (oi.governmentId) setGovernmentId(oi.governmentId);
-             if (oi.children) setChildrenList(oi.children);
+            const oi = typeof p.other_information === 'string' ? JSON.parse(p.other_information) : p.other_information;
+            if (oi.extensionName) setExtensionName(oi.extensionName);
+            if (oi.height) setHeight(oi.height);
+            if (oi.weight) setWeight(oi.weight);
+            if (oi.agencyEmployeeNo) setAgencyEmployeeNo(oi.agencyEmployeeNo);
+            if (oi.citizenshipType) setCitizenshipType(oi.citizenshipType);
+            if (oi.skills) setSkillsList(oi.skills);
+            if (oi.distinctions) setDistinctionsList(oi.distinctions);
+            if (oi.memberships) setMembershipsList(oi.memberships);
+            if (oi.references) setReferencesList(oi.references);
+            if (oi.governmentId) setGovernmentId(oi.governmentId);
+            if (oi.children) setChildrenList(oi.children);
           }
           if (p.questionnaire_responses) {
-             setQuestionnaire(typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses);
+            setQuestionnaire(typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses);
           }
 
-          // Automatically evaluate and set completed steps based on populated data
-          const stepsCompleted: string[] = [];
-          if (p.first_name || p.surname) stepsCompleted.push('Personal Information');
-          if (p.family_background) stepsCompleted.push('Family Background');
-          if (p.educational_background) stepsCompleted.push('Educational Background');
-          if (p.civil_service_eligibility) stepsCompleted.push('Civil Service Eligibility');
-          if (p.work_experience) stepsCompleted.push('Work Experience');
-          if (p.voluntary_work) stepsCompleted.push('Voluntary Work');
-          if (p.learning_and_development) stepsCompleted.push('Learning & Development');
-          if (p.other_information) stepsCompleted.push('Other Information');
-          if (p.questionnaire_responses) stepsCompleted.push('Legal Questionnaire');
-          setCompletedSteps(stepsCompleted);
         }
       })
       .catch(err => console.error('Error fetching profile:', err));
@@ -1442,19 +1422,19 @@ export default function ApplicantJobList() {
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
-                              <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseSurname} onChange={e => setSpouseSurname(e.target.value)} placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
-                              <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseFirst} onChange={e => setSpouseFirst(e.target.value)} placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
-                              <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseMiddle} onChange={e => setSpouseMiddle(e.target.value)} placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name Extension</span>
-                              <input type="text" placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseExt} onChange={e => setSpouseExt(e.target.value)} placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1464,19 +1444,19 @@ export default function ApplicantJobList() {
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Occupation</span>
-                              <input type="text" placeholder="Enter occupation" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseOccupation} onChange={e => setSpouseOccupation(e.target.value)} placeholder="Enter occupation" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Employer/Business Name</span>
-                              <input type="text" placeholder="Enter employer / business name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseEmployer} onChange={e => setSpouseEmployer(e.target.value)} placeholder="Enter employer / business name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Business Address</span>
-                              <input type="text" placeholder="Enter business address" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseBusAddress} onChange={e => setSpouseBusAddress(e.target.value)} placeholder="Enter business address" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                              <input type="text" placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={spouseTelephone} onChange={e => setSpouseTelephone(e.target.value)} placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1490,19 +1470,19 @@ export default function ApplicantJobList() {
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
-                              <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={fatherSurname} onChange={e => setFatherSurname(e.target.value)} placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
-                              <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={fatherFirst} onChange={e => setFatherFirst(e.target.value)} placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
-                              <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={fatherMiddle} onChange={e => setFatherMiddle(e.target.value)} placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name Extension</span>
-                              <input type="text" placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={fatherExt} onChange={e => setFatherExt(e.target.value)} placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1513,15 +1493,15 @@ export default function ApplicantJobList() {
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
-                              <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={motherSurname} onChange={e => setMotherSurname(e.target.value)} placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
-                              <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={motherFirst} onChange={e => setMotherFirst(e.target.value)} placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
-                              <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              <input type="text" value={motherMiddle} onChange={e => setMotherMiddle(e.target.value)} placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1619,32 +1599,32 @@ export default function ApplicantJobList() {
                             <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                               <div className="flex flex-col lg:col-span-2">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
-                                <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), school: e.target.value}})} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), school: e.target.value } })} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                               </div>
 
                               {['vocational', 'college', 'graduate'].includes(level.id) && (
                                 <div className="flex flex-col">
                                   <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
-                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), degree: e.target.value}})} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), degree: e.target.value } })} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                 </div>
                               )}
 
                               <div className="flex flex-col">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
                                 <div className="flex gap-3 relative">
-                                  <input 
-                                    type="date" 
-                                    required={level.required} 
+                                  <input
+                                    type="date"
+                                    required={level.required}
                                     value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
-                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" 
+                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <input 
-                                    type="date" 
-                                    required={level.required} 
+                                  <input
+                                    type="date"
+                                    required={level.required}
                                     value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
-                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" 
+                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
                                 </div>
                               </div>
@@ -1653,18 +1633,18 @@ export default function ApplicantJobList() {
                                 <>
                                   <div className="flex flex-col">
                                     <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
-                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), units: e.target.value}})} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), units: e.target.value } })} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
-                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), year: e.target.value}})} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), year: e.target.value } })} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                 </>
                               )}
 
                               <div className="flex flex-col lg:col-span-3">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Scholarship/Academic Honors Received</span>
-                                <input type="text" value={educationalDates[level.id]?.honors || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), honors: e.target.value}})} placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                <input type="text" value={educationalDates[level.id]?.honors || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), honors: e.target.value } })} placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                               </div>
                             </div>
                           </div>
