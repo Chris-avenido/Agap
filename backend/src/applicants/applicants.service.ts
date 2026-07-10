@@ -265,8 +265,8 @@ class ApplicantsServiceClass {
   }
 
   async update(id: number, data: any) {
-    const fields = [];
-    const values = [];
+    const fields: string[] = [];
+    const values: any[] = [];
     let idx = 1;
 
     const addField = (colName: string, val: any, isJson = false) => {

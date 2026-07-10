@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, GraduationCap } from 'lucide-react';
 
