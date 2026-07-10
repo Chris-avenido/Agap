@@ -341,8 +341,25 @@ export default function ApplicantJobList() {
           });
 
           if (applyResponse.ok) {
+            const applyData = await applyResponse.json();
             Swal.fire('Success', 'Profile updated and applied to ' + applyingJob.title + ' successfully!', 'success');
             setAppliedJobIds(prev => [...prev, applyingJob.id]);
+            
+            const newApp = {
+              id: applyData?.data?.id || Date.now(),
+              positionId: applyingJob.id,
+              position: applyingJob.title,
+              office: applyingJob.office || 'Department of Education',
+              type: applyingJob.type || 'Permanent',
+              posted: applyingJob.posted || 'N/A',
+              deadline: applyingJob.deadline || 'N/A',
+              sg: applyingJob.sg || 'N/A',
+              itemNo: applyingJob.itemNo || 'N/A',
+              date: new Date().toLocaleDateString(),
+              stage: 'Applied',
+              status: 'Active'
+            };
+            setApplications(prev => [newApp, ...prev]);
           } else {
             Swal.fire('Error', 'Profile updated but failed to apply for the job.', 'error');
           }
@@ -673,7 +690,6 @@ export default function ApplicantJobList() {
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">View Profile</button>
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Print PDS</button>
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Work Experience Sheet</button>
-
               </div>
             )}
           </div>
