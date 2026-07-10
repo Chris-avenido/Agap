@@ -1,0 +1,132 @@
+command in
+front end = npm run dev
+backend = npm run start:dev
+
+CREATE TABLE applicants (
+    -- Auto-incrementing ID for new user registrations
+    id SERIAL PRIMARY KEY,
+    
+    -- Authentication (Since this is for registration)
+    password_hash VARCHAR(255), 
+    
+    -- ==========================================
+    -- C1. PERSONAL INFORMATION
+    -- ==========================================
+    surname VARCHAR(100) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    middle_name VARCHAR(100),
+    date_of_birth DATE,
+    place_of_birth VARCHAR(255),
+    sex VARCHAR(20), 
+    civil_status VARCHAR(50), 
+    citizenship VARCHAR(100) DEFAULT 'Filipino',
+    blood_type VARCHAR(10),
+    
+    -- Government IDs
+    gsis_id_no VARCHAR(50),
+    pag_ibig_id_no VARCHAR(50),
+    philhealth_no VARCHAR(50),
+    sss_no VARCHAR(50),
+    
+    -- Contact Information
+    residential_address TEXT,
+    permanent_address TEXT,
+    telephone_no VARCHAR(50),
+    mobile_no VARCHAR(50),
+    email_address VARCHAR(150) UNIQUE NOT NULL,
+
+    -- ==========================================
+    -- C2. FAMILY BACKGROUND
+    
+    -- ==========================================
+    spouse_surname VARCHAR(100),
+    spouse_first_name VARCHAR(100),
+    spouse_occupation VARCHAR(150),
+    
+    father_surname VARCHAR(100),
+    father_first_name VARCHAR(100),
+    mother_maiden_surname VARCHAR(100),
+
+    -- ==========================================
+    -- TABULAR DATA (Stored as JSONB arrays)
+    -- ==========================================
+    
+    -- Stores array of objects: { level, school_name, degree, date_from, date_to, highest_level, year_graduated }
+    educational_background JSONB DEFAULT '[]'::jsonb, 
+    
+    -- Stores array of objects: { eligibility, rating, date_of_exam, place_of_exam, license_no, license_validity }
+    civil_service_eligibility JSONB DEFAULT '[]'::jsonb,
+    
+    -- Stores array of objects: { date_from, date_to, position_title, agency_company, monthly_salary, pay_grade, status, govt_service }
+    work_experience JSONB DEFAULT '[]'::jsonb,
+    
+    -- Stores array of objects: { organization_name, date_from, date_to, hours, position }
+    voluntary_work JSONB DEFAULT '[]'::jsonb,
+    
+    -- Stores array of objects: { title, date_from, date_to, hours, type_of_ld, sponsor }
+    learning_and_development JSONB DEFAULT '[]'::jsonb,
+    
+    -- Stores object: { skills: [], distinctions: [], organizations: [] }
+    other_information JSONB DEFAULT '{}'::jsonb,
+
+    -- ==========================================
+    -- C4. QUESTIONNAIRE (Stored as JSONB)
+    -- ==========================================
+    -- Example structure: 
+    -- {
+    --    "q34a": { "answer": "no", "details": "" },
+    --    "q34b": { "answer": "yes", "details": "Mayor John Doe" }
+    -- }
+    questionnaire_responses JSONB DEFAULT '{}'::jsonb,
+
+    -- ==========================================
+    -- TIMESTAMPS & TRACKING
+    -- ==========================================
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE "job_applications" (
+  "id" SERIAL PRIMARY KEY,
+  "applicant_id" INTEGER NOT NULL,
+  "position_id" INTEGER,
+  "job_title" VARCHAR(255) NOT NULL,
+  "status" VARCHAR(50) DEFAULT 'Pending',
+  "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "job_applications_applicant_id_fkey" FOREIGN KEY ("applicant_id") REFERENCES "applicants"("id") ON DELETE CASCADE
+  
+  -- Uncomment and change "positions" below to your actual table name if you already have one!
+  -- CONSTRAINT "job_applications_position_id_fkey" FOREIGN KEY ("position_id") REFERENCES "positions"("id") ON DELETE SET NULL
+);
+
+
+CREATE TABLE saved_jobs (
+    id SERIAL PRIMARY KEY,
+    applicant_id INTEGER NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+    position_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(applicant_id, position_id)
+);
+
+ALTER TABLE saved_jobs ADD COLUMN is_saved BOOLEAN DEFAULT TRUE;
+
+
+
+ALTER TABLE applicants
+ADD COLUMN name_extension VARCHAR(50),
+ADD COLUMN height VARCHAR(20),
+ADD COLUMN weight VARCHAR(20),
+ADD COLUMN agency_employee_no VARCHAR(50),
+ADD COLUMN citizenship_type VARCHAR(50),
+ADD COLUMN spouse_middle_name VARCHAR(100),
+ADD COLUMN spouse_name_extension VARCHAR(50),
+ADD COLUMN spouse_employer_business VARCHAR(150),
+ADD COLUMN spouse_business_address VARCHAR(255),
+ADD COLUMN spouse_telephone VARCHAR(50),
+ADD COLUMN father_middle_name VARCHAR(100),
+ADD COLUMN father_name_extension VARCHAR(50),
+ADD COLUMN mother_first_name VARCHAR(100),
+ADD COLUMN mother_middle_name VARCHAR(100),
+ADD COLUMN children_details JSONB DEFAULT '[]'::jsonb;
