@@ -673,7 +673,7 @@ export default function ApplicantJobList() {
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">View Profile</button>
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Print PDS</button>
                 <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Work Experience Sheet</button>
-                <button onClick={submitApplication} className="bg-gray-600 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-700 transition-colors shadow-sm border border-gray-700">Submit Application</button>
+
               </div>
             )}
           </div>
