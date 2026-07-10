@@ -13,15 +13,16 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function CustomDatePicker({ value, onChange, placeholder = "Select date", className = "" }: CustomDatePickerProps) {
+  const safeValue = value ? (typeof value === 'string' ? new Date(value) : value) : null;
   const [isOpen, setIsOpen] = useState(false);
-  const [viewDate, setViewDate] = useState(value || new Date(1997, 7, 11)); // Default view if no value
+  const [viewDate, setViewDate] = useState<Date>(safeValue || new Date(1997, 7, 11)); // Default view if no value
   const [showYearSelector, setShowYearSelector] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const yearListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (value) setViewDate(value);
+    if (safeValue) setViewDate(safeValue);
   }, [value]);
 
   useEffect(() => {
@@ -103,8 +104,8 @@ export default function CustomDatePicker({ value, onChange, placeholder = "Selec
         } ${className}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={value ? "text-blue-600" : "text-gray-400"}>
-          {value ? formatDate(value) : placeholder}
+        <span className={safeValue ? "text-blue-600" : "text-gray-400"}>
+          {safeValue ? formatDate(safeValue) : placeholder}
         </span>
       </div>
 
@@ -150,7 +151,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "Selec
               ))}
               
               {monthDays.map(day => {
-                const isSelected = value && value.getDate() === day && value.getMonth() === currentMonth && value.getFullYear() === currentYear;
+                const isSelected = safeValue && safeValue.getDate() === day && safeValue.getMonth() === currentMonth && safeValue.getFullYear() === currentYear;
                 return (
                   <button
                     type="button"

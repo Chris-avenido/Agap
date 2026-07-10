@@ -88,36 +88,8 @@ export default function ApplicantJobDetails() {
     navigate('/');
   };
 
-  const handleApplyClick = async () => {
-    try {
-      const sessionStr = localStorage.getItem('session_data');
-      if (!sessionStr) {
-        Swal.fire('Error', 'You must be logged in to apply.', 'error');
-        navigate('/login');
-        return;
-      }
-      
-      const session = JSON.parse(sessionStr);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/apply-job`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicantId: session.id,
-          positionId: job.id,
-          jobTitle: job.title
-        })
-      });
-
-      if (response.ok) {
-        Swal.fire('Success', 'Successfully applied for ' + job.title + '!', 'success');
-        setHasApplied(true);
-      } else {
-        Swal.fire('Error', 'Failed to apply. Please try again.', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Error', 'Error applying for job.', 'error');
-    }
+  const handleApplyClick = () => {
+    navigate('/applicant-jobs', { state: { applyingJob: job } });
   };
 
   if (!job) return null;

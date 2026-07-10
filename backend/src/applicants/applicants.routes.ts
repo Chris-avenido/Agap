@@ -45,6 +45,7 @@ router.post('/apply-job', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
+
     const applicants = await ApplicantsService.findAll();
     res.json({ success: true, data: applicants });
   } catch (error: any) {
@@ -52,6 +53,21 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: error.message || 'Error fetching applicants' });
   }
 });
+
+router.get('/:id', async (req, res) => {
+  if (req.params.id === 'parse-resume' || req.params.id === 'login' || req.params.id === 'apply-job') {
+    return; // Let other routes handle it if it conflicts, though express router order should handle it. Wait, the order of routes matters.
+  }
+  try {
+    const applicant = await ApplicantsService.findOne(Number(req.params.id));
+    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
+    res.json({ success: true, data: applicant });
+  } catch (error: any) {
+    console.error("Error fetching applicant:", error);
+    res.status(500).json({ message: error.message || 'Error fetching applicant profile' });
+  }
+});
+
 
 router.get('/:id/applications', async (req, res) => {
   try {
@@ -90,6 +106,16 @@ router.post('/', async (req, res) => {
   } catch (error: any) {
     console.error("Error saving applicant:", error);
     res.status(500).json({ message: error.message || 'Error submitting application' });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  try {
+    const applicant = await ApplicantsService.update(Number(req.params.id), req.body);
+    res.json({ success: true, message: 'Applicant profile updated successfully', data: applicant });
+  } catch (error: any) {
+    console.error("Error updating applicant:", error);
+    res.status(500).json({ message: error.message || 'Error updating profile' });
   }
 });
 

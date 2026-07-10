@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { prisma } from '../database';
+import { pool } from '../database';
 const pdfParse = require('pdf-parse');
 import * as mammoth from 'mammoth';
 
@@ -116,26 +116,30 @@ class ApplicantsServiceClass {
     }
   }
 
+  async findOne(id: number) {
+    const result = await pool.query('SELECT * FROM applicants WHERE id = $1', [id]);
+    return result.rows[0];
+  }
+
   async findAll() {
-    return prisma.applicants.findMany({
-      where: {
-        job_applications: {
-          some: {} // Only return applicants who have at least one job application
-        }
-      },
-      include: {
-        job_applications: true
-      },
-      orderBy: {
-        id: 'desc'
-      }
-    });
+    const result = await pool.query(`
+      SELECT a.*, 
+             COALESCE(
+               json_agg(j.*) FILTER (WHERE j.id IS NOT NULL), 
+               '[]'
+             ) as job_applications
+      FROM applicants a
+      LEFT JOIN job_applications j ON a.id = j.applicant_id
+      WHERE EXISTS (SELECT 1 FROM job_applications WHERE applicant_id = a.id)
+      GROUP BY a.id
+      ORDER BY a.id DESC
+    `);
+    return result.rows;
   }
 
   async login(email_address: string, password_raw: string) {
-    const applicant = await prisma.applicants.findUnique({
-      where: { email_address }
-    });
+    const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+    const applicant = result.rows[0];
     if (!applicant || !applicant.password_hash) return null;
     const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
     if (!isMatch) return null;
@@ -143,57 +147,47 @@ class ApplicantsServiceClass {
   }
 
   async applyJob(applicantId: number, jobTitle: string, positionId?: number) {
-    return prisma.job_applications.create({
-      data: {
-        applicant_id: applicantId,
-        position_id: positionId,
-        job_title: jobTitle,
-        status: 'Pending'
-      }
-    });
+    const result = await pool.query(`
+      INSERT INTO job_applications (applicant_id, position_id, job_title, status)
+      VALUES ($1, $2, $3, 'Pending')
+      RETURNING *
+    `, [applicantId, positionId || null, jobTitle]);
+    return result.rows[0];
   }
 
   async findApplications(applicantId: number) {
-    return prisma.job_applications.findMany({
-      where: { applicant_id: applicantId }
-    });
+    const result = await pool.query('SELECT * FROM job_applications WHERE applicant_id = $1', [applicantId]);
+    return result.rows;
   }
 
   async toggleSavedJob(applicantId: number, positionId: number) {
-    const existing = await prisma.saved_jobs.findFirst({
-      where: { applicant_id: applicantId, position_id: positionId }
-    });
+    const checkResult = await pool.query('SELECT * FROM saved_jobs WHERE applicant_id = $1 AND position_id = $2', [applicantId, positionId]);
+    const existing = checkResult.rows[0];
 
     if (existing) {
       const newStatus = !existing.is_saved;
-      await prisma.saved_jobs.update({
-        where: { id: existing.id },
-        data: { is_saved: newStatus }
-      });
+      await pool.query('UPDATE saved_jobs SET is_saved = $1 WHERE id = $2', [newStatus, existing.id]);
       return { status: newStatus ? 'added' : 'removed' };
     } else {
-      await prisma.saved_jobs.create({
-        data: { applicant_id: applicantId, position_id: positionId, is_saved: true }
-      });
+      await pool.query(`
+        INSERT INTO saved_jobs (applicant_id, position_id, is_saved)
+        VALUES ($1, $2, true)
+      `, [applicantId, positionId]);
       return { status: 'added' };
     }
   }
 
   async findSavedJobs(applicantId: number) {
-    return prisma.saved_jobs.findMany({
-      where: { applicant_id: applicantId, is_saved: true }
-    });
+    const result = await pool.query('SELECT * FROM saved_jobs WHERE applicant_id = $1 AND is_saved = true', [applicantId]);
+    return result.rows;
   }
 
   async create(data: any) {
     const email = data.email_address || `no-email-${Date.now()}@test.com`;
 
     if (data.email_address) {
-      const existing = await prisma.applicants.findUnique({
-        where: { email_address: data.email_address }
-      });
-      
-      if (existing) {
+      const existing = await pool.query('SELECT id FROM applicants WHERE email_address = $1', [data.email_address]);
+      if (existing.rows.length > 0) {
         throw new Error('Email address already exists');
       }
     }
@@ -203,64 +197,120 @@ class ApplicantsServiceClass {
       passwordHash = await bcrypt.hash(data.password, 10);
     }
 
-    const applicant = await prisma.applicants.create({
-      data: {
-        password_hash: passwordHash,
-        surname: data.surname || 'UNKNOWN',
-        first_name: data.first_name || 'UNKNOWN',
-        middle_name: data.middle_name,
-        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : null,
-        place_of_birth: data.place_of_birth,
-        sex: data.sex,
-        civil_status: data.civil_status,
-        citizenship: data.citizenship,
-        blood_type: data.blood_type,
-        gsis_id_no: data.gsis_id_no,
-        pag_ibig_id_no: data.pag_ibig_id_no,
-        philhealth_no: data.philhealth_no,
-        sss_no: data.sss_no,
-        residential_address: data.residential_address,
-        permanent_address: data.permanent_address,
-        telephone_no: data.telephone_no,
-        mobile_no: data.mobile_no,
-        email_address: email,
-
-        educational_background: data.educational_background || [],
-        civil_service_eligibility: data.civil_service_eligibility || [],
-        work_experience: data.work_experience || [],
-        voluntary_work: data.voluntary_work || [],
-        learning_and_development: data.learning_and_development || [],
-        other_information: data.other_information || {},
-
-        questionnaire_responses: {
-          q34a: data.q34a,
-          q34b: data.q34b,
-          q35a: data.q35a,
-          q35b: data.q35b,
-          q36: data.q36,
-          q37: data.q37,
-          q38a: data.q38a,
-          q38b: data.q38b,
-          q39: data.q39,
-          q40a: data.q40a,
-          q40b: data.q40b,
-          q40c: data.q40c,
-        },
-      },
+    const questionnaire_responses = JSON.stringify({
+      q34a: data.q34a,
+      q34b: data.q34b,
+      q35a: data.q35a,
+      q35b: data.q35b,
+      q36: data.q36,
+      q37: data.q37,
+      q38a: data.q38a,
+      q38b: data.q38b,
+      q39: data.q39,
+      q40a: data.q40a,
+      q40b: data.q40b,
+      q40c: data.q40c,
     });
 
+    const result = await pool.query(`
+      INSERT INTO applicants (
+        password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
+        sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
+        sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
+        educational_background, civil_service_eligibility, work_experience, voluntary_work,
+        learning_and_development, other_information, questionnaire_responses
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23, $24, $25, $26
+      ) RETURNING *
+    `, [
+      passwordHash,
+      data.surname || 'UNKNOWN',
+      data.first_name || 'UNKNOWN',
+      data.middle_name || null,
+      data.date_of_birth ? new Date(data.date_of_birth) : null,
+      data.place_of_birth || null,
+      data.sex || null,
+      data.civil_status || null,
+      data.citizenship || null,
+      data.blood_type || null,
+      data.gsis_id_no || null,
+      data.pag_ibig_id_no || null,
+      data.philhealth_no || null,
+      data.sss_no || null,
+      data.residential_address ? JSON.stringify(data.residential_address) : null,
+      data.permanent_address ? JSON.stringify(data.permanent_address) : null,
+      data.telephone_no || null,
+      data.mobile_no || null,
+      email,
+      JSON.stringify(data.educational_background || []),
+      JSON.stringify(data.civil_service_eligibility || []),
+      JSON.stringify(data.work_experience || []),
+      JSON.stringify(data.voluntary_work || []),
+      JSON.stringify(data.learning_and_development || []),
+      JSON.stringify(data.other_information || {}),
+      questionnaire_responses
+    ]);
+
+    const applicant = result.rows[0];
+
     if (data.jobTitle) {
-      await prisma.job_applications.create({
-        data: {
-          applicant_id: applicant.id,
-          position_id: data.positionId ? parseInt(data.positionId, 10) : null,
-          job_title: data.jobTitle,
-          status: 'Pending'
-        }
-      });
+      await pool.query(`
+        INSERT INTO job_applications (applicant_id, position_id, job_title, status)
+        VALUES ($1, $2, $3, 'Pending')
+      `, [applicant.id, data.positionId ? parseInt(data.positionId, 10) : null, data.jobTitle]);
     }
 
     return applicant;
+  }
+
+  async update(id: number, data: any) {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    const addField = (colName: string, val: any, isJson = false) => {
+      if (val !== undefined) {
+        fields.push(`${colName} = $${idx}`);
+        values.push(isJson ? JSON.stringify(val) : val);
+        idx++;
+      }
+    };
+
+    addField('surname', data.surname);
+    addField('first_name', data.first_name);
+    addField('middle_name', data.middle_name);
+    addField('date_of_birth', data.date_of_birth ? new Date(data.date_of_birth) : null);
+    addField('place_of_birth', data.place_of_birth);
+    addField('sex', data.sex);
+    addField('civil_status', data.civil_status);
+    addField('citizenship', data.citizenship);
+    addField('blood_type', data.blood_type);
+    addField('gsis_id_no', data.gsis_id_no);
+    addField('pag_ibig_id_no', data.pag_ibig_id_no);
+    addField('philhealth_no', data.philhealth_no);
+    addField('sss_no', data.sss_no);
+    addField('residential_address', data.residential_address, true);
+    addField('permanent_address', data.permanent_address, true);
+    addField('telephone_no', data.telephone_no);
+    addField('mobile_no', data.mobile_no);
+
+    addField('educational_background', data.educational_background, true);
+    addField('family_background', data.family_background, true);
+    addField('civil_service_eligibility', data.civil_service_eligibility, true);
+    addField('work_experience', data.work_experience, true);
+    addField('voluntary_work', data.voluntary_work, true);
+    addField('learning_and_development', data.learning_and_development, true);
+    addField('other_information', data.other_information, true);
+    addField('questionnaire_responses', data.questionnaire_responses, true);
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+    const query = `UPDATE applicants SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
   }
 }
 

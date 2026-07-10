@@ -303,7 +303,13 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
                             <td className="px-4 py-2 border font-medium">{level}</td>
                             <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
                             <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
+                            <td className="px-2 py-1 border">
+                              <div className="flex items-center gap-1">
+                                <input type="date" className="w-full p-1 bg-transparent outline-none text-xs" />
+                                <span className="text-gray-400 text-xs">-</span>
+                                <input type="date" className="w-full p-1 bg-transparent outline-none text-xs" />
+                              </div>
+                            </td>
                             <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
                             <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
                           </tr>

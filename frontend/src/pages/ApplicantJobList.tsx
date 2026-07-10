@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {
   Search, Clock, Hash, LogOut,
@@ -73,6 +73,7 @@ const positions = [
 
 export default function ApplicantJobList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [appliedJobIds, setAppliedJobIds] = useState<number[]>([]);
   const [savedJobIds, setSavedJobIds] = useState<number[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
@@ -83,6 +84,21 @@ export default function ApplicantJobList() {
   const [currentStep, setCurrentStep] = useState('Personal Information');
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Personal Info States
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [extensionName, setExtensionName] = useState('');
+  const [placeOfBirth, setPlaceOfBirth] = useState('');
+  const [sex, setSex] = useState('');
+  const [civilStatus, setCivilStatus] = useState('');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [bloodType, setBloodType] = useState('');
+  const [agencyEmployeeNo, setAgencyEmployeeNo] = useState('');
+  const [citizenship, setCitizenship] = useState('');
+  const [citizenshipType, setCitizenshipType] = useState('');
 
   // Residential Address States
   const [resRegion, setResRegion] = useState('');
@@ -104,10 +120,39 @@ export default function ApplicantJobList() {
   const permProvincesList = permRegion ? provinces.filter((p: any) => p.reg_code === permRegion) : [];
   const permCitiesList = permProvince ? city_mun.filter((c: any) => c.prov_code === permProvince) : [];
   const permBarangaysList = permCity ? barangays.filter((b: any) => b.mun_code === permCity) : [];
+  const [resHouse, setResHouse] = useState('');
+  const [resStreet, setResStreet] = useState('');
+  const [resSubdivision, setResSubdivision] = useState('');
+  const [resZip, setResZip] = useState('');
+  const [permHouse, setPermHouse] = useState('');
+  const [permStreet, setPermStreet] = useState('');
+  const [permSubdivision, setPermSubdivision] = useState('');
+  const [permZip, setPermZip] = useState('');
+  const [telephoneNo, setTelephoneNo] = useState('');
+  const [mobileNo, setMobileNo] = useState('');
+  const [alternateEmail, setAlternateEmail] = useState('');
+
+  const [spouseSurname, setSpouseSurname] = useState('');
+  const [spouseFirst, setSpouseFirst] = useState('');
+  const [spouseMiddle, setSpouseMiddle] = useState('');
+  const [spouseExt, setSpouseExt] = useState('');
+  const [spouseOccupation, setSpouseOccupation] = useState('');
+  const [spouseEmployer, setSpouseEmployer] = useState('');
+  const [spouseBusAddress, setSpouseBusAddress] = useState('');
+  const [spouseTelephone, setSpouseTelephone] = useState('');
+
+  const [fatherSurname, setFatherSurname] = useState('');
+  const [fatherFirst, setFatherFirst] = useState('');
+  const [fatherMiddle, setFatherMiddle] = useState('');
+  const [fatherExt, setFatherExt] = useState('');
+
+  const [motherSurname, setMotherSurname] = useState('');
+  const [motherFirst, setMotherFirst] = useState('');
+  const [motherMiddle, setMotherMiddle] = useState('');
 
   const itemsPerPage = 5;
 
-  const totalSteps = 13;
+  const totalSteps = 9;
   const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
   const handlePersonalInfoSubmit = (e: React.FormEvent) => {
@@ -119,6 +164,7 @@ export default function ApplicantJobList() {
   };
 
   const [childrenList, setChildrenList] = useState<any[]>([{ name: '', dob: null }]);
+  const [educationalDates, setEducationalDates] = useState<Record<string, { school: string, degree: string, from: Date | null, to: Date | null, units: string, year: string, honors: string }>>({});
 
   const handleFamilyBackgroundSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,18 +238,151 @@ export default function ApplicantJobList() {
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
   const [governmentId, setGovernmentId] = useState({ type: '', idNo: '', datePlace: '' });
 
-  const handleLegalQuestionnaireSubmit = (e: React.FormEvent) => {
+  const handleLegalQuestionnaireSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completedSteps.includes('Legal Questionnaire')) {
       setCompletedSteps(prev => [...prev, 'Legal Questionnaire']);
     }
-    // Proceed to final submission or next step
+
+    try {
+      const sessionStr = localStorage.getItem('session_data');
+      if (!sessionStr) {
+        Swal.fire('Error', 'You must be logged in to apply.', 'error');
+        navigate('/login');
+        return;
+      }
+
+      const session = JSON.parse(sessionStr);
+
+      const applicantData = {
+        surname: lastName,
+        first_name: firstName,
+        middle_name: middleName,
+        place_of_birth: placeOfBirth,
+        sex: sex,
+        civil_status: civilStatus,
+        citizenship: citizenship,
+        blood_type: bloodType,
+        date_of_birth: birthDate,
+        residential_address: {
+          house: resHouse,
+          street: resStreet,
+          subdivision: resSubdivision,
+          zip: resZip,
+          region: resRegion,
+          province: resProvince,
+          city: resCity,
+          barangay: resBarangay,
+        },
+        permanent_address: {
+          house: permHouse,
+          street: permStreet,
+          subdivision: permSubdivision,
+          zip: permZip,
+          region: permRegion,
+          province: permProvince,
+          city: permCity,
+          barangay: permBarangay,
+        },
+        telephone_no: telephoneNo,
+        mobile_no: mobileNo,
+        family_background: {
+          spouse: {
+            surname: spouseSurname,
+            first_name: spouseFirst,
+            middle_name: spouseMiddle,
+            name_extension: spouseExt,
+            occupation: spouseOccupation,
+            employer: spouseEmployer,
+            business_address: spouseBusAddress,
+            telephone: spouseTelephone
+          },
+          father: {
+            surname: fatherSurname,
+            first_name: fatherFirst,
+            middle_name: fatherMiddle,
+            name_extension: fatherExt,
+          },
+          mother: {
+            surname: motherSurname,
+            first_name: motherFirst,
+            middle_name: motherMiddle,
+          }
+        },
+        educational_background: Object.entries(educationalDates).map(([level, dates]) => ({ level, ...dates })),
+        civil_service_eligibility: civilServiceList,
+        work_experience: workExperienceList,
+        voluntary_work: voluntaryWorkList,
+        learning_and_development: learningDevelopmentList,
+        other_information: {
+          extensionName,
+          height,
+          weight,
+          agencyEmployeeNo,
+          citizenshipType,
+          skills: skillsList,
+          distinctions: distinctionsList,
+          memberships: membershipsList,
+          references: referencesList,
+          governmentId: governmentId,
+          children: childrenList
+        },
+        questionnaire_responses: questionnaire
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(applicantData)
+      });
+
+      if (response.ok) {
+        if (applyingJob) {
+          const applyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/apply-job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              applicantId: session.id,
+              positionId: applyingJob.id,
+              jobTitle: applyingJob.title
+            })
+          });
+
+          if (applyResponse.ok) {
+            Swal.fire('Success', 'Profile updated and applied to ' + applyingJob.title + ' successfully!', 'success');
+            setAppliedJobIds(prev => [...prev, applyingJob.id]);
+          } else {
+            Swal.fire('Error', 'Profile updated but failed to apply for the job.', 'error');
+          }
+        } else {
+          Swal.fire('Success', 'Profile updated successfully!', 'success');
+        }
+        
+        setActiveTab('job-board');
+        setApplyingJob(null);
+      } else {
+        const errorData = await response.json();
+        Swal.fire('Error', errorData.message || 'Failed to update profile.', 'error');
+      }
+    } catch (err) {
+      console.error('Error submitting application:', err);
+      Swal.fire('Error', 'An unexpected error occurred.', 'error');
+    }
   };
 
   const indexOfLastApp = currentPage * itemsPerPage;
   const indexOfFirstApp = indexOfLastApp - itemsPerPage;
   const currentApps = applications.slice(indexOfFirstApp, indexOfLastApp);
   const totalPages = Math.ceil(applications.length / itemsPerPage);
+
+  useEffect(() => {
+    if (location.state?.applyingJob) {
+      setApplyingJob(location.state.applyingJob);
+      setActiveTab('application-form');
+      // clear the state so it doesn't reopen if the user refreshes
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   useEffect(() => {
     const sessionStr = localStorage.getItem('session_data');
@@ -238,6 +417,132 @@ export default function ApplicantJobList() {
         }
       })
       .catch(err => console.error('Error fetching applications:', err));
+
+    fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          console.log("PROFILE DATA RECEIVED:", data.data);
+          const p = data.data;
+          setFirstName(p.first_name || '');
+          setLastName(p.surname || '');
+          setMiddleName(p.middle_name || '');
+          setPlaceOfBirth(p.place_of_birth || '');
+          setSex(p.sex || '');
+          setCivilStatus(p.civil_status || '');
+          setCitizenship(p.citizenship || '');
+          setBloodType(p.blood_type || '');
+          setBirthDate(p.date_of_birth ? new Date(p.date_of_birth) : null);
+          setTelephoneNo(p.telephone_no || '');
+          setMobileNo(p.mobile_no || '');
+
+          if (p.residential_address) {
+            const ra = typeof p.residential_address === 'string' ? JSON.parse(p.residential_address) : p.residential_address;
+            setResHouse(ra.house || '');
+            setResStreet(ra.street || '');
+            setResSubdivision(ra.subdivision || '');
+            setResZip(ra.zip || '');
+            setResRegion(ra.region || '');
+            setResProvince(ra.province || '');
+            setResCity(ra.city || '');
+            setResBarangay(ra.barangay || '');
+          }
+
+          if (p.permanent_address) {
+            const pa = typeof p.permanent_address === 'string' ? JSON.parse(p.permanent_address) : p.permanent_address;
+            setPermHouse(pa.house || '');
+            setPermStreet(pa.street || '');
+            setPermSubdivision(pa.subdivision || '');
+            setPermZip(pa.zip || '');
+            setPermRegion(pa.region || '');
+            setPermProvince(pa.province || '');
+            setPermCity(pa.city || '');
+            setPermBarangay(pa.barangay || '');
+          }
+
+          if (p.family_background) {
+            const fb = typeof p.family_background === 'string' ? JSON.parse(p.family_background) : p.family_background;
+            if (fb.spouse) {
+              setSpouseSurname(fb.spouse.surname || '');
+              setSpouseFirst(fb.spouse.first_name || '');
+              setSpouseMiddle(fb.spouse.middle_name || '');
+              setSpouseExt(fb.spouse.name_extension || '');
+              setSpouseOccupation(fb.spouse.occupation || '');
+              setSpouseEmployer(fb.spouse.employer || '');
+              setSpouseBusAddress(fb.spouse.business_address || '');
+              setSpouseTelephone(fb.spouse.telephone || '');
+            }
+            if (fb.father) {
+              setFatherSurname(fb.father.surname || '');
+              setFatherFirst(fb.father.first_name || '');
+              setFatherMiddle(fb.father.middle_name || '');
+              setFatherExt(fb.father.name_extension || '');
+            }
+            if (fb.mother) {
+              setMotherSurname(fb.mother.surname || '');
+              setMotherFirst(fb.mother.first_name || '');
+              setMotherMiddle(fb.mother.middle_name || '');
+            }
+          }
+          
+          if (p.educational_background) {
+            let edParsed = Array.isArray(p.educational_background) ? p.educational_background : (typeof p.educational_background === 'string' ? JSON.parse(p.educational_background) : p.educational_background);
+            const newEd = {...educationalDates};
+            if(Array.isArray(edParsed)) {
+              edParsed.forEach((ed: any) => {
+                  if (ed.level) {
+                     newEd[ed.level] = { 
+                       school: ed.school || '',
+                       degree: ed.degree || '',
+                       from: ed.from || '', 
+                       to: ed.to || '',
+                       units: ed.units || '',
+                       year: ed.year || '',
+                       honors: ed.honors || ''
+                     };
+                  }
+              });
+              setEducationalDates(newEd);
+            }
+          }
+          if (p.civil_service_eligibility) setCivilServiceList(Array.isArray(p.civil_service_eligibility) ? p.civil_service_eligibility : (typeof p.civil_service_eligibility === 'string' ? JSON.parse(p.civil_service_eligibility) : p.civil_service_eligibility));
+          if (p.work_experience) setWorkExperienceList(Array.isArray(p.work_experience) ? p.work_experience : (typeof p.work_experience === 'string' ? JSON.parse(p.work_experience) : p.work_experience));
+          if (p.voluntary_work) setVoluntaryWorkList(Array.isArray(p.voluntary_work) ? p.voluntary_work : (typeof p.voluntary_work === 'string' ? JSON.parse(p.voluntary_work) : p.voluntary_work));
+          if (p.learning_and_development) setLearningDevelopmentList(Array.isArray(p.learning_and_development) ? p.learning_and_development : (typeof p.learning_and_development === 'string' ? JSON.parse(p.learning_and_development) : p.learning_and_development));
+          
+          if (p.other_information) {
+             const oi = typeof p.other_information === 'string' ? JSON.parse(p.other_information) : p.other_information;
+             if (oi.extensionName) setExtensionName(oi.extensionName);
+             if (oi.height) setHeight(oi.height);
+             if (oi.weight) setWeight(oi.weight);
+             if (oi.agencyEmployeeNo) setAgencyEmployeeNo(oi.agencyEmployeeNo);
+             if (oi.citizenshipType) setCitizenshipType(oi.citizenshipType);
+             if (oi.skills) setSkillsList(oi.skills);
+             if (oi.distinctions) setDistinctionsList(oi.distinctions);
+             if (oi.memberships) setMembershipsList(oi.memberships);
+             if (oi.references) setReferencesList(oi.references);
+             if (oi.governmentId) setGovernmentId(oi.governmentId);
+             if (oi.children) setChildrenList(oi.children);
+          }
+          if (p.questionnaire_responses) {
+             setQuestionnaire(typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses);
+          }
+
+          // Automatically evaluate and set completed steps based on populated data
+          const stepsCompleted: string[] = [];
+          if (p.first_name || p.surname) stepsCompleted.push('Personal Information');
+          if (p.family_background) stepsCompleted.push('Family Background');
+          if (p.educational_background) stepsCompleted.push('Educational Background');
+          if (p.civil_service_eligibility) stepsCompleted.push('Civil Service Eligibility');
+          if (p.work_experience) stepsCompleted.push('Work Experience');
+          if (p.voluntary_work) stepsCompleted.push('Voluntary Work');
+          if (p.learning_and_development) stepsCompleted.push('Learning & Development');
+          if (p.other_information) stepsCompleted.push('Other Information');
+          if (p.questionnaire_responses) stepsCompleted.push('Legal Questionnaire');
+          setCompletedSteps(stepsCompleted);
+        }
+      })
+      .catch(err => console.error('Error fetching profile:', err));
 
     fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/saved-jobs`)
       .then(res => res.json())
@@ -681,16 +986,12 @@ export default function ApplicantJobList() {
                       { name: 'Personal Information', icon: FileText },
                       { name: 'Family Background', icon: FileText },
                       { name: 'Educational Background', icon: GraduationCap },
-                      { name: 'Eligibility', icon: FileText },
-                      { name: 'Work Experiences', icon: Briefcase },
-                      { name: 'Voluntary Works', icon: FileText },
-                      { name: 'Learning and Development Interventions', icon: FileText },
+                      { name: 'Civil Service Eligibility', icon: FileText },
+                      { name: 'Work Experience', icon: Briefcase },
+                      { name: 'Voluntary Work', icon: FileText },
+                      { name: 'Learning & Development', icon: FileText },
                       { name: 'Other Information', icon: FileText },
-                      { name: 'Questionnaire', icon: FileText },
-                      { name: 'References', icon: FileText },
-                      { name: 'Government Issued IDs', icon: FileText },
-                      { name: 'Supporting Document/s', icon: FileText },
-                      { name: 'Specializations', icon: FileText }
+                      { name: 'Legal Questionnaire', icon: FileText }
                     ].map((item, idx) => {
                       const Icon = item.icon;
                       const isActive = currentStep === item.name;
@@ -749,7 +1050,7 @@ export default function ApplicantJobList() {
                       Your profile is <span className="font-bold text-gray-700">{percentage}% complete</span>. In order to complete your profile, please provide us with the required information:
                     </p>
                     <p className="font-bold text-[13px] text-gray-700 leading-relaxed max-w-4xl tracking-wide">
-                      Profile Photo, Personal Information, Family Background, Educational Background, Eligibility, Work Experiences, Voluntary Works, Learning and Development Interventions, Other Information, Questionnaire, References, Government Issued IDs, Supporting Document/s, Specializations
+                      Profile Photo, Personal Information, Family Background, Educational Background, Civil Service Eligibility, Work Experience, Voluntary Work, Learning & Development, Other Information, Legal Questionnaire
                     </p>
                   </div>
 
@@ -757,26 +1058,26 @@ export default function ApplicantJobList() {
                   <div className="bg-white p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm">
                     <h3 className="text-[18px] text-gray-500 uppercase tracking-widest mb-10 text-center font-light">{currentStep}</h3>
 
-                    {currentStep === 'Personal Information' && (
+                    <div className={currentStep === 'Personal Information' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-4xl space-y-7" onSubmit={handlePersonalInfoSubmit}>
                         <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Name <span className="text-red-500">*</span></label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="flex flex-col">
-                              <input type="text" required defaultValue="CHRIS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">First Name</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
+                              <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
-                              <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Middle Name</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
+                              <input type="text" placeholder="Enter middle name" value={middleName} onChange={e => setMiddleName(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                             </div>
                             <div className="flex flex-col">
-                              <input type="text" required defaultValue="MENDOZA" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Last Name</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Last Name</span>
+                              <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
-                              <input type="text" placeholder="Enter extension name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Extension Name</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Extension Name</span>
+                              <input type="text" placeholder="Enter extension name" value={extensionName} onChange={e => setExtensionName(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                             </div>
                           </div>
                         </div>
@@ -792,8 +1093,8 @@ export default function ApplicantJobList() {
                               />
                             </div>
                             <div className="flex-1 flex flex-col">
-                              <input type="text" required placeholder="Enter place of birth" className="w-full border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">City, town, etc.</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">City, town, etc.</span>
+                              <input type="text" required placeholder="Enter place of birth" value={placeOfBirth} onChange={e => setPlaceOfBirth(e.target.value)} className="w-full border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                             </div>
                           </div>
                         </div>
@@ -801,18 +1102,18 @@ export default function ApplicantJobList() {
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px]">Sex <span className="text-red-500">*</span></label>
                           <div className="flex gap-4">
-                            <button type="button" className="bg-[#3498db] text-white px-10 py-2.5 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px]">
-                              <div className="w-2.5 h-2.5 bg-white rounded-full"></div> MALE
+                            <button type="button" onClick={() => setSex('Male')} className={`${sex === 'Male' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 py-2.5 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors`}>
+                              <div className={`w-2.5 h-2.5 rounded-full ${sex === 'Male' ? 'bg-white' : 'bg-gray-400'}`}></div> MALE
                             </button>
-                            <button type="button" className="bg-gray-100 text-gray-500 px-10 py-2.5 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 border border-gray-200 min-w-[120px] hover:bg-gray-200 transition-colors">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full"></div> FEMALE
+                            <button type="button" onClick={() => setSex('Female')} className={`${sex === 'Female' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 py-2.5 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors`}>
+                              <div className={`w-2.5 h-2.5 rounded-full ${sex === 'Female' ? 'bg-white' : 'bg-gray-400'}`}></div> FEMALE
                             </button>
                           </div>
                         </div>
 
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px]">Civil Status <span className="text-red-500">*</span></label>
-                          <select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 min-w-[200px]">
+                          <select required value={civilStatus} onChange={e => setCivilStatus(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 min-w-[200px]">
                             <option value="">Select civil status</option>
                             <option value="Single">Single</option>
                             <option value="Married">Married</option>
@@ -828,21 +1129,22 @@ export default function ApplicantJobList() {
                           </label>
                           <div className="flex-1 flex flex-col sm:flex-row gap-4">
                             <div className="w-full sm:w-1/3 flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Height</span>
                               <div className="flex">
-                                <input type="text" required placeholder="Enter height" className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                <input type="text" required placeholder="Enter height" value={height} onChange={e => setHeight(e.target.value)} className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                 <span className="border border-l-0 border-gray-300 rounded-r px-3 py-2.5 text-[13px] text-gray-500 flex items-center justify-center bg-gray-200 font-medium">m</span>
                               </div>
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Height</span>
                             </div>
                             <div className="w-full sm:w-1/3 flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Weight</span>
                               <div className="flex">
-                                <input type="text" required placeholder="Enter weight" className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                <input type="text" required placeholder="Enter weight" value={weight} onChange={e => setWeight(e.target.value)} className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                 <span className="border border-l-0 border-gray-300 rounded-r px-3 py-2.5 text-[13px] text-gray-500 flex items-center justify-center bg-gray-200 font-medium">kg</span>
                               </div>
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Weight</span>
                             </div>
                             <div className="w-full sm:w-1/3 flex flex-col">
-                              <select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Blood Type</span>
+                              <select required value={bloodType} onChange={e => setBloodType(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none">
                                 <option value="">Select blood type</option>
                                 <option value="A+">A+</option>
                                 <option value="A-">A-</option>
@@ -854,7 +1156,6 @@ export default function ApplicantJobList() {
                                 <option value="O-">O-</option>
                                 <option value="Unknown">Unknown</option>
                               </select>
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Blood Type</span>
                             </div>
                           </div>
                         </div>
@@ -863,24 +1164,24 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px]">
                             Agency Employee No.<br /><span className="text-[12px] text-gray-400 font-normal">(if any)</span>
                           </label>
-                          <input type="text" placeholder="Enter agency employee number" className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                          <input type="text" placeholder="Enter agency employee number" value={agencyEmployeeNo} onChange={e => setAgencyEmployeeNo(e.target.value)} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                         </div>
 
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px]">Citizenship <span className="text-red-500">*</span></label>
                           <div className="flex-1 flex flex-col sm:flex-row items-center gap-6">
-                            <select required className="w-full sm:w-[240px] border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none">
+                            <select required value={citizenship} onChange={e => setCitizenship(e.target.value)} className="w-full sm:w-[240px] border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none">
                               <option value="">Enter citizenship</option>
                               <option value="Filipino">Filipino</option>
                               <option value="Dual Citizenship">Dual Citizenship</option>
                             </select>
                             <div className="flex items-center gap-6">
                               <label className="flex items-center gap-2.5 cursor-pointer text-[13px] text-gray-600">
-                                <input type="radio" name="citizenship_type" className="w-3.5 h-3.5 text-blue-600 border-gray-300" />
+                                <input type="radio" name="citizenship_type" checked={citizenshipType === 'by Birth'} onChange={() => setCitizenshipType('by Birth')} className="w-3.5 h-3.5 text-blue-600 border-gray-300" />
                                 by Birth
                               </label>
                               <label className="flex items-center gap-2.5 cursor-pointer text-[13px] text-gray-600">
-                                <input type="radio" name="citizenship_type" className="w-3.5 h-3.5 text-blue-600 border-gray-300" />
+                                <input type="radio" name="citizenship_type" checked={citizenshipType === 'by Naturalization'} onChange={() => setCitizenshipType('by Naturalization')} className="w-3.5 h-3.5 text-blue-600 border-gray-300" />
                                 by Naturalization
                               </label>
                             </div>
@@ -892,24 +1193,25 @@ export default function ApplicantJobList() {
                           <div className="flex-1 flex flex-col gap-4">
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                               <div className="flex flex-col">
-                                <input type="text" placeholder="Enter house / block / lot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">House / Block / Lot No.</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">House / Block / Lot No.</span>
+                                <input type="text" value={resHouse} onChange={e => setResHouse(e.target.value)} placeholder="Enter house / block / lot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                               </div>
                               <div className="flex flex-col">
-                                <input type="text" placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Street</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Street</span>
+                                <input type="text" value={resStreet} onChange={e => setResStreet(e.target.value)} placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                               </div>
                               <div className="flex flex-col">
-                                <input type="text" placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Subdivision / Village</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Subdivision / Village</span>
+                                <input type="text" value={resSubdivision} onChange={e => setResSubdivision(e.target.value)} placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
                               </div>
                               <div className="flex flex-col">
-                                <input type="text" placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">ZIP Code</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">ZIP Code</span>
+                                <input type="text" value={resZip} onChange={e => setResZip(e.target.value)} placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                               </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                               <div className="flex flex-col">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Region</span>
                                 <select
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none"
@@ -926,9 +1228,9 @@ export default function ApplicantJobList() {
                                     <option key={r.reg_code} value={r.reg_code}>{r.name}</option>
                                   ))}
                                 </select>
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Region</span>
                               </div>
                               <div className="flex flex-col">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Province</span>
                                 <select
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -945,9 +1247,9 @@ export default function ApplicantJobList() {
                                     <option key={p.prov_code} value={p.prov_code}>{p.name}</option>
                                   ))}
                                 </select>
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Province</span>
                               </div>
                               <div className="flex flex-col">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">City / Municipality</span>
                                 <select
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -963,9 +1265,9 @@ export default function ApplicantJobList() {
                                     <option key={c.mun_code} value={c.mun_code}>{c.name}</option>
                                   ))}
                                 </select>
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">City / Municipality</span>
                               </div>
                               <div className="flex flex-col">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Barangay</span>
                                 <select
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -978,7 +1280,6 @@ export default function ApplicantJobList() {
                                     <option key={idx} value={b.name}>{b.name}</option>
                                   ))}
                                 </select>
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Barangay</span>
                               </div>
                             </div>
                           </div>
@@ -1001,24 +1302,25 @@ export default function ApplicantJobList() {
                               <>
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                   <div className="flex flex-col">
-                                    <input type="text" placeholder="Enter house / hlock / hot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">House / Block / Lot No.</span>
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">House / Block / Lot No.</span>
+                                    <input type="text" value={permHouse} onChange={e => setPermHouse(e.target.value)} placeholder="Enter house / block / lot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                   <div className="flex flex-col">
-                                    <input type="text" placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Street</span>
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Street</span>
+                                    <input type="text" value={permStreet} onChange={e => setPermStreet(e.target.value)} placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                   <div className="flex flex-col">
-                                    <input type="text" placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Subdivision / Village</span>
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Subdivision / Village</span>
+                                    <input type="text" value={permSubdivision} onChange={e => setPermSubdivision(e.target.value)} placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                   <div className="flex flex-col">
-                                    <input type="text" placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">ZIP Code</span>
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">ZIP Code</span>
+                                    <input type="text" value={permZip} onChange={e => setPermZip(e.target.value)} placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                   </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                   <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Region</span>
                                     <select
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none"
@@ -1035,9 +1337,9 @@ export default function ApplicantJobList() {
                                         <option key={r.reg_code} value={r.reg_code}>{r.name}</option>
                                       ))}
                                     </select>
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Region</span>
                                   </div>
                                   <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Province</span>
                                     <select
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -1054,9 +1356,9 @@ export default function ApplicantJobList() {
                                         <option key={p.prov_code} value={p.prov_code}>{p.name}</option>
                                       ))}
                                     </select>
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Province</span>
                                   </div>
                                   <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">City / Municipality</span>
                                     <select
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -1072,9 +1374,9 @@ export default function ApplicantJobList() {
                                         <option key={c.mun_code} value={c.mun_code}>{c.name}</option>
                                       ))}
                                     </select>
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">City / Municipality</span>
                                   </div>
                                   <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Barangay</span>
                                     <select
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50"
@@ -1087,7 +1389,6 @@ export default function ApplicantJobList() {
                                         <option key={idx} value={b.name}>{b.name}</option>
                                       ))}
                                     </select>
-                                    <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Barangay</span>
                                   </div>
                                 </div>
                               </>
@@ -1099,12 +1400,12 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Contact Nos. <span className="text-red-500">*</span></label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col">
-                              <input type="text" required placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Telephone No.</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
+                              <input type="text" value={telephoneNo} onChange={e => setTelephoneNo(e.target.value)} required placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                             <div className="flex flex-col">
-                              <input type="text" required placeholder="Enter mobile no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Mobile No.</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Mobile No.</span>
+                              <input type="text" value={mobileNo} onChange={e => setMobileNo(e.target.value)} required placeholder="Enter mobile no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1113,12 +1414,12 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Email Address <span className="text-red-500">*</span></label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Primary</span>
                               <input type="email" required defaultValue="avenidochristop@gmail.com" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Primary</span>
                             </div>
                             <div className="flex flex-col">
-                              <input type="email" placeholder="Enter alternate" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Alternate</span>
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Alternate</span>
+                              <input type="email" value={alternateEmail} onChange={e => setAlternateEmail(e.target.value)} placeholder="Enter alternate email" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                             </div>
                           </div>
                         </div>
@@ -1130,9 +1431,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Family Background' && (
+                    <div className={currentStep === 'Family Background' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-4xl space-y-7" onSubmit={handleFamilyBackgroundSubmit}>
 
                         {/* Spouse */}
@@ -1140,20 +1441,20 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Spouse's Name</label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
                               <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Surname</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
                               <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">First Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
                               <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Middle Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name Extension</span>
                               <input type="text" placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name Extension</span>
                             </div>
                           </div>
                         </div>
@@ -1162,20 +1463,20 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Spouse's Details</label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Occupation</span>
                               <input type="text" placeholder="Enter occupation" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Occupation</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Employer/Business Name</span>
                               <input type="text" placeholder="Enter employer / business name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Employer/Business Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Business Address</span>
                               <input type="text" placeholder="Enter business address" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Business Address</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
                               <input type="text" placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Telephone No.</span>
                             </div>
                           </div>
                         </div>
@@ -1188,20 +1489,20 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Father's Name</label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
                               <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Surname</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
                               <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">First Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
                               <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Middle Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name Extension</span>
                               <input type="text" placeholder="e.g. JR., SR" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name Extension</span>
                             </div>
                           </div>
                         </div>
@@ -1211,16 +1512,16 @@ export default function ApplicantJobList() {
                           <label className="lg:w-[140px] lg:text-right font-bold text-gray-600 text-[14px] pt-2">Mother's Maiden Name</label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
                               <input type="text" placeholder="Enter surname" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Surname</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
                               <input type="text" placeholder="Enter first name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">First Name</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span>
                               <input type="text" placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Middle Name</span>
                             </div>
                           </div>
                         </div>
@@ -1235,6 +1536,7 @@ export default function ApplicantJobList() {
                             {childrenList.map((child, idx) => (
                               <div key={idx} className="flex gap-4 items-start">
                                 <div className="flex-1 flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of Child (Write full name)</span>
                                   <input
                                     type="text"
                                     placeholder="Enter child's full name"
@@ -1246,9 +1548,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name of Child (Write full name)</span>
                                 </div>
                                 <div className="w-[200px] flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
                                   <CustomDatePicker
                                     value={child.dob}
                                     onChange={(date) => {
@@ -1258,7 +1560,6 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="Select date of birth"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Date of Birth</span>
                                 </div>
                                 <div className="pt-1.5">
                                   <button
@@ -1297,9 +1598,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Educational Background' && (
+                    <div className={currentStep === 'Educational Background' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleEducationalBackgroundSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please fill in your educational background. Write "N/A" if not applicable.</p>
@@ -1311,39 +1612,59 @@ export default function ApplicantJobList() {
                           { id: 'college', label: 'College', required: true },
                           { id: 'graduate', label: 'Graduate Studies', required: false }
                         ].map((level) => (
-                          <div key={level.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5">
+                          <div key={level.id} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm">
+                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 rounded-t-lg">
                               <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">{level.label} {level.required && <span className="text-red-500">*</span>}</h3>
                             </div>
                             <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                               <div className="flex flex-col lg:col-span-2">
-                                <input type="text" required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name of School (Write in full)</span>
-                              </div>
-                              <div className="flex flex-col">
-                                <input type="text" required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+                                <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), school: e.target.value}})} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                               </div>
 
-                              <div className="flex flex-col">
-                                <div className="flex gap-3">
-                                  <input type="text" required={level.required} placeholder="From (Year)" className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                  <input type="text" required={level.required} placeholder="To (Year)" className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                              {['vocational', 'college', 'graduate'].includes(level.id) && (
+                                <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
+                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), degree: e.target.value}})} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                                 </div>
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Period of Attendance (From - To)</span>
-                              </div>
+                              )}
+
                               <div className="flex flex-col">
-                                <input type="text" placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+                                <div className="flex gap-3 relative">
+                                  <input 
+                                    type="date" 
+                                    required={level.required} 
+                                    value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
+                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" 
+                                  />
+                                  <input 
+                                    type="date" 
+                                    required={level.required} 
+                                    value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
+                                    className="w-1/2 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" 
+                                  />
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <input type="text" placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Year Graduated</span>
-                              </div>
+
+                              {['vocational', 'college', 'graduate'].includes(level.id) && (
+                                <>
+                                  <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
+                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), units: e.target.value}})} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), year: e.target.value}})} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
+                                  </div>
+                                </>
+                              )}
 
                               <div className="flex flex-col lg:col-span-3">
-                                <input type="text" placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
-                                <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Scholarship/Academic Honors Received</span>
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Scholarship/Academic Honors Received</span>
+                                <input type="text" value={educationalDates[level.id]?.honors || ''} onChange={e => setEducationalDates({...educationalDates, [level.id]: {...(educationalDates[level.id] || {}), honors: e.target.value}})} placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50" />
                               </div>
                             </div>
                           </div>
@@ -1359,9 +1680,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Civil Service Eligibility' && (
+                    <div className={currentStep === 'Civil Service Eligibility' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleCivilServiceSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your civil service eligibility. Write "N/A" if not applicable.</p>
@@ -1369,8 +1690,8 @@ export default function ApplicantJobList() {
 
                         <div className="flex flex-col gap-6">
                           {civilServiceList.map((item, idx) => (
-                            <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm relative">
-                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center">
+                            <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
+                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Eligibility #{idx + 1}</h3>
                                 {civilServiceList.length > 1 && (
                                   <button
@@ -1386,6 +1707,7 @@ export default function ApplicantJobList() {
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Career Service/RA 1080 (Board/Bar)/Under Special Laws/CES/CSEE</span>
                                   <input
                                     type="text"
                                     required={idx === 0}
@@ -1398,9 +1720,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Career Service/RA 1080 (Board/Bar)/Under Special Laws/CES/CSEE</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Rating (if applicable)</span>
                                   <input
                                     type="text"
                                     placeholder="Enter rating"
@@ -1412,10 +1734,10 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Rating (if applicable)</span>
                                 </div>
 
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Examination / Conferment</span>
                                   <CustomDatePicker
                                     value={item.date}
                                     onChange={(date) => {
@@ -1425,9 +1747,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="Select date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Date of Examination / Conferment</span>
                                 </div>
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
                                   <input
                                     type="text"
                                     placeholder="Enter place of examination"
@@ -1439,10 +1761,10 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Place of Examination / Conferment</span>
                                 </div>
 
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Number (if applicable)</span>
                                   <input
                                     type="text"
                                     placeholder="Enter license number"
@@ -1454,9 +1776,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">License Number (if applicable)</span>
                                 </div>
                                 <div className="flex flex-col z-40">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Date of Validity (if applicable)</span>
                                   <CustomDatePicker
                                     value={item.licenseDate}
                                     onChange={(date) => {
@@ -1466,7 +1788,6 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="Select date of validity"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">License Date of Validity (if applicable)</span>
                                 </div>
                               </div>
                             </div>
@@ -1491,9 +1812,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Work Experience' && (
+                    <div className={currentStep === 'Work Experience' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleWorkExperienceSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your work experience from most recent to oldest. Write "N/A" if not applicable.</p>
@@ -1501,8 +1822,8 @@ export default function ApplicantJobList() {
 
                         <div className="flex flex-col gap-6">
                           {workExperienceList.map((item, idx) => (
-                            <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm relative">
-                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center">
+                            <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
+                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Work Experience #{idx + 1}</h3>
                                 {workExperienceList.length > 1 && (
                                   <button
@@ -1518,6 +1839,7 @@ export default function ApplicantJobList() {
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
                                   <CustomDatePicker
                                     value={item.fromDate}
                                     onChange={(date) => {
@@ -1527,9 +1849,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="From Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date (From)</span>
                                 </div>
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
                                   <CustomDatePicker
                                     value={item.toDate}
                                     onChange={(date) => {
@@ -1539,9 +1861,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="To Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date (To)</span>
                                 </div>
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Position Title (Write in full/Do not abbreviate)</span>
                                   <input
                                     type="text"
                                     required={idx === 0}
@@ -1554,10 +1876,10 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Position Title (Write in full/Do not abbreviate)</span>
                                 </div>
 
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Department/Agency/Office/Company</span>
                                   <input
                                     type="text"
                                     required={idx === 0}
@@ -1570,9 +1892,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Department/Agency/Office/Company</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
                                   <input
                                     type="text"
                                     placeholder="Enter monthly salary"
@@ -1584,9 +1906,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Monthly Salary</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
                                   <input
                                     type="text"
                                     placeholder="Format 00-0"
@@ -1598,10 +1920,10 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
                                 </div>
 
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Status of Appointment</span>
                                   <input
                                     type="text"
                                     placeholder="Enter status of appointment"
@@ -1613,9 +1935,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Status of Appointment</span>
                                 </div>
                                 <div className="flex flex-col lg:col-span-2">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Gov't Service (Y/N)</span>
                                   <select
                                     required={idx === 0}
                                     value={item.govtService}
@@ -1630,7 +1952,6 @@ export default function ApplicantJobList() {
                                     <option value="Y">Yes</option>
                                     <option value="N">No</option>
                                   </select>
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Gov't Service (Y/N)</span>
                                 </div>
                               </div>
                             </div>
@@ -1655,9 +1976,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Voluntary Work' && (
+                    <div className={currentStep === 'Voluntary Work' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleVoluntaryWorkSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your voluntary work or involvement in civic/non-government/people/voluntary organizations. Write "N/A" if not applicable.</p>
@@ -1665,8 +1986,8 @@ export default function ApplicantJobList() {
 
                         <div className="flex flex-col gap-6">
                           {voluntaryWorkList.map((item, idx) => (
-                            <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm relative">
-                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center">
+                            <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
+                              <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Voluntary Work #{idx + 1}</h3>
                                 {voluntaryWorkList.length > 1 && (
                                   <button
@@ -1682,6 +2003,7 @@ export default function ApplicantJobList() {
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <div className="flex flex-col lg:col-span-3">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name & Address of Organization (Write in full)</span>
                                   <input
                                     type="text"
                                     required={idx === 0}
@@ -1694,9 +2016,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name & Address of Organization (Write in full)</span>
                                 </div>
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
                                   <CustomDatePicker
                                     value={item.fromDate}
                                     onChange={(date) => {
@@ -1706,9 +2028,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="From Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date (From)</span>
                                 </div>
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
                                   <CustomDatePicker
                                     value={item.toDate}
                                     onChange={(date) => {
@@ -1718,9 +2040,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="To Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date (To)</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
                                   <input
                                     type="text"
                                     placeholder="Enter number of hours"
@@ -1732,9 +2054,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Number of Hours</span>
                                 </div>
                                 <div className="flex flex-col lg:col-span-3">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Position / Nature of Work</span>
                                   <input
                                     type="text"
                                     placeholder="Enter position / nature of work"
@@ -1746,7 +2068,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Position / Nature of Work</span>
                                 </div>
                               </div>
                             </div>
@@ -1771,9 +2092,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Learning & Development' && (
+                    <div className={currentStep === 'Learning & Development' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleLearningDevelopmentSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your learning and development (L&D) interventions/training programs attended. Write "N/A" if not applicable.</p>
@@ -1798,6 +2119,7 @@ export default function ApplicantJobList() {
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                                 <div className="flex flex-col lg:col-span-4">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Title of Learning and Development Interventions/Training Programs (Write in full)</span>
                                   <input
                                     type="text"
                                     required={idx === 0}
@@ -1810,9 +2132,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Title of Learning and Development Interventions/Training Programs (Write in full)</span>
                                 </div>
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (From)</span>
                                   <CustomDatePicker
                                     value={item.fromDate}
                                     onChange={(date) => {
@@ -1822,9 +2144,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="From Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date of Attendance (From)</span>
                                 </div>
                                 <div className="flex flex-col z-50">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (To)</span>
                                   <CustomDatePicker
                                     value={item.toDate}
                                     onChange={(date) => {
@@ -1834,9 +2156,9 @@ export default function ApplicantJobList() {
                                     }}
                                     placeholder="To Date"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Inclusive Date of Attendance (To)</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
                                   <input
                                     type="text"
                                     placeholder="Enter number of hours"
@@ -1848,9 +2170,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Number of Hours</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Type of LD</span>
                                   <input
                                     type="text"
                                     placeholder="Managerial/Supervisory/Technical/etc"
@@ -1862,9 +2184,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Type of LD</span>
                                 </div>
                                 <div className="flex flex-col lg:col-span-4">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Conducted/Sponsored By (Write in full)</span>
                                   <input
                                     type="text"
                                     placeholder="Enter sponsor / conducted by"
@@ -1876,7 +2198,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Conducted/Sponsored By (Write in full)</span>
                                 </div>
                               </div>
                             </div>
@@ -1901,9 +2222,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Other Information' && (
+                    <div className={currentStep === 'Other Information' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-8" onSubmit={handleOtherInformationSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your special skills and hobbies, non-academic distinctions, and memberships. Write "N/A" if not applicable.</p>
@@ -2040,9 +2361,9 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
 
-                    {currentStep === 'Legal Questionnaire' && (
+                    <div className={currentStep === 'Legal Questionnaire' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-8" onSubmit={handleLegalQuestionnaireSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please answer the following questions truthfully. If "Yes", provide the necessary details.</p>
@@ -2120,6 +2441,7 @@ export default function ApplicantJobList() {
                             {[1, 2, 3].map((_, idx) => (
                               <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name</span>
                                   <input
                                     type="text"
                                     required
@@ -2133,9 +2455,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Name</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Address</span>
                                   <input
                                     type="text"
                                     required
@@ -2149,9 +2471,9 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Address</span>
                                 </div>
                                 <div className="flex flex-col">
+                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
                                   <input
                                     type="text"
                                     required
@@ -2165,7 +2487,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                                   />
-                                  <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Telephone No.</span>
                                 </div>
                               </div>
                             ))}
@@ -2179,6 +2500,7 @@ export default function ApplicantJobList() {
                           </div>
                           <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Government Issued ID</span>
                               <input
                                 type="text"
                                 required
@@ -2187,9 +2509,9 @@ export default function ApplicantJobList() {
                                 onChange={(e) => setGovernmentId({ ...governmentId, type: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                               />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Government Issued ID</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">ID/License/Passport No.</span>
                               <input
                                 type="text"
                                 required
@@ -2198,9 +2520,9 @@ export default function ApplicantJobList() {
                                 onChange={(e) => setGovernmentId({ ...governmentId, idNo: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                               />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">ID/License/Passport No.</span>
                             </div>
                             <div className="flex flex-col">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date/Place of Issuance</span>
                               <input
                                 type="text"
                                 required
@@ -2209,7 +2531,6 @@ export default function ApplicantJobList() {
                                 onChange={(e) => setGovernmentId({ ...governmentId, datePlace: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50"
                               />
-                              <span className="text-[12px] text-gray-400 mt-1.5 font-medium">Date/Place of Issuance</span>
                             </div>
                           </div>
                         </div>
@@ -2224,7 +2545,7 @@ export default function ApplicantJobList() {
                           </button>
                         </div>
                       </form>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
