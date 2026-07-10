@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Award, Hash, LogOut, GraduationCap } from 'lucide-react';
+import { ArrowLeft, LogOut, GraduationCap } from 'lucide-react';
 
 const positions = [
   {
