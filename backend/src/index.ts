@@ -6,6 +6,8 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { pool } from './database';
 import applicantsRouter from './applicants/applicants.routes';
+import vacanciesRouter from './vacancies/vacancies.routes';
+import { setupVacanciesCron } from './vacancies/vacancies.cron';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -40,8 +42,14 @@ app.post('/api/register-hr', async (req, res) => {
   }
 });
 
+// Vacancies Module Routes
+app.use('/api/vacancies', vacanciesRouter);
+
 // Applicants Module Routes
 app.use('/api/applicants', applicantsRouter);
+
+// Initialize Cron Jobs
+setupVacanciesCron();
 
 app.listen(port, () => {
   console.log(`🚀 Express server running on http://localhost:${port}`);

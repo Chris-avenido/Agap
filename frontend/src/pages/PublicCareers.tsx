@@ -1,73 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Search, Clock, Hash, MapPin, ChevronDown, GraduationCap, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2 } from 'lucide-react';
 
-const positions = [
-  {
-    id: 1,
-    title: 'Information Technology Officer I',
-    office: 'Information and Communications Technology Service',
-    division: 'ICTS - Applications Development',
-    type: 'Temporary',
-    posted: '2026-06-29',
-    deadline: '2026-07-14',
-    sg: 18,
-    itemNo: 'ITO-18-7102',
-    location: 'Pasig City',
-    description: 'Develops and maintains web applications and information systems for the department. Provides technical support for...',
-    qualifications: "Bachelor's degree in Computer Science, IT, or related field Experience in web development (React, Node.js) Knowledge of database manageme...",
-    daysLeft: 7
-  },
-  {
-    id: 2,
-    title: 'Chief Education Program Specialist',
-    office: 'Policy and Research Service',
-    division: 'Office of the Secretary',
-    type: 'Permanent',
-    posted: '2026-06-29',
-    deadline: '2026-07-09',
-    sg: 24,
-    itemNo: 'CEPS-24-1998',
-    location: 'Pasig City',
-    description: 'Plans, develops, and implements education policies and programs. Provides technical leadership in research and...',
-    qualifications: "Master's degree in Education, Public Administration, or related field At least 5 years of supervisory experience in policy or research Excellent...",
-    daysLeft: 2
-  },
-  {
-    id: 3,
-    title: 'Senior Education Program Specialist',
-    office: 'Policy and Research Service',
-    division: 'Office of the Secretary',
-    type: 'Permanent',
-    posted: '2026-06-29',
-    deadline: '2026-07-16',
-    sg: 19,
-    itemNo: 'SEPS-19-2005',
-    location: 'Pasig City',
-    description: 'Assists in planning, developing, and implementing education policies and programs. Conducts research and analysis...',
-    qualifications: "Bachelor's degree in Education or related field At least 2 years of relevant experience in policy or research...",
-    daysLeft: 9
-  },
-  {
-    id: 4,
-    title: 'Administrative Assistant III',
-    office: 'Human Resources Division',
-    division: 'Administrative Service',
-    type: 'Permanent',
-    posted: '2026-06-28',
-    deadline: '2026-07-08',
-    sg: 9,
-    itemNo: 'ADAS3-12-2015',
-    location: 'Pasig City',
-    description: 'Provides administrative and clerical support to the division. Handles correspondence, records management, and...',
-    qualifications: "Completion of two years studies in college. 1 year of relevant experience. 4 hours of relevant training...",
-    daysLeft: 1
-  }
-];
+// Removed mock positions array
 
 export default function PublicCareers() {
   const navigate = useNavigate();
+  const [positions, setPositions] = useState<any[]>([]);
+  const [currentJobPage, setCurrentJobPage] = useState(1);
+  const [jobsPerPage, setJobsPerPage] = useState(10);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [viewedJob, setViewedJob] = useState<any>(null);
@@ -78,11 +20,11 @@ export default function PublicCareers() {
   const [filterDivision, setFilterDivision] = useState('All Divisions');
   const [filterPosition, setFilterPosition] = useState('All Positions');
 
-  const availableRegions = [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean);
-  const availableDivisions = [...new Set(positions.map(p => p.division || p.office))].filter(Boolean);
-  const availablePositions = [...new Set(positions.map(p => p.title))].filter(Boolean);
+  const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), [positions]);
+  const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), [positions]);
+  const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
 
-  const filteredPositions = positions.filter(job => {
+  const filteredPositions = useMemo(() => positions.filter(job => {
     const matchSearch = !searchQuery || 
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -94,7 +36,41 @@ export default function PublicCareers() {
     const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
     
     return matchSearch && matchRegion && matchDivision && matchPosition;
-  });
+  }), [searchQuery, filterRegion, filterDivision, filterPosition, positions]);
+
+  useEffect(() => {
+    setCurrentJobPage(1);
+  }, [searchQuery, filterRegion, filterDivision, filterPosition, jobsPerPage]);
+
+  const totalJobPages = Math.ceil(filteredPositions.length / jobsPerPage);
+  const indexOfLastJob = currentJobPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = filteredPositions.slice(indexOfFirstJob, indexOfLastJob);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const formatted = data.data.map((v: any) => ({
+            id: v.id,
+            title: v.title,
+            office: v.school || 'Department of Education',
+            division: v.region || '',
+            type: 'Permanent',
+            posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+            deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+            sg: v.salary_grade,
+            itemNo: v.item_no,
+            location: v.location || '',
+            description: 'Details available in the full job posting.',
+            daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
+          }));
+          setPositions(formatted);
+        }
+      })
+      .catch(err => console.error('Error fetching vacancies:', err));
+  }, []);
 
   const handleClearFilters = () => {
     setSearchQuery('');
@@ -331,7 +307,7 @@ export default function PublicCareers() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredPositions.map((job, index) => {
+              {currentJobs.map((job, index) => {
                 const isFeatured = index < 2;
                 const isTemporary = job.type.toLowerCase() === 'temporary';
 
@@ -450,6 +426,44 @@ export default function PublicCareers() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-8 mt-8 gap-4">
+              <div className="text-[13px] text-gray-500 font-bold uppercase tracking-wider bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                SHOWING {filteredPositions.length > 0 ? indexOfFirstJob + 1 : 0} TO {Math.min(indexOfLastJob, filteredPositions.length)} OF {filteredPositions.length} ENTRIES
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
+                <button
+                  onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
+                  disabled={currentJobPage === 1}
+                  className="px-3 sm:px-4 py-2 rounded-lg bg-white border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 shadow-sm"
+                >
+                  Previous
+                </button>
+                
+                {Array.from({ length: Math.max(1, totalJobPages) }, (_, i) => i + 1).map(pageNum => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentJobPage(pageNum)}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors shadow-sm ${
+                      currentJobPage === pageNum 
+                        ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]' 
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
+                  disabled={currentJobPage === totalJobPages || totalJobPages <= 1}
+                  className="px-3 sm:px-4 py-2 rounded-lg bg-white border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 shadow-sm"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </>

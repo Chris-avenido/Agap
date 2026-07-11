@@ -13,70 +13,12 @@ import ApplicantHeader from '../components/ApplicantHeader';
 // @ts-ignore
 import { regions, provinces, city_mun, barangays } from 'phil-reg-prov-mun-brgy';
 
-const positions = [
-  {
-    id: 1,
-    title: 'Information Technology Officer I',
-    office: 'Information and Communications Technology Service',
-    division: 'ICTS - Applications Development',
-    type: 'Temporary',
-    posted: 'Jun 30, 2026',
-    deadline: 'Jul 14, 2026',
-    sg: 18,
-    itemNo: 'ITO-18-7102',
-    location: 'Pasig City',
-    description: 'Develops and maintains web applications and information systems for the department. Provides technical support for ICT initiatives and digital transformation programs.',
-    daysLeft: 6
-  },
-  {
-    id: 2,
-    title: 'Chief Education Program Specialist',
-    office: 'Policy and Research Service',
-    division: 'Office of the Secretary',
-    type: 'Permanent',
-    posted: 'Jun 29, 2026',
-    deadline: 'Jul 09, 2026',
-    sg: 24,
-    itemNo: 'CEPS-24-1998',
-    location: 'Pasig City',
-    description: 'Plans, develops, and implements education policies and programs. Provides technical leadership in research and policy development.',
-    daysLeft: 2
-  },
-  {
-    id: 3,
-    title: 'Senior Education Program Specialist',
-    office: 'Policy and Research Service',
-    division: 'Office of the Secretary',
-    type: 'Permanent',
-    posted: 'Jun 29, 2026',
-    deadline: 'Jul 16, 2026',
-    sg: 19,
-    itemNo: 'SEPS-19-2005',
-    location: 'Pasig City',
-    description: 'Assists in planning, developing, and implementing education policies and programs. Conducts research and analysis on sector trends.',
-    daysLeft: 9
-  },
-  {
-    id: 4,
-    title: 'Administrative Assistant III',
-    office: 'Human Resources Division',
-    division: 'Administrative Service',
-    type: 'Permanent',
-    posted: 'Jun 28, 2026',
-    deadline: 'Jul 08, 2026',
-    sg: 9,
-    itemNo: 'ADAS3-12-2015',
-    location: 'Pasig City',
-    description: 'Provides administrative and clerical support to the division. Handles correspondence, records management, and scheduling of activities.',
-    daysLeft: 1
-  }
-];
-
 export default function ApplicantJobList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [appliedJobIds, setAppliedJobIds] = useState<number[]>([]);
-  const [savedJobIds, setSavedJobIds] = useState<number[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+  const [appliedJobIds, setAppliedJobIds] = useState<any[]>([]);
+  const [savedJobIds, setSavedJobIds] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'job-board' | 'my-applications' | 'my-saved-jobs' | 'application-form'>('job-board');
   const [applyingJob, setApplyingJob] = useState<any>(null);
@@ -84,15 +26,17 @@ export default function ApplicantJobList() {
   const [sameAsResidential, setSameAsResidential] = useState(false);
   const [currentStep, setCurrentStep] = useState('Personal Information');
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentJobPage, setCurrentJobPage] = useState(1);
+  const [jobsPerPage, setJobsPerPage] = useState(10);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRegion, setFilterRegion] = useState('All Regions');
   const [filterDivision, setFilterDivision] = useState('All Divisions');
   const [filterPosition, setFilterPosition] = useState('All Positions');
 
-  const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), []);
-  const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), []);
-  const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), []);
+  const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), [positions]);
+  const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), [positions]);
+  const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
 
   const filteredPositions = useMemo(() => positions.filter(job => {
     const matchSearch = !searchQuery ||
@@ -106,7 +50,16 @@ export default function ApplicantJobList() {
     const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
 
     return matchSearch && matchRegion && matchDivision && matchPosition;
-  }), [searchQuery, filterRegion, filterDivision, filterPosition]);
+  }), [searchQuery, filterRegion, filterDivision, filterPosition, positions]);
+
+  useEffect(() => {
+    setCurrentJobPage(1);
+  }, [searchQuery, filterRegion, filterDivision, filterPosition, jobsPerPage]);
+
+  const totalJobPages = Math.ceil(filteredPositions.length / jobsPerPage);
+  const indexOfLastJob = currentJobPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = filteredPositions.slice(indexOfFirstJob, indexOfLastJob);
 
   const handleClearFilters = () => {
     setSearchQuery('');
@@ -284,7 +237,24 @@ export default function ApplicantJobList() {
 
       const session = JSON.parse(sessionStr);
 
-      const applicantData = {
+      const toUpper = (val: any, keyName?: string): any => {
+        if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType'].includes(keyName)) {
+          return val;
+        }
+        if (typeof val === 'string') return val.toUpperCase();
+        if (Array.isArray(val)) return val.map(v => toUpper(v));
+        if (val !== null && typeof val === 'object') {
+          if (val instanceof Date) return val;
+          const newVal: any = {};
+          for (const key in val) {
+            newVal[key] = toUpper(val[key], key);
+          }
+          return newVal;
+        }
+        return val;
+      };
+
+      const applicantData = toUpper({
         surname: lastName,
         first_name: firstName,
         middle_name: middleName,
@@ -358,7 +328,7 @@ export default function ApplicantJobList() {
           children: childrenList
         },
         questionnaire_responses: questionnaire
-      };
+      });
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
         method: 'PUT',
@@ -373,7 +343,7 @@ export default function ApplicantJobList() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               applicantId: session.id,
-              positionId: applyingJob.id,
+              positionId: applyingJob.positionId,
               jobTitle: applyingJob.title
             })
           });
@@ -381,11 +351,11 @@ export default function ApplicantJobList() {
           if (applyResponse.ok) {
             const applyData = await applyResponse.json();
             Swal.fire('Success', 'Profile updated and applied to ' + applyingJob.title + ' successfully!', 'success');
-            setAppliedJobIds(prev => [...prev, applyingJob.id]);
+            setAppliedJobIds(prev => [...prev, applyingJob.positionId]);
 
             const newApp = {
               id: applyData?.data?.id || Date.now(),
-              positionId: applyingJob.id,
+              positionId: applyingJob.positionId,
               position: applyingJob.title,
               office: applyingJob.office || 'Department of Education',
               type: applyingJob.type || 'Permanent',
@@ -439,31 +409,55 @@ export default function ApplicantJobList() {
     }
     const session = JSON.parse(sessionStr);
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
-          setAppliedJobIds(data.data.map((app: any) => app.position_id));
-          setApplications(data.data.map((app: any) => {
-            const jobDetails = positions.find(p => p.id === app.position_id) || {} as any;
-            return {
-              id: app.id,
-              positionId: app.position_id,
-              position: app.job_title || jobDetails.title || 'Unknown Position',
-              office: jobDetails.office || 'Department of Education',
-              type: jobDetails.type || 'Permanent',
-              posted: jobDetails.posted || 'N/A',
-              deadline: jobDetails.deadline || 'N/A',
-              sg: jobDetails.sg || 'N/A',
-              itemNo: jobDetails.itemNo || 'N/A',
-              date: new Date(app.created_at).toLocaleDateString(),
-              stage: app.status || 'Applied',
-              status: 'Active'
-            };
+          const formatted = data.data.map((v: any) => ({
+            id: v.id,
+            positionId: v.position_id,
+            title: v.title,
+            office: v.school || 'Department of Education',
+            division: v.region || '',
+            type: 'Permanent', // Defaulting as DB doesn't have it
+            posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+            deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+            sg: v.salary_grade,
+            itemNo: v.item_no,
+            location: v.location || '',
+            description: 'Details available in the full job posting.',
+            daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
+          setPositions(formatted);
+          
+          fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
+            .then(res => res.json())
+            .then(appData => {
+              if (appData.success && appData.data) {
+                setAppliedJobIds(appData.data.map((app: any) => app.position_id));
+                setApplications(appData.data.map((app: any) => {
+                  const jobDetails = formatted.find((p: any) => p.id === app.position_id) || {} as any;
+                  return {
+                    id: app.id,
+                    positionId: app.position_id,
+                    position: app.job_title || jobDetails.title || 'Unknown Position',
+                    office: jobDetails.office || 'Department of Education',
+                    type: jobDetails.type || 'Permanent',
+                    posted: jobDetails.posted || 'N/A',
+                    deadline: jobDetails.deadline || 'N/A',
+                    sg: jobDetails.sg || 'N/A',
+                    itemNo: jobDetails.itemNo || 'N/A',
+                    date: new Date(app.created_at).toLocaleDateString(),
+                    stage: app.status || 'Applied',
+                    status: 'Active'
+                  };
+                }));
+              }
+            })
+            .catch(err => console.error('Error fetching applications:', err));
         }
       })
-      .catch(err => console.error('Error fetching applications:', err));
+      .catch(err => console.error('Error fetching vacancies:', err));
 
     fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`)
       .then(res => res.json())
@@ -607,7 +601,7 @@ export default function ApplicantJobList() {
   };
 
 
-  const toggleSaveJob = async (jobId: number) => {
+  const toggleSaveJob = async (jobId: string | number) => {
     try {
       const sessionStr = localStorage.getItem('session_data');
       if (!sessionStr) {
@@ -750,13 +744,26 @@ export default function ApplicantJobList() {
                   </div>
                 </div>
 
-                <p className="text-xs font-bold text-gray-500 mb-4 uppercase tracking-wider">
-                  SHOWING 1 TO {filteredPositions.length} OF {filteredPositions.length} ENTRIES
-                </p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-gray-500">Show</span>
+                    <select
+                      value={jobsPerPage}
+                      onChange={(e) => setJobsPerPage(Number(e.target.value))}
+                      className="border border-gray-200 rounded px-2 py-1 text-[13px] font-medium text-gray-700 outline-none focus:border-[#0a6fa6]"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100000}>All</option>
+                    </select>
+                    <span className="text-[13px] font-semibold text-gray-500">entries</span>
+                  </div>
+                </div>
 
                 {/* Job List */}
                 <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100">
-                  {filteredPositions.map((job) => {
+                  {currentJobs.map((job) => {
                     const isTemporary = job.type.toLowerCase() === 'temporary';
                     return (
                       <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
@@ -828,16 +835,16 @@ export default function ApplicantJobList() {
                         {/* Right Buttons */}
                         <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
                           <button
-                            onClick={() => toggleSaveJob(job.id)}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-[15px] ${savedJobIds.includes(job.id)
+                            onClick={() => toggleSaveJob(job.positionId)}
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-[15px] ${savedJobIds.includes(job.positionId)
                               ? 'border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100'
                               : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                               }`}
                           >
-                            <Star className={`w-[18px] h-[18px] ${savedJobIds.includes(job.id) ? 'fill-[#3b82f6]' : ''}`} />
-                            {savedJobIds.includes(job.id) ? 'Saved' : 'Save'}
+                            <Star className={`w-[18px] h-[18px] ${savedJobIds.includes(job.positionId) ? 'fill-[#3b82f6]' : ''}`} />
+                            {savedJobIds.includes(job.positionId) ? 'Saved' : 'Save'}
                           </button>
-                          {appliedJobIds.includes(job.id) ? (
+                          {appliedJobIds.includes(job.positionId) ? (
                             <button
                               disabled
                               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-semibold rounded-xl shadow-sm text-[15px] cursor-not-allowed"
@@ -857,6 +864,46 @@ export default function ApplicantJobList() {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-6">
+                  <div className="text-[13px] text-gray-500 font-bold uppercase tracking-wider">
+                    SHOWING {filteredPositions.length > 0 ? indexOfFirstJob + 1 : 0} TO {Math.min(indexOfLastJob, filteredPositions.length)} OF {filteredPositions.length} ENTRIES
+                  </div>
+                  {totalJobPages > 1 && (
+                    <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
+                      <button
+                        onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
+                        disabled={currentJobPage === 1}
+                        className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                      >
+                        Previous
+                      </button>
+                      
+                      {Array.from({ length: totalJobPages }, (_, i) => i + 1).map(pageNum => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentJobPage(pageNum)}
+                          className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${
+                            currentJobPage === pageNum 
+                              ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]' 
+                              : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
+                        disabled={currentJobPage === totalJobPages}
+                        className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -936,7 +983,7 @@ export default function ApplicantJobList() {
                   </div>
                 ) : (
                   <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100 bg-white px-6 rounded-xl shadow-sm border border-gray-200">
-                    {positions.filter(job => savedJobIds.includes(job.id)).map((job) => {
+                    {positions.filter(job => savedJobIds.includes(job.positionId)).map((job) => {
                       const isTemporary = job.type.toLowerCase() === 'temporary';
                       return (
                         <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
@@ -979,12 +1026,12 @@ export default function ApplicantJobList() {
 
                           <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
                             <button
-                              onClick={() => toggleSaveJob(job.id)}
+                              onClick={() => toggleSaveJob(job.positionId)}
                               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-sm border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100`}
                             >
                               <Star className={`w-[18px] h-[18px] fill-[#3b82f6]`} /> Saved
                             </button>
-                            {appliedJobIds.includes(job.id) ? (
+                            {appliedJobIds.includes(job.positionId) ? (
                               <button disabled className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-extrabold rounded-xl shadow-sm text-sm cursor-not-allowed">
                                 Already Applied
                               </button>
@@ -1101,7 +1148,7 @@ export default function ApplicantJobList() {
                   </div>
 
                   {/* Dynamic Content Box */}
-                  <div className="bg-white p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm">
+                  <div className="bg-white p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase [&_input[type='email']]:uppercase [&_textarea]:uppercase">
                     <h3 className="text-[18px] text-gray-500 uppercase tracking-widest mb-10 text-center font-light">{currentStep}</h3>
 
                     <div className={currentStep === 'Personal Information' ? 'block' : 'hidden'}>
@@ -1131,7 +1178,8 @@ export default function ApplicantJobList() {
                         <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
                           <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Birth Details <span className="text-red-500">*</span></label>
                           <div className="flex-1 flex flex-col sm:flex-row gap-4">
-                            <div className="w-full sm:w-[35%] flex flex-col ">
+                            <div className="w-full sm:w-[35%] flex flex-col justify-between h-full">
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
                               <CustomDatePicker
                                 value={birthDate}
                                 onChange={(date) => setBirthDate(date)}
@@ -1662,35 +1710,35 @@ export default function ApplicantJobList() {
                             <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 rounded-t-lg">
                               <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">{level.label} {level.required && <span className="text-red-500">*</span>}</h3>
                             </div>
-                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                              <div className="flex flex-col lg:col-span-2 justify-between h-full">
+                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                              <div className={`flex flex-col justify-between h-full ${['elementary', 'secondary'].includes(level.id) ? '' : 'md:col-span-2'}`}>
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
-                                <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), school: e.target.value } })} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                                <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), school: e.target.value } })} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                               </div>
 
                               {['vocational', 'college', 'graduate'].includes(level.id) && (
                                 <div className="flex flex-col justify-between h-full">
                                   <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
-                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), degree: e.target.value } })} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), degree: e.target.value } })} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                                 </div>
                               )}
 
                               <div className="flex flex-col justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
-                                <div className="flex gap-3 relative">
+                                <div className="grid grid-cols-2 gap-3 relative">
                                   <input
                                     type="date"
                                     required={level.required}
                                     value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
-                                    className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] "
+                                    className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                   <input
                                     type="date"
                                     required={level.required}
                                     value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
-                                    className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] "
+                                    className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                 </div>
                               </div>
@@ -1699,18 +1747,18 @@ export default function ApplicantJobList() {
                                 <>
                                   <div className="flex flex-col justify-between h-full">
                                     <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
-                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), units: e.target.value } })} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), units: e.target.value } })} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                                   </div>
                                   <div className="flex flex-col justify-between h-full">
                                     <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
-                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), year: e.target.value } })} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), year: e.target.value } })} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                                   </div>
                                 </>
                               )}
 
-                              <div className="flex flex-col lg:col-span-3 justify-between h-full">
+                              <div className="flex flex-col md:col-span-2 justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Scholarship/Academic Honors Received</span>
-                                <input type="text" value={educationalDates[level.id]?.honors || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), honors: e.target.value } })} placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                                <input type="text" value={educationalDates[level.id]?.honors || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), honors: e.target.value } })} placeholder="Enter scholarship or academic honors" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                               </div>
                             </div>
                           </div>
@@ -2280,7 +2328,7 @@ export default function ApplicantJobList() {
 
                           {/* Skills */}
                           <div className="flex flex-col gap-4">
-                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2">Special Skills & Hobbies</h3>
+                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2 min-h-[48px] flex items-end">Special Skills & Hobbies</h3>
                             <div className="flex flex-col gap-3">
                               {skillsList.map((item, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
@@ -2319,7 +2367,7 @@ export default function ApplicantJobList() {
 
                           {/* Distinctions */}
                           <div className="flex flex-col gap-4">
-                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2">Non-Academic Distinctions</h3>
+                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2 min-h-[48px] flex items-end">Non-Academic Distinctions</h3>
                             <div className="flex flex-col gap-3">
                               {distinctionsList.map((item, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
@@ -2358,7 +2406,7 @@ export default function ApplicantJobList() {
 
                           {/* Memberships */}
                           <div className="flex flex-col gap-4">
-                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2">Memberships in Associations</h3>
+                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide border-b border-gray-200 pb-2 min-h-[48px] flex items-end">Memberships in Associations</h3>
                             <div className="flex flex-col gap-3">
                               {membershipsList.map((item, idx) => (
                                 <div key={idx} className="flex items-center gap-2">

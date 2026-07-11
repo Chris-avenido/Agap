@@ -2,52 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, GraduationCap, ArrowRight } from 'lucide-react';
 
-const positions = [
-  {
-    id: 1,
-    title: 'Chief Economic Development Specialist',
-    office: 'National Policy and Planning Staff',
-    type: 'PERMANENT',
-    posted: 'Jun 29, 2026',
-    deadline: 'Jul 09, 2026',
-    sg: 24,
-    itemNo: 'CEDS-35-1998',
-    description: 'Directs the formulation and updating of the national/regional development plans and the preparation of socio-economic reports. Oversees the review and evaluation of major programs and projects. Coordinates with other agencies and LGUs on development initiatives.'
-  },
-  {
-    id: 2,
-    title: 'Chief Economic Development Specialist',
-    office: 'National Policy and Planning Staff',
-    type: 'PERMANENT',
-    posted: 'Jun 29, 2026',
-    deadline: 'Jul 09, 2026',
-    sg: 24,
-    itemNo: 'CEDS-1-1998',
-    description: 'Responsible for leading policy research, drafting economic advisories, and guiding junior staff in complex statistical analysis. Ensures alignment of departmental outputs with the overall strategic framework of the agency.'
-  },
-  {
-    id: 3,
-    title: 'Chief Economic Development Specialist',
-    office: 'National Policy and Planning Staff',
-    type: 'PERMANENT',
-    posted: 'Jun 29, 2026',
-    deadline: 'Jul 09, 2026',
-    sg: 24,
-    itemNo: 'CEDS-24-1998',
-    description: 'Manages inter-agency collaborations for economic policy implementation. Designs and conducts capability-building activities for local government units regarding economic planning and investment programming.'
-  },
-  {
-    id: 4,
-    title: 'Information Officer V',
-    office: 'Development Information Staff',
-    type: 'PERMANENT',
-    posted: 'Jun 28, 2026',
-    deadline: 'Jul 08, 2026',
-    sg: 24,
-    itemNo: 'INFO5-12-2005',
-    description: 'Heads the public relations and communications team. Develops comprehensive communication plans, manages press relations, and oversees the production of all official publications, press releases, and digital content.'
-  }
-];
+// Hardcoded positions removed, fetching dynamically
 
 export default function ApplicantJobDetails() {
   const { id } = useParams();
@@ -64,22 +19,46 @@ export default function ApplicantJobDetails() {
     }
     const session = JSON.parse(sessionStr);
 
-    const foundJob = positions.find(p => p.id === Number(id));
-    if (foundJob) {
-      setJob(foundJob);
-      
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.data) {
-            const applied = data.data.some((app: any) => app.position_id === foundJob.id);
-            setHasApplied(applied);
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const v = data.data.find((vac: any) => vac.id === id || String(vac.id) === String(id));
+          if (v) {
+            const foundJob = {
+              id: v.id,
+              positionId: v.position_id,
+              title: v.title,
+              office: v.school || 'Department of Education',
+              division: v.region || '',
+              type: 'Permanent',
+              posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+              deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+              sg: v.salary_grade,
+              itemNo: v.item_no,
+              location: v.location || '',
+              description: 'Details available in the full job posting.'
+            };
+            setJob(foundJob);
+            
+            fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
+              .then(res => res.json())
+              .then(appData => {
+                if (appData.success && appData.data) {
+                  const applied = appData.data.some((app: any) => app.position_id === foundJob.positionId);
+                  setHasApplied(applied);
+                }
+              })
+              .catch(err => console.error('Error fetching applications:', err));
+          } else {
+            navigate('/applicant-jobs');
           }
-        })
-        .catch(err => console.error('Error fetching applications:', err));
-    } else {
-      navigate('/applicant-jobs');
-    }
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching vacancies:', err);
+        navigate('/applicant-jobs');
+      });
   }, [id, navigate]);
 
   const handleLogout = () => {
