@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, GraduationCap } from 'lucide-react';
+import { ArrowLeft, LogOut, GraduationCap, ArrowRight } from 'lucide-react';
 
 const positions = [
   {
@@ -94,7 +94,16 @@ export default function ApplicantJobDetails() {
   if (!job) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div
+      className="min-h-screen font-sans flex flex-col relative"
+      style={{
+        background: `
+        radial-gradient(circle at 78% 14%, rgba(253,186,34,.30), transparent 32%),
+        radial-gradient(circle at 70% 86%, rgba(10,111,166,.18), transparent 34%),
+        linear-gradient(135deg, #EAF7FC 0%, #F8FCFF 52%, #FFF2C6 100%)
+        `
+      }}
+    >
       <header className="sticky top-0 bg-[#003366] text-white px-6 py-4 flex justify-between items-center z-30 shadow-md">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/applicant-dashboard')}>
           <div className="w-10 h-10 bg-[#facc15] rounded-[10px] flex items-center justify-center shrink-0">
@@ -111,7 +120,7 @@ export default function ApplicantJobDetails() {
         </button>
       </header>
 
-      <main className="flex-1 w-full flex flex-col bg-gray-50">
+      <main className="flex-1 w-full flex flex-col">
         {/* Details Hero Banner Section */}
         <div
           className="relative w-full overflow-hidden py-12 sm:py-16 px-6 md:px-12 flex-shrink-0"
@@ -152,13 +161,19 @@ export default function ApplicantJobDetails() {
               <button 
                 onClick={handleApplyClick}
                 disabled={hasApplied}
-                className={`px-8 py-3 rounded text-[13px] font-bold uppercase tracking-wider shadow-sm transition-colors shrink-0 ${
+                className={`px-8 py-3.5 rounded-[8px] text-[15px] font-semibold transition-colors shrink-0 flex items-center justify-center gap-2 w-full md:w-[320px] shadow-md ${
                   hasApplied
                     ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-[#e67e22] hover:bg-[#d35400] text-white'
+                    : 'bg-[#022851] hover:bg-[#011a36] text-white'
                 }`}
               >
-                {hasApplied ? 'ALREADY APPLIED' : 'Apply Now'}
+                {hasApplied ? (
+                  'Already Applied'
+                ) : (
+                  <>
+                    Apply Now <ArrowRight className="w-[18px] h-[18px]" />
+                  </>
+                )}
               </button>
             </div>
 

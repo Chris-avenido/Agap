@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  
   /* Brand/Nav Color (Navy from landing page) */
   --color-brand-50: #EBF1F7;
   --color-brand-100: #D0DFEE;
