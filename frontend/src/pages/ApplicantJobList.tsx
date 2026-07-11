@@ -103,6 +103,21 @@ export default function ApplicantJobList() {
   const permProvincesList = permRegion ? provinces.filter((p: any) => p.reg_code === permRegion) : [];
   const permCitiesList = permProvince ? city_mun.filter((c: any) => c.prov_code === permProvince) : [];
   const permBarangaysList = permCity ? barangays.filter((b: any) => b.mun_code === permCity) : [];
+
+  // Normalize uppercase barangays from database to match proper casing in options
+  useEffect(() => {
+    if (resBarangay && resBarangaysList.length > 0) {
+      const match = resBarangaysList.find((b: any) => b.name.toUpperCase() === resBarangay.toUpperCase());
+      if (match && match.name !== resBarangay) setResBarangay(match.name);
+    }
+  }, [resBarangay, resBarangaysList]);
+
+  useEffect(() => {
+    if (permBarangay && permBarangaysList.length > 0) {
+      const match = permBarangaysList.find((b: any) => b.name.toUpperCase() === permBarangay.toUpperCase());
+      if (match && match.name !== permBarangay) setPermBarangay(match.name);
+    }
+  }, [permBarangay, permBarangaysList]);
   const [resHouse, setResHouse] = useState('');
   const [resStreet, setResStreet] = useState('');
   const [resSubdivision, setResSubdivision] = useState('');
@@ -136,6 +151,18 @@ export default function ApplicantJobList() {
   const itemsPerPage = 5;
 
   const totalSteps = 9;
+
+  const handleTabClick = (targetStep: string) => {
+    const formId = `form-${currentStep}`;
+    const currentForm = document.getElementById(formId) as HTMLFormElement;
+    
+    // Only validate if the form exists and is invalid
+    if (currentForm && !currentForm.checkValidity()) {
+      currentForm.reportValidity();
+      return;
+    }
+    setCurrentStep(targetStep);
+  };
 
   const handlePersonalInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +265,7 @@ export default function ApplicantJobList() {
       const session = JSON.parse(sessionStr);
 
       const toUpper = (val: any, keyName?: string): any => {
-        if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType'].includes(keyName)) {
+        if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType', 'barangay', 'city', 'province', 'region', 'date_of_birth'].includes(keyName)) {
           return val;
         }
         if (typeof val === 'string') return val.toUpperCase();
@@ -472,7 +499,14 @@ export default function ApplicantJobList() {
           setCivilStatus(p.civil_status || '');
           setCitizenship(p.citizenship || '');
           setBloodType(p.blood_type || '');
-          setBirthDate(p.date_of_birth ? new Date(p.date_of_birth) : null);
+          if (p.date_of_birth) {
+            const d = new Date(p.date_of_birth);
+            if (!isNaN(d.getTime())) {
+               setBirthDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+            }
+          } else {
+            setBirthDate(null);
+          }
           setTelephoneNo(p.telephone_no || '');
           setMobileNo(p.mobile_no || '');
 
@@ -531,7 +565,17 @@ export default function ApplicantJobList() {
             if (Array.isArray(edParsed)) {
               edParsed.forEach((ed: any) => {
                 if (ed.level) {
-                  newEd[ed.level] = {
+                  const levelMap: any = {
+                    'ELEMENTARY': 'elementary',
+                    'SECONDARY': 'secondary',
+                    'VOCATIONAL / TRADE COURSE': 'vocational',
+                    'VOCATIONAL': 'vocational',
+                    'COLLEGE': 'college',
+                    'GRADUATE STUDIES': 'graduate',
+                    'GRADUATE': 'graduate'
+                  };
+                  const matchedLevel = levelMap[ed.level.toUpperCase()] || ed.level.toLowerCase();
+                  newEd[matchedLevel] = {
                     school: ed.school || '',
                     degree: ed.degree || '',
                     from: ed.from || '',
@@ -565,7 +609,16 @@ export default function ApplicantJobList() {
             if (oi.children) setChildrenList(oi.children);
           }
           if (p.questionnaire_responses) {
-            setQuestionnaire(typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses);
+            const parsedQ = typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses;
+            const normalizedQ: any = {};
+            for (const k in parsedQ) {
+              const ans = parsedQ[k]?.answer;
+              normalizedQ[k] = {
+                answer: ans?.toUpperCase() === 'YES' ? 'Yes' : (ans?.toUpperCase() === 'NO' ? 'No' : ans),
+                details: parsedQ[k]?.details || ''
+              };
+            }
+            setQuestionnaire(normalizedQ);
           }
 
         }
@@ -1062,7 +1115,7 @@ export default function ApplicantJobList() {
                       <span>PHOTO</span>
                     </div>
                     <div className="flex flex-col text-white">
-                      <span className="font-bold text-[16px] uppercase tracking-wide">CHRIS MENDOZA</span>
+                      <span className="font-bold text-[16px] uppercase tracking-wide">{firstName} {lastName}</span>
                       <span className="text-[13px] leading-snug mt-1 opacity-90">Applying for {applyingJob.title}</span>
                     </div>
                   </div>
@@ -1086,7 +1139,7 @@ export default function ApplicantJobList() {
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setCurrentStep(item.name)}
+                          onClick={() => handleTabClick(item.name)}
                           className={`flex items-center justify-between px-5 py-3.5 text-left border-b border-gray-50 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-50/30' : ''}`}
                         >
                           <div className="flex items-center gap-3.5">
@@ -1152,7 +1205,7 @@ export default function ApplicantJobList() {
                     <h3 className="text-[18px] text-gray-500 uppercase tracking-widest mb-10 text-center font-light">{currentStep}</h3>
 
                     <div className={currentStep === 'Personal Information' ? 'block' : 'hidden'}>
-                      <form className="w-full space-y-8" onSubmit={handlePersonalInfoSubmit}>
+                      <form id="form-Personal Information" className="w-full space-y-8" onSubmit={handlePersonalInfoSubmit}>
                         <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
                           <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Name <span className="text-red-500">*</span></label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -1528,7 +1581,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Family Background' ? 'block' : 'hidden'}>
-                      <form className="w-full space-y-8" onSubmit={handleFamilyBackgroundSubmit}>
+                      <form id="form-Family Background" className="w-full space-y-8" onSubmit={handleFamilyBackgroundSubmit}>
 
                         {/* Spouse */}
                         <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
@@ -1695,7 +1748,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Educational Background' ? 'block' : 'hidden'}>
-                      <form className="w-full max-w-5xl space-y-6" onSubmit={handleEducationalBackgroundSubmit}>
+                      <form id="form-Educational Background" className="w-full max-w-5xl space-y-6" onSubmit={handleEducationalBackgroundSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please fill in your educational background. Write "N/A" if not applicable.</p>
                         </div>
@@ -1777,7 +1830,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Eligibility' ? 'block' : 'hidden'}>
-                      <form className="w-full max-w-5xl space-y-6" onSubmit={handleCivilServiceSubmit}>
+                      <form id="form-Eligibility" className="w-full max-w-5xl space-y-6" onSubmit={handleCivilServiceSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your civil service eligibility. Write "N/A" if not applicable.</p>
                         </div>
@@ -1909,7 +1962,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Work Experience' ? 'block' : 'hidden'}>
-                      <form className="w-full max-w-5xl space-y-6" onSubmit={handleWorkExperienceSubmit}>
+                      <form id="form-Work Experience" className="w-full max-w-5xl space-y-6" onSubmit={handleWorkExperienceSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your work experience from most recent to oldest. Write "N/A" if not applicable.</p>
                         </div>
@@ -2073,7 +2126,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Voluntary Work' ? 'block' : 'hidden'}>
-                      <form className="w-full max-w-5xl space-y-6" onSubmit={handleVoluntaryWorkSubmit}>
+                      <form id="form-Voluntary Work" className="w-full max-w-5xl space-y-6" onSubmit={handleVoluntaryWorkSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your voluntary work or involvement in civic/non-government/people/voluntary organizations. Write "N/A" if not applicable.</p>
                         </div>
@@ -2189,7 +2242,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Learning & Development' ? 'block' : 'hidden'}>
-                      <form className="w-full max-w-5xl space-y-6" onSubmit={handleLearningDevelopmentSubmit}>
+                      <form id="form-Learning & Development" className="w-full max-w-5xl space-y-6" onSubmit={handleLearningDevelopmentSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your learning and development (L&D) interventions/training programs attended. Write "N/A" if not applicable.</p>
                         </div>
@@ -2319,7 +2372,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Other Information' ? 'block' : 'hidden'}>
-                      <form className="w-full space-y-8" onSubmit={handleOtherInformationSubmit}>
+                      <form id="form-Other Information" className="w-full space-y-8" onSubmit={handleOtherInformationSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your special skills and hobbies, non-academic distinctions, and memberships. Write "N/A" if not applicable.</p>
                         </div>
@@ -2458,7 +2511,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Legal Questionnaire' ? 'block' : 'hidden'}>
-                      <form className="w-full space-y-8" onSubmit={handleLegalQuestionnaireSubmit}>
+                      <form id="form-Legal Questionnaire" className="w-full space-y-8" onSubmit={handleLegalQuestionnaireSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please answer the following questions truthfully. If "Yes", provide the necessary details.</p>
                         </div>
@@ -2642,7 +2695,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className={currentStep === 'Essential Documents' ? 'block' : 'hidden'}>
-                      <form className="w-full space-y-8" onSubmit={handleEssentialDocumentsSubmit}>
+                      <form id="form-Essential Documents" className="w-full space-y-8" onSubmit={handleEssentialDocumentsSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please upload the required essential documents for your application. (Max file size: 5MB per document)</p>
                         </div>
