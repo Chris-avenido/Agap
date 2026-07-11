@@ -5,7 +5,7 @@ import {
   Search, Clock, Hash, LogOut,
   Briefcase, ArrowRight, CalendarDays, Star,
   Building2, CircleDollarSign, MapPin,
-  FileText, Bookmark, SlidersHorizontal,
+  FileText, Bookmark,
   GraduationCap, ChevronLeft, ChevronRight, HelpCircle, Plus, Trash2
 } from 'lucide-react';
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -591,56 +591,6 @@ export default function ApplicantJobList() {
     setActiveTab('application-form');
   };
 
-  const submitApplication = async (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    if (!applyingJob) return;
-
-    try {
-      const sessionStr = localStorage.getItem('session_data');
-      if (!sessionStr) {
-        Swal.fire('Error', 'You must be logged in to apply.', 'error');
-        navigate('/login');
-        return;
-      }
-
-      const job = applyingJob;
-
-      const session = JSON.parse(sessionStr);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/apply-job`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicantId: session.id,
-          positionId: job.id,
-          jobTitle: job.title
-        })
-      });
-
-      if (response.ok) {
-        Swal.fire('Success', 'Successfully applied for ' + job.title + '!', 'success');
-        setAppliedJobIds(prev => [...prev, job.id]);
-        setApplications(prev => [...prev, {
-          id: Date.now(),
-          positionId: job.id,
-          position: job.title,
-          office: job.office,
-          type: job.type,
-          posted: job.posted,
-          deadline: job.deadline,
-          sg: job.sg,
-          itemNo: job.itemNo,
-          date: new Date().toLocaleDateString(),
-          stage: 'Applied',
-          status: 'Active'
-        }]);
-      } else {
-        Swal.fire('Error', 'Failed to apply. Please try again.', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Error', 'Error applying for job.', 'error');
-    }
-  };
 
   const toggleSaveJob = async (jobId: number) => {
     try {
