@@ -84,6 +84,36 @@ export default function ApplicantJobList() {
   const [currentStep, setCurrentStep] = useState('Personal Information');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterRegion, setFilterRegion] = useState('All Regions');
+  const [filterDivision, setFilterDivision] = useState('All Divisions');
+  const [filterPosition, setFilterPosition] = useState('All Positions');
+
+  const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), []);
+  const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), []);
+  const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), []);
+
+  const filteredPositions = useMemo(() => positions.filter(job => {
+    const matchSearch = !searchQuery || 
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (job.division && job.division.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchRegion = filterRegion === 'All Regions' || (job.location || 'Unknown') === filterRegion;
+    const matchDivision = filterDivision === 'All Divisions' || (job.division || job.office) === filterDivision;
+    const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
+    
+    return matchSearch && matchRegion && matchDivision && matchPosition;
+  }), [searchQuery, filterRegion, filterDivision, filterPosition]);
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilterRegion('All Regions');
+    setFilterDivision('All Divisions');
+    setFilterPosition('All Positions');
+  };
+
   // Personal Info States
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -168,7 +198,7 @@ export default function ApplicantJobList() {
 
   const handleEducationalBackgroundSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentStep('Civil Service Eligibility');
+    setCurrentStep('Eligibility');
   };
 
   const [civilServiceList, setCivilServiceList] = useState<any[]>([{ eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }]);
@@ -217,7 +247,7 @@ export default function ApplicantJobList() {
     if (firstName.trim() && lastName.trim() && placeOfBirth.trim() && sex && civilStatus && citizenship) steps.push('Personal Information');
     if (motherSurname.trim() || motherFirst.trim() || fatherSurname.trim() || fatherFirst.trim() || spouseSurname.trim() || spouseFirst.trim()) steps.push('Family Background');
     if (Object.values(educationalDates).some(ed => ed.school.trim() !== '')) steps.push('Educational Background');
-    if (civilServiceList.some(cs => cs.eligibility.trim() !== '')) steps.push('Civil Service Eligibility');
+    if (civilServiceList.some(cs => cs.eligibility.trim() !== '')) steps.push('Eligibility');
     if (workExperienceList.some(we => we.company.trim() !== '' || we.positionTitle.trim() !== '')) steps.push('Work Experience');
     if (voluntaryWorkList.some(vw => vw.nameAddress.trim() !== '')) steps.push('Voluntary Work');
     if (learningDevelopmentList.some(ld => ld.title.trim() !== '')) steps.push('Learning & Development');
@@ -652,10 +682,27 @@ export default function ApplicantJobList() {
             <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">DEPARTMENT OF EDUCATION</span>
           </div>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 text-white hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20">
-          <LogOut className="w-5 h-5" />
-          <span className="font-semibold text-sm">Logout</span>
-        </button>
+        
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="bg-white/10 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-3 shadow-inner hidden sm:flex">
+            <div className="flex flex-col text-right">
+              <span className="text-[10px] text-gray-300 font-bold uppercase tracking-wider">Account Completion</span>
+              <span className="text-sm font-extrabold text-[#facc15]">{percentage}%</span>
+            </div>
+            {/* Simple Progress Ring */}
+            <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+              <svg className="w-8 h-8 transform -rotate-90">
+                <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-white/20" />
+                <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={14 * 2 * Math.PI} strokeDashoffset={(14 * 2 * Math.PI) - ((parseFloat(percentage) / 100) * (14 * 2 * Math.PI))} className="text-[#facc15]" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <button onClick={handleLogout} className="flex items-center gap-2 text-white hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20">
+            <LogOut className="w-5 h-5" />
+            <span className="font-semibold text-sm">Logout</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Container */}
@@ -699,27 +746,74 @@ export default function ApplicantJobList() {
             {activeTab === 'job-board' && (
               <>
                 {/* Search & Filter */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition-colors focus-within:border-[#003366] focus-within:ring-1 focus-within:ring-[#003366]">
-                    <Search className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
-                    <input
-                      type="text"
-                      placeholder="Search position title, division, or location..."
-                      className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 text-[15px]"
-                    />
+                <div className="flex flex-col gap-4 mb-8">
+                  {/* Search Row */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition-colors focus-within:border-[#003366] focus-within:ring-1 focus-within:ring-[#003366]">
+                      <Search className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <input
+                        type="text"
+                        placeholder="Search position title, division, or location..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 text-[15px]"
+                      />
+                    </div>
+                    <button 
+                      onClick={handleClearFilters}
+                      className="hidden sm:flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-xl text-gray-600 font-semibold text-[15px] hover:bg-gray-100 transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-5 h-5 text-gray-500" /> Clear
+                    </button>
                   </div>
-                  <button className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 rounded-xl text-gray-600 font-semibold text-[15px] hover:bg-gray-50 transition-colors shrink-0">
-                    <SlidersHorizontal className="w-5 h-5" /> Filters
-                  </button>
+
+                  {/* Filters Row */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition-colors focus-within:border-[#003366] focus-within:ring-1 focus-within:ring-[#003366]">
+                      <MapPin className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <select 
+                        value={filterRegion}
+                        onChange={(e) => setFilterRegion(e.target.value)}
+                        className="w-full bg-transparent outline-none text-gray-700 cursor-pointer appearance-none text-[15px]"
+                      >
+                        <option value="All Regions">All Regions</option>
+                        {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition-colors focus-within:border-[#003366] focus-within:ring-1 focus-within:ring-[#003366]">
+                      <Building2 className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <select 
+                        value={filterDivision}
+                        onChange={(e) => setFilterDivision(e.target.value)}
+                        className="w-full bg-transparent outline-none text-gray-700 cursor-pointer appearance-none text-[15px]"
+                      >
+                        <option value="All Divisions">All Divisions</option>
+                        {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition-colors focus-within:border-[#003366] focus-within:ring-1 focus-within:ring-[#003366]">
+                      <Briefcase className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <select 
+                        value={filterPosition}
+                        onChange={(e) => setFilterPosition(e.target.value)}
+                        className="w-full bg-transparent outline-none text-gray-700 cursor-pointer appearance-none text-[15px]"
+                      >
+                        <option value="All Positions">All Positions</option>
+                        {availablePositions.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <p className="text-xs font-bold text-gray-500 mb-4 uppercase tracking-wider">
-                  SHOWING 1 TO {positions.length} OF {positions.length} ENTRIES
+                  SHOWING 1 TO {filteredPositions.length} OF {filteredPositions.length} ENTRIES
                 </p>
 
                 {/* Job List */}
                 <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100">
-                  {positions.map((job) => {
+                  {filteredPositions.map((job) => {
                     const isTemporary = job.type.toLowerCase() === 'temporary';
                     return (
                       <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
@@ -982,7 +1076,7 @@ export default function ApplicantJobList() {
                       { name: 'Personal Information', icon: FileText },
                       { name: 'Family Background', icon: FileText },
                       { name: 'Educational Background', icon: GraduationCap },
-                      { name: 'Civil Service Eligibility', icon: FileText },
+                      { name: 'Eligibility', icon: FileText },
                       { name: 'Work Experience', icon: Briefcase },
                       { name: 'Voluntary Work', icon: FileText },
                       { name: 'Learning & Development', icon: FileText },
@@ -1045,8 +1139,8 @@ export default function ApplicantJobList() {
                     <p className="text-gray-500 text-[14px] mb-4">
                       Your profile is <span className="font-bold text-gray-700">{percentage}% complete</span>. In order to complete your profile, please provide us with the required information:
                     </p>
-                    <p className="font-bold text-[13px] text-gray-700 leading-relaxed max-w-4xl tracking-wide">
-                      Profile Photo, Personal Information, Family Background, Educational Background, Civil Service Eligibility, Work Experience, Voluntary Work, Learning & Development, Other Information, Legal Questionnaire
+                    <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+                      Profile Photo, Personal Information, Family Background, Educational Background, Eligibility, Work Experience, Voluntary Work, Learning & Development, Other Information, Legal Questionnaire
                     </p>
                   </div>
 
@@ -1678,7 +1772,7 @@ export default function ApplicantJobList() {
                       </form>
                     </div>
 
-                    <div className={currentStep === 'Civil Service Eligibility' ? 'block' : 'hidden'}>
+                    <div className={currentStep === 'Eligibility' ? 'block' : 'hidden'}>
                       <form className="w-full max-w-5xl space-y-6" onSubmit={handleCivilServiceSubmit}>
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please list your civil service eligibility. Write "N/A" if not applicable.</p>
@@ -1794,12 +1888,12 @@ export default function ApplicantJobList() {
                             onClick={() => setCivilServiceList([...civilServiceList, { eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }])}
                             className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
                           >
-                            <Plus className="w-4 h-4" /> Add Civil Service / Eligibility
+                            <Plus className="w-4 h-4" /> Add Eligibility
                           </button>
                         </div>
 
                         {/* Next Button */}
-                        <div className="flex justify-end pt-6 mt-4 border-t border-gray-100 gap-4">
+                        <div className="flex justify-between items-center mt-10 border-t border-gray-100 pt-6">
                           <button type="button" onClick={() => setCurrentStep('Educational Background')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
                             <ChevronLeft className="w-4 h-4" /> Back
                           </button>
@@ -1963,8 +2057,8 @@ export default function ApplicantJobList() {
                         </div>
 
                         {/* Next Button */}
-                        <div className="flex justify-end pt-6 mt-4 border-t border-gray-100 gap-4">
-                          <button type="button" onClick={() => setCurrentStep('Civil Service Eligibility')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
+                        <div className="flex justify-between items-center mt-10 border-t border-gray-100 pt-6">
+                          <button type="button" onClick={() => setCurrentStep('Eligibility')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
                             <ChevronLeft className="w-4 h-4" /> Back
                           </button>
                           <button type="submit" className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">

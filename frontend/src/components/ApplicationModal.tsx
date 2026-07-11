@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
-import { X, ChevronRight, ChevronLeft, UploadCloud } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, UploadCloud, Eye, EyeOff } from 'lucide-react';
 
 interface ApplicationModalProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface ApplicationModalProps {
 export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: ApplicationModalProps) {
   const [activeTab, setActiveTab] = useState('C1');
   const [isParsing, setIsParsing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,7 +241,16 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">PASSWORD (For Portal Access)</label>
-                      <input name="password" type="password" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" required minLength={8} />
+                      <div className="relative">
+                        <input name="password" type={showPassword ? "text" : "password"} className="w-full p-2 pr-10 border rounded bg-gray-50 focus:bg-white outline-brand-500" required minLength={8} />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -324,7 +334,7 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
             <div className={activeTab === 'C2' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
                 {/* Section IV */}
                 <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">IV. Civil Service Eligibility</h3>
+                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">IV. Eligibility</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border">
                       <thead className="bg-gray-100 text-xs text-gray-600 uppercase">

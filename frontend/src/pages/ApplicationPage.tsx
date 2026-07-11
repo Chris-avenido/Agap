@@ -397,7 +397,7 @@ export default function ApplicationPage() {
             <div className={activeTab === 'C2' ? "space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500" : "hidden"}>
               {/* Section IV */}
               <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-                <h3 className="text-[15px] font-extrabold text-[#022851] border-b border-gray-100 pb-3 uppercase tracking-wider">IV. Civil Service Eligibility</h3>
+                <h3 className="text-[15px] font-extrabold text-[#022851] border-b border-gray-100 pb-3 uppercase tracking-wider">IV. Eligibility</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 text-xs font-bold text-gray-600 border-b border-gray-200">

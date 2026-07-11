@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Search, Clock, Hash, MapPin, ChevronDown, GraduationCap, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Pen, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Search, Clock, Hash, MapPin, ChevronDown, GraduationCap, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2 } from 'lucide-react';
 
 const positions = [
   {
@@ -71,6 +71,37 @@ export default function PublicCareers() {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [viewedJob, setViewedJob] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterRegion, setFilterRegion] = useState('All Regions');
+  const [filterDivision, setFilterDivision] = useState('All Divisions');
+  const [filterPosition, setFilterPosition] = useState('All Positions');
+
+  const availableRegions = [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean);
+  const availableDivisions = [...new Set(positions.map(p => p.division || p.office))].filter(Boolean);
+  const availablePositions = [...new Set(positions.map(p => p.title))].filter(Boolean);
+
+  const filteredPositions = positions.filter(job => {
+    const matchSearch = !searchQuery || 
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (job.division && job.division.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchRegion = filterRegion === 'All Regions' || (job.location || 'Unknown') === filterRegion;
+    const matchDivision = filterDivision === 'All Divisions' || (job.division || job.office) === filterDivision;
+    const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
+    
+    return matchSearch && matchRegion && matchDivision && matchPosition;
+  });
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFilterRegion('All Regions');
+    setFilterDivision('All Divisions');
+    setFilterPosition('All Positions');
+  };
 
   useEffect(() => {
     const sessionStr = localStorage.getItem('session_data');
@@ -217,29 +248,76 @@ export default function PublicCareers() {
           </div>
 
           {/* Search Bar */}
-          <div className="max-w-5xl w-full mx-auto px-4 relative z-20 -mt-8 mb-12">
-            <div className="bg-white p-2 sm:p-2.5 rounded-2xl sm:rounded-full shadow-xl shadow-gray-200/50 flex flex-col sm:flex-row items-center gap-2 border border-gray-100">
-              <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-3 sm:border-r border-gray-200">
+          <div className="max-w-6xl w-full mx-auto px-4 relative z-20 -mt-8 mb-12">
+            <div className="bg-white p-2 sm:p-2.5 rounded-2xl shadow-xl shadow-gray-200/50 flex flex-col items-stretch gap-2 border border-gray-100">
+              
+              {/* Text Search Row */}
+              <div className="w-full flex items-center px-4 py-2 border-b sm:border-b-0 sm:border-gray-200">
                 <Search className="w-5 h-5 text-gray-400 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search position title, item number, or division..."
-                  className="w-full outline-none text-gray-700 bg-transparent placeholder-gray-400 font-medium text-sm sm:text-base"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full outline-none text-gray-700 bg-transparent placeholder-gray-400 font-medium text-sm sm:text-base ml-3"
                 />
               </div>
-              <div className="w-full sm:w-auto flex items-center px-4 py-2 sm:py-0 gap-2 shrink-0">
+
+              {/* Dropdowns Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
                 <MapPin className="w-5 h-5 text-gray-400" />
-                <select className="w-full sm:w-auto bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base">
-                  <option>All regions</option>
-                  <option>NCR</option>
-                  <option>Region I</option>
+                <select 
+                  value={filterRegion}
+                  onChange={(e) => setFilterRegion(e.target.value)}
+                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                >
+                  <option value="All Regions">All Regions</option>
+                  {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
               </div>
-              <button className="w-full sm:w-auto bg-[#022851] hover:bg-[#033a76] text-white px-8 py-3.5 rounded-xl sm:rounded-full font-semibold transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0">
+
+              <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
+                <Building2 className="w-5 h-5 text-gray-400" />
+                <select 
+                  value={filterDivision}
+                  onChange={(e) => setFilterDivision(e.target.value)}
+                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                >
+                  <option value="All Divisions">All Divisions</option>
+                  {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
+              </div>
+
+              <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 shrink-0">
+                <Briefcase className="w-5 h-5 text-gray-400" />
+                <select 
+                  value={filterPosition}
+                  onChange={(e) => setFilterPosition(e.target.value)}
+                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                >
+                  <option value="All Positions">All Positions</option>
+                  {availablePositions.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
+              </div>
+
+              <button 
+                onClick={handleClearFilters}
+                className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-3.5 rounded-xl font-semibold transition-all hover:shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear
+              </button>
+              
+              <button className="w-full sm:w-auto bg-[#022851] hover:bg-[#033a76] text-white px-8 py-3.5 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0">
                 <Search className="w-4 h-4 sm:hidden" />
                 Search
               </button>
+              
+              </div>
             </div>
           </div>
 
@@ -248,12 +326,12 @@ export default function PublicCareers() {
             <div className="flex justify-between items-end mb-6">
               <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Latest Vacancies</h2>
               <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                Showing {positions.length} Positions
+                Showing {filteredPositions.length} Positions
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {positions.map((job, index) => {
+              {filteredPositions.map((job, index) => {
                 const isFeatured = index < 2;
                 const isTemporary = job.type.toLowerCase() === 'temporary';
 
@@ -556,9 +634,9 @@ export default function PublicCareers() {
                     <HelpCircle className="w-[14px] h-[14px] text-[#0a6fa6]" />
                   </div>
                   <div className="relative">
-                    <input name="password" type="password" placeholder="Password" className="w-full p-3 pr-10 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] bg-white transition-all shadow-sm" required />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0a6fa6] transition-colors">
-                      <EyeOff className="w-[18px] h-[18px]" />
+                    <input name="password" type={showPassword ? "text" : "password"} placeholder="Password" className="w-full p-3 pr-10 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] bg-white transition-all shadow-sm" required />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0a6fa6] transition-colors">
+                      {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                     </button>
                   </div>
                 </div>
