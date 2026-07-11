@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import Swal from 'sweetalert2';
 import modernLogo from '../assets/modern_logo.png';
 
