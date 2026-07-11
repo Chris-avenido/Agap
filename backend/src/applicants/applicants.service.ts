@@ -265,6 +265,22 @@ class ApplicantsServiceClass {
     return applicant;
   }
 
+
+  async changePassword(applicantId: number, currentPasswordRaw: string, newPasswordRaw: string) {
+    const result = await pool.query('SELECT password_hash FROM applicants WHERE id = $1', [applicantId]);
+    const applicant = result.rows[0];
+    if (!applicant || !applicant.password_hash) {
+      throw new Error('User not found or no password set');
+    }
+    const isMatch = await bcrypt.compare(currentPasswordRaw, applicant.password_hash);
+    if (!isMatch) {
+      throw new Error('Incorrect current password');
+    }
+    const newPasswordHash = await bcrypt.hash(newPasswordRaw, 10);
+    await pool.query('UPDATE applicants SET password_hash = $1 WHERE id = $2', [newPasswordHash, applicantId]);
+    return true;
+  }
+
   async update(id: number, data: any) {
     const fields: string[] = [];
     const values: any[] = [];

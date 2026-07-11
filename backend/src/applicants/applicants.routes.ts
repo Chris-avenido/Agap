@@ -109,6 +109,18 @@ router.post('/', async (req, res) => {
   }
 });
 
+
+router.post('/:id/change-password', async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    await ApplicantsService.changePassword(Number(req.params.id), currentPassword, newPassword);
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error: any) {
+    console.error("Error changing password:", error);
+    res.status(400).json({ message: error.message || 'Error changing password' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   try {
     const applicant = await ApplicantsService.update(Number(req.params.id), req.body);
