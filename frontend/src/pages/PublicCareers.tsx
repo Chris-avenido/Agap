@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Search, Clock, Hash, MapPin, ChevronDown, GraduationCap, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2 } from 'lucide-react';
+import modernLogo from '../assets/modern_logo.png';
 
 // Removed mock positions array
 
@@ -176,8 +177,8 @@ export default function PublicCareers() {
       {/* Top Navbar */}
       <nav className="bg-white px-6 md:px-12 py-4 flex justify-between items-center sticky top-0 z-50 border-b border-gray-100 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-[#022851] rounded-full flex items-center justify-center shadow-inner shrink-0">
-            <GraduationCap className="w-6 h-6 text-white" />
+          <div className="w-11 h-11 bg-[#022851] rounded-full flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-[#022851]">
+            <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain p-1" />
           </div>
           <div className="flex flex-col">
             <span className="text-[#022851] font-bold text-lg leading-tight tracking-tight">AGAP Portal</span>

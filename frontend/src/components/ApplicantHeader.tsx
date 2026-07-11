@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, ChevronDown } from 'lucide-react';
 import Swal from 'sweetalert2';
+import modernLogo from '../assets/modern_logo.png';
 
 interface ApplicantHeaderProps {
   percentage: string | number;
@@ -101,8 +102,8 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ percentage, firstName
   return (
     <header className="sticky top-0 bg-[#003366] text-white px-6 py-4 flex justify-between items-center z-30 shadow-md">
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/applicant-dashboard')}>
-        <div className="w-10 h-10 bg-[#facc15] rounded-[10px] flex items-center justify-center shrink-0">
-          <GraduationCap className="w-6 h-6 text-[#003366]" />
+        <div className="w-10 h-10 bg-[#facc15] rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden border border-[#facc15]">
+          <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain" />
         </div>
         <div className="flex flex-col">
           <span className="font-bold text-xl leading-tight tracking-wide">DEPED</span>

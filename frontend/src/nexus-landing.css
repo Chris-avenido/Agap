@@ -48,7 +48,7 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   background: #EAF6FB;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 a {
