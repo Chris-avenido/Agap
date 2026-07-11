@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {
-  Search, Clock, Hash, LogOut,
+  Search, Clock, Hash,
   Briefcase, ArrowRight, CalendarDays, Star,
   Building2, CircleDollarSign, MapPin,
   FileText, Bookmark,
-  GraduationCap, ChevronLeft, ChevronRight, HelpCircle, Plus, Trash2, ChevronDown
+  GraduationCap, ChevronLeft, ChevronRight, HelpCircle, Plus, Trash2
 } from 'lucide-react';
 import CustomDatePicker from '../components/CustomDatePicker';
 import ApplicantHeader from '../components/ApplicantHeader';

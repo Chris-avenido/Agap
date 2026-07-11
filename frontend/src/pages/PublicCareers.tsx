@@ -9,7 +9,7 @@ export default function PublicCareers() {
   const navigate = useNavigate();
   const [positions, setPositions] = useState<any[]>([]);
   const [currentJobPage, setCurrentJobPage] = useState(1);
-  const [jobsPerPage, setJobsPerPage] = useState(10);
+  const [jobsPerPage] = useState(10);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [viewedJob, setViewedJob] = useState<any>(null);
