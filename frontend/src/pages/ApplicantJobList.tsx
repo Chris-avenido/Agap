@@ -392,6 +392,8 @@ export default function ApplicantJobList() {
               itemNo: applyingJob.itemNo || 'N/A',
               date: new Date().toLocaleDateString(),
               stage: 'Applied',
+              assessmentStatus: 'Pending Assessment',
+              appointmentStatus: 'Pending Appointment',
               status: 'Active'
             };
             setApplications(prev => {
@@ -479,6 +481,8 @@ export default function ApplicantJobList() {
                     itemNo: jobDetails.itemNo || 'N/A',
                     date: new Date(app.created_at).toLocaleDateString(),
                     stage: app.status || 'Applied',
+                    assessmentStatus: app.assessment_status || 'Pending Assessment',
+                    appointmentStatus: app.appointment_status || 'Pending Appointment',
                     status: 'Active'
                   };
                 }));
@@ -979,13 +983,24 @@ export default function ApplicantJobList() {
                     >
                       <div className="mb-2">
                         <span className="text-[#3b82f6] text-lg font-medium hover:underline">
-                          {app.position} ({app.stage})
+                          {app.position}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-gray-600 text-sm">{app.office}</span>
                         <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded ${app.type.toLowerCase() === 'permanent' ? 'bg-[#5cb85c]' : 'bg-[#f0ad4e]'} uppercase tracking-wider`}>
                           {app.type}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                          Status: {app.stage}
+                        </span>
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                          Assessment: {app.assessmentStatus}
+                        </span>
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Appointment: {app.appointmentStatus}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-2">

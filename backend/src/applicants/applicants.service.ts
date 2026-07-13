@@ -129,8 +129,8 @@ class ApplicantsServiceClass {
                '[]'
              ) as job_applications
       FROM applicants a
-      LEFT JOIN job_applications j ON a.id = j.applicant_id
-      WHERE EXISTS (SELECT 1 FROM job_applications WHERE applicant_id = a.id)
+      LEFT JOIN applications j ON a.id::text = j.applicant_id
+      WHERE EXISTS (SELECT 1 FROM applications WHERE applicant_id = a.id::text)
       GROUP BY a.id
       ORDER BY a.id DESC
     `);
@@ -151,24 +151,25 @@ class ApplicantsServiceClass {
     const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
 
     const checkResult = await pool.query(
-      'SELECT * FROM job_applications WHERE applicant_id = $1 AND position_id = $2',
-      [applicantId, positionId || null]
+      'SELECT * FROM applications WHERE applicant_id = $1 AND vacancy_id = $2',
+      [applicantId.toString(), positionId || null]
     );
     if (checkResult.rows.length > 0) return checkResult.rows[0];
 
+    const appId = require('crypto').randomUUID();
+
     const result = await pool.query(`
-      INSERT INTO job_applications (applicant_id, position_id, job_title, status, applicant_number)
-      VALUES ($1, $2, $3, 'Pending', $4)
-      ON CONFLICT (applicant_id, position_id) DO NOTHING
+      INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
+      VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
       RETURNING *
-    `, [applicantId, positionId || null, jobTitle, applicantNumber]);
+    `, [appId, applicantNumber, applicantId.toString(), positionId || null]);
     
     return result.rows[0];
   }
 
   async findApplications(applicantId: number) {
-    const result = await pool.query('SELECT * FROM job_applications WHERE applicant_id = $1', [applicantId]);
-    return result.rows;
+    const result = await pool.query('SELECT * FROM applications WHERE applicant_id = $1', [applicantId.toString()]);
+    return result.rows.map(r => ({ ...r, position_id: r.vacancy_id }));
   }
 
   async toggleSavedJob(applicantId: number, positionId: string) {
@@ -274,10 +275,11 @@ class ApplicantsServiceClass {
     applicant.applicant_number = applicantNumber;
 
     if (data.jobTitle) {
+      const appId = require('crypto').randomUUID();
       await pool.query(`
-        INSERT INTO job_applications (applicant_id, position_id, job_title, status, applicant_number)
-        VALUES ($1, $2, $3, 'Pending', $4)
-      `, [applicant.id, data.positionId || null, data.jobTitle, applicantNumber]);
+        INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
+        VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
+      `, [appId, applicantNumber, applicant.id.toString(), data.positionId || null]);
     }
 
     return applicant;
