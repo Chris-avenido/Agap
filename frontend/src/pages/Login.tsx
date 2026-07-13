@@ -48,6 +48,7 @@ export default function Login() {
         const now = new Date();
         const item = {
           id: resData.data.id,
+          applicant_number: resData.data.applicant_number,
           email: resData.data.email,
           expiry: now.getTime() + 3 * 60 * 60 * 1000,
         };

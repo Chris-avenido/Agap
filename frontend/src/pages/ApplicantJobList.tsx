@@ -370,7 +370,7 @@ export default function ApplicantJobList() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               applicantId: session.id,
-              positionId: applyingJob.positionId,
+              positionId: applyingJob.id,
               jobTitle: applyingJob.title
             })
           });
@@ -378,11 +378,11 @@ export default function ApplicantJobList() {
           if (applyResponse.ok) {
             const applyData = await applyResponse.json();
             Swal.fire('Success', 'Profile updated and applied to ' + applyingJob.title + ' successfully!', 'success');
-            setAppliedJobIds(prev => [...prev, applyingJob.positionId]);
+            setAppliedJobIds(prev => [...prev, applyingJob.id]);
 
             const newApp = {
               id: applyData?.data?.id || Date.now(),
-              positionId: applyingJob.positionId,
+              positionId: applyingJob.id,
               position: applyingJob.title,
               office: applyingJob.office || 'Department of Education',
               type: applyingJob.type || 'Permanent',
@@ -394,7 +394,10 @@ export default function ApplicantJobList() {
               stage: 'Applied',
               status: 'Active'
             };
-            setApplications(prev => [newApp, ...prev]);
+            setApplications(prev => {
+              if (prev.some(app => app.positionId === applyingJob.id)) return prev;
+              return [newApp, ...prev];
+            });
           } else {
             Swal.fire('Error', 'Profile updated but failed to apply for the job.', 'error');
           }
@@ -888,16 +891,16 @@ export default function ApplicantJobList() {
                         {/* Right Buttons */}
                         <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
                           <button
-                            onClick={() => toggleSaveJob(job.positionId)}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-[15px] ${savedJobIds.includes(job.positionId)
+                            onClick={() => toggleSaveJob(job.id)}
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-[15px] ${savedJobIds.includes(job.id)
                               ? 'border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100'
                               : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                               }`}
                           >
-                            <Star className={`w-[18px] h-[18px] ${savedJobIds.includes(job.positionId) ? 'fill-[#3b82f6]' : ''}`} />
-                            {savedJobIds.includes(job.positionId) ? 'Saved' : 'Save'}
+                            <Star className={`w-[18px] h-[18px] ${savedJobIds.includes(job.id) ? 'fill-[#3b82f6]' : ''}`} />
+                            {savedJobIds.includes(job.id) ? 'Saved' : 'Save'}
                           </button>
-                          {appliedJobIds.includes(job.positionId) ? (
+                          {appliedJobIds.includes(job.id) ? (
                             <button
                               disabled
                               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-semibold rounded-xl shadow-sm text-[15px] cursor-not-allowed"
@@ -1036,7 +1039,7 @@ export default function ApplicantJobList() {
                   </div>
                 ) : (
                   <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100 bg-white px-6 rounded-xl shadow-sm border border-gray-200">
-                    {positions.filter(job => savedJobIds.includes(job.positionId)).map((job) => {
+                    {positions.filter(job => savedJobIds.includes(job.id)).map((job) => {
                       const isTemporary = job.type.toLowerCase() === 'temporary';
                       return (
                         <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
@@ -1079,12 +1082,12 @@ export default function ApplicantJobList() {
 
                           <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
                             <button
-                              onClick={() => toggleSaveJob(job.positionId)}
+                              onClick={() => toggleSaveJob(job.id)}
                               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-sm border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100`}
                             >
                               <Star className={`w-[18px] h-[18px] fill-[#3b82f6]`} /> Saved
                             </button>
-                            {appliedJobIds.includes(job.positionId) ? (
+                            {appliedJobIds.includes(job.id) ? (
                               <button disabled className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-extrabold rounded-xl shadow-sm text-sm cursor-not-allowed">
                                 Already Applied
                               </button>

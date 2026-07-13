@@ -146,12 +146,23 @@ class ApplicantsServiceClass {
     return applicant;
   }
 
-  async applyJob(applicantId: number, jobTitle: string, positionId?: number) {
+  async applyJob(applicantId: number, jobTitle: string, positionId?: string) {
+    const applicantRes = await pool.query('SELECT applicant_number FROM applicants WHERE id = $1', [applicantId]);
+    const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
+
+    const checkResult = await pool.query(
+      'SELECT * FROM job_applications WHERE applicant_id = $1 AND position_id = $2',
+      [applicantId, positionId || null]
+    );
+    if (checkResult.rows.length > 0) return checkResult.rows[0];
+
     const result = await pool.query(`
-      INSERT INTO job_applications (applicant_id, position_id, job_title, status)
-      VALUES ($1, $2, $3, 'Pending')
+      INSERT INTO job_applications (applicant_id, position_id, job_title, status, applicant_number)
+      VALUES ($1, $2, $3, 'Pending', $4)
+      ON CONFLICT (applicant_id, position_id) DO NOTHING
       RETURNING *
-    `, [applicantId, positionId || null, jobTitle]);
+    `, [applicantId, positionId || null, jobTitle, applicantNumber]);
+    
     return result.rows[0];
   }
 
@@ -160,7 +171,7 @@ class ApplicantsServiceClass {
     return result.rows;
   }
 
-  async toggleSavedJob(applicantId: number, positionId: number) {
+  async toggleSavedJob(applicantId: number, positionId: string) {
     const checkResult = await pool.query('SELECT * FROM saved_jobs WHERE applicant_id = $1 AND position_id = $2', [applicantId, positionId]);
     const existing = checkResult.rows[0];
 
@@ -255,11 +266,18 @@ class ApplicantsServiceClass {
 
     const applicant = result.rows[0];
 
+    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).replace(/-/g, '');
+    const paddedId = applicant.id.toString().padStart(4, '0');
+    const applicantNumber = `AGAP-${dateStr}-${paddedId}`;
+
+    await pool.query('UPDATE applicants SET applicant_number = $1 WHERE id = $2', [applicantNumber, applicant.id]);
+    applicant.applicant_number = applicantNumber;
+
     if (data.jobTitle) {
       await pool.query(`
-        INSERT INTO job_applications (applicant_id, position_id, job_title, status)
-        VALUES ($1, $2, $3, 'Pending')
-      `, [applicant.id, data.positionId ? parseInt(data.positionId, 10) : null, data.jobTitle]);
+        INSERT INTO job_applications (applicant_id, position_id, job_title, status, applicant_number)
+        VALUES ($1, $2, $3, 'Pending', $4)
+      `, [applicant.id, data.positionId || null, data.jobTitle, applicantNumber]);
     }
 
     return applicant;

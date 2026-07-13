@@ -129,15 +129,18 @@ export default function PublicCareers() {
         const now = new Date();
         const item = {
           id: resData.data?.id,
+          applicant_number: resData.data?.applicant_number,
           email: resData.data?.email_address || email,
           expiry: now.getTime() + 3 * 60 * 60 * 1000,
         };
         localStorage.setItem('session_data', JSON.stringify(item));
-        if (selectedJob) {
-          navigate(`/applicant-jobs/${selectedJob.id}`);
-        } else {
-          navigate('/applicant-jobs');
-        }
+        Swal.fire('Success', `Registration successful! Your Applicant ID is ${resData.data?.applicant_number}`, 'success').then(() => {
+          if (selectedJob) {
+            navigate(`/applicant-jobs/${selectedJob.id}`);
+          } else {
+            navigate('/applicant-jobs');
+          }
+        });
       } else {
         const errorData = await response.json();
         if (errorData.message === 'Email address already exists') {

@@ -107,12 +107,13 @@ export default function ApplicationPage() {
           const now = new Date();
           const item = {
             id: resData.data.id,
+            applicant_number: resData.data.applicant_number,
             email: resData.data.email_address,
             expiry: now.getTime() + 3 * 60 * 60 * 1000,
           };
           localStorage.setItem('session_data', JSON.stringify(item));
 
-          Swal.fire('Success', 'Application submitted successfully!', 'success').then(() => {
+          Swal.fire('Success', `Application submitted successfully! Your Applicant ID is ${resData.data.applicant_number}`, 'success').then(() => {
             navigate('/applicant-jobs');
           });
         } else {

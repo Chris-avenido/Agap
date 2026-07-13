@@ -128,9 +128,21 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ percentage, firstName
         <div className="relative">
           <button
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            className="flex items-center gap-2 text-white hover:text-white transition-colors bg-transparent px-2 py-2 rounded-lg font-semibold text-sm tracking-wide uppercase"
+            className="flex flex-col items-end gap-0.5 text-white hover:text-white transition-colors bg-transparent px-2 py-1 rounded-lg font-semibold tracking-wide uppercase"
           >
-            {(firstName || lastName) ? `${firstName} ${lastName}`.trim() : 'APPLICANT'} <ChevronDown className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-sm">
+              {(firstName || lastName) ? `${firstName} ${lastName}`.trim() : 'APPLICANT'} <ChevronDown className="w-4 h-4" />
+            </div>
+            {(() => {
+              const sessionStr = localStorage.getItem('session_data');
+              if (sessionStr) {
+                const session = JSON.parse(sessionStr);
+                if (session.applicant_number) {
+                  return <span className="text-[10px] text-[#facc15] font-bold tracking-wider">ID: {session.applicant_number}</span>;
+                }
+              }
+              return null;
+            })()}
           </button>
 
           {isProfileDropdownOpen && (
