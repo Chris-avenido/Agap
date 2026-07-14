@@ -155,12 +155,6 @@ export default function ApplicantJobList() {
 
   const totalSteps = 9;
 
-  const getDocumentUrl = (docName: string) => {
-    if (uploadedDocumentUrls[docName]) {
-      return `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(uploadedDocumentUrls[docName])}`;
-    }
-    return null;
-  };
 
   const handleTabClick = (targetStep: string) => {
     setCurrentStep(targetStep);
@@ -255,46 +249,6 @@ export default function ApplicantJobList() {
 
   const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 4 * 1024 * 1024) {
-      Swal.fire('Error', 'Photo size must be less than 4MB', 'error');
-      return;
-    }
-
-    try {
-      const sessionStr = localStorage.getItem('session_data');
-      if (!sessionStr) return;
-      const session = JSON.parse(sessionStr);
-
-      Swal.fire({
-        title: 'Uploading Photo...',
-        text: 'Please wait...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      });
-
-      const formData = new FormData();
-      formData.append('photo', file);
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/photo`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPhotoUrl(data.photoUrl);
-        Swal.fire('Success', 'Profile photo uploaded successfully!', 'success');
-      } else {
-        Swal.fire('Error', 'Failed to upload photo.', 'error');
-      }
-    } catch (err) {
-      Swal.fire('Error', 'An error occurred during upload.', 'error');
-    }
-  };
 
   const handleEssentialDocumentsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

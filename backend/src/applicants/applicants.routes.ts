@@ -135,7 +135,7 @@ router.put('/:id', async (req, res) => {
 router.post('/:id/documents', upload.array('files'), async (req, res) => {
   try {
     const applicantId = Number(req.params.id);
-    const files = req.files as Express.Multer.File[];
+    const files = (req as any).files;
     let documentNames = req.body.documentNames; // Array of doc names matching files array order
 
     // If only one file is uploaded, documentNames will be a string instead of an array
@@ -192,7 +192,7 @@ router.post('/:id/documents', upload.array('files'), async (req, res) => {
 router.post('/:id/photo', upload.single('photo'), async (req, res) => {
   try {
     const applicantId = Number(req.params.id);
-    const file = req.file;
+    const file = (req as any).file;
 
     if (!file) {
       return res.status(400).json({ message: 'No photo uploaded' });
