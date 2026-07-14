@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
-const containerName = 'staging-agap';
+const containerName = process.env.AZURE_FOLDER_NAME as string;
 
 let blobServiceClient: BlobServiceClient;
 if (connectionString) {

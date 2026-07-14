@@ -249,7 +249,47 @@ export default function ApplicantJobList() {
 
   const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
+  const handleLetterOfIntentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Error', 'File size must be less than 5MB', 'error');
+      return;
+    }
+
+    try {
+      const sessionStr = localStorage.getItem('session_data');
+      if (!sessionStr) return;
+      const session = JSON.parse(sessionStr);
+
+      Swal.fire({
+        title: 'Uploading Letter of Intent...',
+        text: 'Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const formData = new FormData();
+      formData.append('files', file);
+      formData.append('documentNames', 'Letter of Intent');
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedDocumentUrls(data.documents);
+        Swal.fire('Success', 'Letter of Intent uploaded successfully!', 'success');
+      } else {
+        Swal.fire('Error', 'Failed to upload Letter of Intent.', 'error');
+      }
+    } catch (err) {
+      Swal.fire('Error', 'An error occurred during upload.', 'error');
+    }
+  };
   const handleEssentialDocumentsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1401,9 +1441,22 @@ export default function ApplicantJobList() {
                         <span className="text-[11px] text-gray-500">For this position.</span>
                       </div>
                     </div>
-                    <button className="bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium w-fit hover:bg-gray-100 transition-colors h-[42px] w-full">
-                      Upload Now
-                    </button>
+                    {uploadedDocumentUrls && uploadedDocumentUrls['Letter of Intent'] ? (
+                      <div className="flex flex-col gap-2 w-full mt-2">
+                        <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                          ✓ Uploaded
+                        </span>
+                        <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                          Replace File
+                          <input type="file" className="hidden" onChange={handleLetterOfIntentUpload} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
+                        Upload Now
+                        <input type="file" className="hidden" onChange={handleLetterOfIntentUpload} />
+                      </label>
+                    )}
                   </div>
                 </div>
 
