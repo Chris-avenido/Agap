@@ -26,8 +26,8 @@ export default function PublicCareers() {
   const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
 
   const filteredPositions = useMemo(() => positions.filter(job => {
-    const matchSearch = !searchQuery || 
-      job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchSearch = !searchQuery ||
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (job.division && job.division.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -35,7 +35,7 @@ export default function PublicCareers() {
     const matchRegion = filterRegion === 'All Regions' || (job.location || 'Unknown') === filterRegion;
     const matchDivision = filterDivision === 'All Divisions' || (job.division || job.office) === filterDivision;
     const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
-    
+
     return matchSearch && matchRegion && matchDivision && matchPosition;
   }), [searchQuery, filterRegion, filterDivision, filterPosition, positions]);
 
@@ -222,7 +222,7 @@ export default function PublicCareers() {
               </h1>
 
               <p className="text-gray-300 text-base md:text-lg max-w-2xl leading-relaxed font-light">
-                The DEPDev adheres to the existing general policy of no discrimination based on gender identity, sexual orientation, disabilities, religion and/or indigenous group membership in the implementation of its recruitment, selection and placement.
+                The Department of Education adheres to the existing general policy of no discrimination based on gender identity, sexual orientation, disabilities, religion and/or indigenous group membership in the implementation of its recruitment, selection and placement.
               </p>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function PublicCareers() {
           {/* Search Bar */}
           <div className="max-w-6xl w-full mx-auto px-4 relative z-20 -mt-8 mb-12">
             <div className="bg-white p-2 sm:p-2.5 rounded-2xl shadow-xl shadow-gray-200/50 flex flex-col items-stretch gap-2 border border-gray-100">
-              
+
               {/* Text Search Row */}
               <div className="w-full flex items-center px-4 py-2 border-b sm:border-b-0 sm:border-gray-200">
                 <Search className="w-5 h-5 text-gray-400 shrink-0" />
@@ -246,57 +246,57 @@ export default function PublicCareers() {
               {/* Dropdowns Row */}
               <div className="flex flex-col sm:flex-row items-center gap-2">
                 <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
-                <MapPin className="w-5 h-5 text-gray-400" />
-                <select 
-                  value={filterRegion}
-                  onChange={(e) => setFilterRegion(e.target.value)}
-                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
-                >
-                  <option value="All Regions">All Regions</option>
-                  {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
-              </div>
+                  <MapPin className="w-5 h-5 text-gray-400" />
+                  <select
+                    value={filterRegion}
+                    onChange={(e) => setFilterRegion(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                  >
+                    <option value="All Regions">All Regions</option>
+                    {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
+                </div>
 
-              <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
-                <Building2 className="w-5 h-5 text-gray-400" />
-                <select 
-                  value={filterDivision}
-                  onChange={(e) => setFilterDivision(e.target.value)}
-                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
-                >
-                  <option value="All Divisions">All Divisions</option>
-                  {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
-              </div>
+                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
+                  <Building2 className="w-5 h-5 text-gray-400" />
+                  <select
+                    value={filterDivision}
+                    onChange={(e) => setFilterDivision(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                  >
+                    <option value="All Divisions">All Divisions</option>
+                    {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
+                </div>
 
-              <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 shrink-0">
-                <Briefcase className="w-5 h-5 text-gray-400" />
-                <select 
-                  value={filterPosition}
-                  onChange={(e) => setFilterPosition(e.target.value)}
-                  className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
-                >
-                  <option value="All Positions">All Positions</option>
-                  {availablePositions.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
-              </div>
+                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 shrink-0">
+                  <Briefcase className="w-5 h-5 text-gray-400" />
+                  <select
+                    value={filterPosition}
+                    onChange={(e) => setFilterPosition(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                  >
+                    <option value="All Positions">All Positions</option>
+                    {availablePositions.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
+                </div>
 
-              <button 
-                onClick={handleClearFilters}
-                className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-3.5 rounded-xl font-semibold transition-all hover:shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear
-              </button>
-              
-              <button className="w-full sm:w-auto bg-[#022851] hover:bg-[#033a76] text-white px-8 py-3.5 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0">
-                <Search className="w-4 h-4 sm:hidden" />
-                Search
-              </button>
-              
+                <button
+                  onClick={handleClearFilters}
+                  className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-3.5 rounded-xl font-semibold transition-all hover:shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear
+                </button>
+
+                <button className="w-full sm:w-auto bg-[#022851] hover:bg-[#033a76] text-white px-8 py-3.5 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0">
+                  <Search className="w-4 h-4 sm:hidden" />
+                  Search
+                </button>
+
               </div>
             </div>
           </div>
@@ -445,16 +445,15 @@ export default function PublicCareers() {
                 >
                   Previous
                 </button>
-                
+
                 {Array.from({ length: Math.max(1, totalJobPages) }, (_, i) => i + 1).map(pageNum => (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentJobPage(pageNum)}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors shadow-sm ${
-                      currentJobPage === pageNum 
-                        ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]' 
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                    }`}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors shadow-sm ${currentJobPage === pageNum
+                      ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                      }`}
                   >
                     {pageNum}
                   </button>

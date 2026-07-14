@@ -157,12 +157,15 @@ class ApplicantsServiceClass {
     if (checkResult.rows.length > 0) return checkResult.rows[0];
 
     const appId = require('crypto').randomUUID();
+    
+    // Make application_number unique by appending a short portion of the UUID
+    const uniqueApplicationNumber = applicantNumber ? `${applicantNumber}-${appId.substring(0, 6).toUpperCase()}` : `APP-${appId.substring(0, 8).toUpperCase()}`;
 
     const result = await pool.query(`
       INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
       VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
       RETURNING *
-    `, [appId, applicantNumber, applicantId.toString(), positionId || null]);
+    `, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
     
     return result.rows[0];
   }
@@ -269,17 +272,18 @@ class ApplicantsServiceClass {
 
     const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).replace(/-/g, '');
     const paddedId = applicant.id.toString().padStart(4, '0');
-    const applicantNumber = `AGAP-${dateStr}-${paddedId}`;
+    const applicantNumber = `${dateStr}-${paddedId}`;
 
     await pool.query('UPDATE applicants SET applicant_number = $1 WHERE id = $2', [applicantNumber, applicant.id]);
     applicant.applicant_number = applicantNumber;
 
     if (data.jobTitle) {
       const appId = require('crypto').randomUUID();
+      const uniqueApplicationNumber = `${applicantNumber}-${appId.substring(0, 6).toUpperCase()}`;
       await pool.query(`
         INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
         VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
-      `, [appId, applicantNumber, applicant.id.toString(), data.positionId || null]);
+      `, [appId, uniqueApplicationNumber, applicant.id.toString(), data.positionId || null]);
     }
 
     return applicant;

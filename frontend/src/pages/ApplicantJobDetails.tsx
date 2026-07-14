@@ -45,7 +45,7 @@ export default function ApplicantJobDetails() {
               .then(res => res.json())
               .then(appData => {
                 if (appData.success && appData.data) {
-                  const applied = appData.data.some((app: any) => app.position_id === foundJob.positionId);
+                  const applied = appData.data.some((app: any) => (app.vacancy_id === foundJob.id) || (app.position_id === foundJob.id));
                   setHasApplied(applied);
                 }
               })

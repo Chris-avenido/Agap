@@ -33,6 +33,9 @@ export default function ApplicantJobList() {
   const [filterRegion, setFilterRegion] = useState('All Regions');
   const [filterDivision, setFilterDivision] = useState('All Divisions');
   const [filterPosition, setFilterPosition] = useState('All Positions');
+  const [highlightDocs, setHighlightDocs] = useState(false);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const [pendingApplyJob, setPendingApplyJob] = useState<any>(null);
 
   const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), [positions]);
   const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), [positions]);
@@ -152,15 +155,14 @@ export default function ApplicantJobList() {
 
   const totalSteps = 9;
 
-  const handleTabClick = (targetStep: string) => {
-    const formId = `form-${currentStep}`;
-    const currentForm = document.getElementById(formId) as HTMLFormElement;
-    
-    // Only validate if the form exists and is invalid
-    if (currentForm && !currentForm.checkValidity()) {
-      currentForm.reportValidity();
-      return;
+  const getDocumentUrl = (docName: string) => {
+    if (uploadedDocumentUrls[docName]) {
+      return `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(uploadedDocumentUrls[docName])}`;
     }
+    return null;
+  };
+
+  const handleTabClick = (targetStep: string) => {
     setCurrentStep(targetStep);
   };
 
@@ -225,6 +227,8 @@ export default function ApplicantJobList() {
   };
 
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploadedDocumentUrls, setUploadedDocumentUrls] = useState<Record<string, string>>({});
 
   const [questionnaire, setQuestionnaire] = useState<Record<string, { answer: string, details: string }>>({});
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
@@ -251,9 +255,131 @@ export default function ApplicantJobList() {
 
   const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4 * 1024 * 1024) {
+      Swal.fire('Error', 'Photo size must be less than 4MB', 'error');
+      return;
+    }
+
+    try {
+      const sessionStr = localStorage.getItem('session_data');
+      if (!sessionStr) return;
+      const session = JSON.parse(sessionStr);
+
+      Swal.fire({
+        title: 'Uploading Photo...',
+        text: 'Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/photo`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPhotoUrl(data.photoUrl);
+        Swal.fire('Success', 'Profile photo uploaded successfully!', 'success');
+      } else {
+        Swal.fire('Error', 'Failed to upload photo.', 'error');
+      }
+    } catch (err) {
+      Swal.fire('Error', 'An error occurred during upload.', 'error');
+    }
+  };
+
   const handleEssentialDocumentsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 1. Global Validation: Check all tabs for required fields before submitting
+    const allTabs = [
+      'Personal Information',
+      'Family Background',
+      'Educational Background',
+      'Eligibility',
+      'Work Experience',
+      'Voluntary Work',
+      'Learning & Development',
+      'Other Information',
+      'Legal Questionnaire',
+      'Essential Documents'
+    ];
+
+    for (const tab of allTabs) {
+      const form = document.getElementById(`form-${tab}`) as HTMLFormElement;
+      if (form && !form.checkValidity()) {
+        Swal.fire(
+          'Incomplete Profile',
+          `Please fill in all required fields in the "${tab}" tab.`,
+          'warning'
+        );
+        setCurrentStep(tab);
+        setTimeout(() => {
+          const f = document.getElementById(`form-${tab}`) as HTMLFormElement;
+          if (f) f.reportValidity();
+        }, 300);
+        return;
+      }
+    }
+
+    if (applyingJob && Number(percentage) < 100) {
+      Swal.fire(
+        'Incomplete Profile',
+        `Your profile is only ${percentage}% complete. Please fill out all sections before applying.`,
+        'warning'
+      );
+      return;
+    }
+
+    // 2. Vercel Limit Validation
+    const docEntries = Object.entries(documents).filter(([_, file]) => file !== null);
+    if (docEntries.length > 0) {
+      const totalSize = docEntries.reduce((sum, [_, file]) => sum + (file as File).size, 0);
+      if (totalSize > 4 * 1024 * 1024) {
+        Swal.fire(
+          'Total File Size Too Large',
+          'The total size of the documents you are uploading exceeds the 4MB limit. Please upload them one by one or compress your files.',
+          'error'
+        );
+        return;
+      }
+    }
+
+    // 3. Confirm Documents Modal (if applying for a job)
+    if (applyingJob) {
+      const result = await Swal.fire({
+        title: 'Confirm Documents',
+        text: 'Are you sure your documents are up to date? Please confirm that all required documents are current before submitting your application.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Proceed',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#022851',
+        cancelButtonColor: '#d33'
+      });
+
+      if (!result.isConfirmed) {
+        // User clicked Cancel
+        setHighlightDocs(true);
+        Swal.fire({
+          title: 'Update Documents',
+          text: 'Please review and update your essential documents before applying.',
+          icon: 'info',
+          confirmButtonColor: '#022851'
+        });
+        return; // Abort submission
+      }
+    }
+
+    // 4. Proceed with original upload and submission logic
     try {
       const sessionStr = localStorage.getItem('session_data');
       if (!sessionStr) {
@@ -264,8 +390,51 @@ export default function ApplicantJobList() {
 
       const session = JSON.parse(sessionStr);
 
+      let currentUploadedDocs = { ...uploadedDocumentUrls };
+
+      // Upload Documents to Azure first
+      if (docEntries.length > 0) {
+        Swal.fire({
+          title: 'Uploading Documents...',
+          text: 'Please wait...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const formData = new FormData();
+        docEntries.forEach(([name, file]) => {
+          formData.append('files', file as File);
+          formData.append('documentNames', name);
+        });
+
+        const docUploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (docUploadRes.ok) {
+          const result = await docUploadRes.json();
+          currentUploadedDocs = { ...currentUploadedDocs, ...result.documents };
+          setUploadedDocumentUrls(currentUploadedDocs);
+        } else {
+          Swal.fire('Error', 'Failed to upload one or more documents.', 'error');
+          return;
+        }
+      }
+
+      Swal.fire({
+        title: 'Updating Profile...',
+        text: 'Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       const toUpper = (val: any, keyName?: string): any => {
-        if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType', 'barangay', 'city', 'province', 'region', 'date_of_birth'].includes(keyName)) {
+        if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType', 'barangay', 'city', 'province', 'region', 'date_of_birth', 'documents', 'photoUrl'].includes(keyName)) {
           return val;
         }
         if (typeof val === 'string') return val.toUpperCase();
@@ -352,7 +521,9 @@ export default function ApplicantJobList() {
           memberships: membershipsList,
           references: referencesList,
           governmentId: governmentId,
-          children: childrenList
+          children: childrenList,
+          documents: currentUploadedDocs,
+          photoUrl: photoUrl
         },
         questionnaire_responses: questionnaire
       });
@@ -428,6 +599,7 @@ export default function ApplicantJobList() {
     if (location.state?.applyingJob) {
       setApplyingJob(location.state.applyingJob);
       setActiveTab('application-form');
+      setPendingApplyJob(location.state.applyingJob);
       // clear the state so it doesn't reopen if the user refreshes
       window.history.replaceState({}, document.title);
     }
@@ -614,6 +786,8 @@ export default function ApplicantJobList() {
             if (oi.references) setReferencesList(oi.references);
             if (oi.governmentId) setGovernmentId(oi.governmentId);
             if (oi.children) setChildrenList(oi.children);
+            if (oi.documents) setUploadedDocumentUrls(oi.documents);
+            if (oi.photoUrl) setPhotoUrl(oi.photoUrl);
           }
           if (p.questionnaire_responses) {
             const parsedQ = typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses;
@@ -627,10 +801,13 @@ export default function ApplicantJobList() {
             }
             setQuestionnaire(normalizedQ);
           }
-
+          setIsProfileLoaded(true);
         }
       })
-      .catch(err => console.error('Error fetching profile:', err));
+      .catch(err => {
+        console.error('Error fetching profile:', err);
+        setIsProfileLoaded(true); // set it true even on error to avoid hanging
+      });
 
     fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/saved-jobs`)
       .then(res => res.json())
@@ -642,22 +819,107 @@ export default function ApplicantJobList() {
       .catch(err => console.error('Error fetching saved jobs:', err));
   }, [navigate]);
 
+  useEffect(() => {
+    if (isProfileLoaded && pendingApplyJob) {
+      const jobToApply = pendingApplyJob;
+      setPendingApplyJob(null);
+
+      setTimeout(() => {
+        if (Number(percentage) >= 100) {
+          Swal.fire({
+            title: 'Confirm Documents',
+            text: 'Are you sure your documents are up to date? Please confirm that all required documents are current before submitting your application.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Proceed',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#022851',
+            cancelButtonColor: '#d33'
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              try {
+                const sessionStr = localStorage.getItem('session_data');
+                if (!sessionStr) return navigate('/login');
+                const session = JSON.parse(sessionStr);
+
+                Swal.fire({
+                  title: 'Submitting Application...',
+                  text: 'Please wait...',
+                  allowOutsideClick: false,
+                  didOpen: () => {
+                    Swal.showLoading();
+                  }
+                });
+
+                const applyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/apply-job`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    applicantId: session.id,
+                    positionId: jobToApply.id,
+                    jobTitle: jobToApply.title
+                  })
+                });
+
+                if (applyResponse.ok) {
+                  const applyData = await applyResponse.json();
+                  Swal.fire('Success', 'Application submitted successfully!', 'success');
+                  setAppliedJobIds(prev => [...prev, jobToApply.id]);
+
+                  const newApp = {
+                    id: applyData?.data?.id || Date.now(),
+                    positionId: jobToApply.id,
+                    position: jobToApply.title,
+                    office: jobToApply.office || 'Department of Education',
+                    type: jobToApply.type || 'Permanent',
+                    posted: jobToApply.posted || 'N/A',
+                    deadline: jobToApply.deadline || 'N/A',
+                    sg: jobToApply.sg || 'N/A',
+                    itemNo: jobToApply.itemNo || 'N/A',
+                    date: new Date().toLocaleDateString(),
+                    stage: 'Applied',
+                    assessmentStatus: 'Pending Assessment',
+                    appointmentStatus: 'Pending Appointment',
+                    status: 'Active'
+                  };
+                  setApplications(prev => [newApp, ...prev]);
+                  setActiveTab('job-board');
+                  setApplyingJob(null);
+                } else {
+                  const err = await applyResponse.json();
+                  Swal.fire('Error', err.message || 'Failed to submit application.', 'error');
+                }
+              } catch (error) {
+                Swal.fire('Error', 'An unexpected error occurred.', 'error');
+              }
+            } else {
+              setCurrentStep('Essential Documents');
+              setHighlightDocs(true);
+              Swal.fire({
+                title: 'Update Documents',
+                text: 'Please review and update your essential documents before applying.',
+                icon: 'info',
+                confirmButtonColor: '#022851'
+              });
+            }
+          });
+        } else {
+          Swal.fire({
+            title: 'Complete your Profile',
+            text: `Your profile is only ${percentage}% complete. Please fill in the missing information to proceed with your application.`,
+            icon: 'warning',
+            confirmButtonText: 'Go to Profile',
+            confirmButtonColor: '#022851'
+          });
+        }
+      }, 100);
+    }
+  }, [isProfileLoaded, pendingApplyJob, percentage, navigate]);
+
   const handleApply = (job: any) => {
-    Swal.fire({
-      title: 'Confirm Documents',
-      text: 'Are you sure your documents are up to date?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, proceed',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#022851',
-      cancelButtonColor: '#d33'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setApplyingJob(job);
-        setActiveTab('application-form');
-      }
-    });
+    setApplyingJob(job);
+    setActiveTab('application-form');
+    setPendingApplyJob(job);
   };
 
 
@@ -700,7 +962,7 @@ export default function ApplicantJobList() {
       }}
     >
       {/* Header */}
-      <ApplicantHeader percentage={percentage} firstName={firstName} lastName={lastName} />
+      <ApplicantHeader percentage={percentage} firstName={firstName} lastName={lastName} photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null} />
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-8">
@@ -2718,9 +2980,20 @@ export default function ApplicantJobList() {
                           <p className="text-[13px] text-gray-500 italic">Please upload the required essential documents for your application. (Max file size: 5MB per document)</p>
                         </div>
 
-                        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                          <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5">
-                            <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Essential Documents</h3>
+                        <div 
+                          className={`border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-500 ${
+                            highlightDocs ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'
+                          }`}
+                          onClick={() => setHighlightDocs(false)}
+                        >
+                          <div className={`border-b px-5 py-3.5 transition-colors duration-500 ${
+                            highlightDocs ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
+                          }`}>
+                            <h3 className={`font-bold text-[14px] uppercase tracking-wide ${
+                              highlightDocs ? 'text-red-700' : 'text-gray-700'
+                            }`}>
+                              Essential Documents {highlightDocs && <span className="text-red-500 lowercase normal-case font-normal ml-2">(Action Required)</span>}
+                            </h3>
                           </div>
                           <div className="p-5 flex flex-col gap-6">
                             {[
