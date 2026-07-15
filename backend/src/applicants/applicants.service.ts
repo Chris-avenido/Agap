@@ -71,7 +71,7 @@ class ApplicantsServiceClass {
       // 5. Basic Address Heuristics
       const addressMatch = rawText.match(/(?:address|location|residence)[\s:]*([A-Za-z0-9\s,.-]+(?:City|Province|St|Street|Ave|Subdivision|Village))/i);
       if (addressMatch) {
-         parsedData.residential_address = addressMatch[1].trim();
+        parsedData.residential_address = addressMatch[1].trim();
       }
 
       // 6. Work Experience Heuristics
@@ -81,29 +81,29 @@ class ApplicantsServiceClass {
       if (workExpMatch) {
         const workText = workExpMatch[0];
         const workLines = workText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        
+
         let currentWork = { company: '', position: '' };
         let jobCount = 0;
-        
+
         for (let i = 1; i < workLines.length; i++) {
           const line = workLines[i];
           // Look for lines containing years/dates indicating a job duration (e.g. 2018 - 2020)
           if (/(?:19|20)\d{2}.*(?:19|20)\d{2}|present|now|current/i.test(line)) {
             if (currentWork.company || currentWork.position) {
-              parsedData.work_experience.push({...currentWork});
+              parsedData.work_experience.push({ ...currentWork });
               jobCount++;
               if (jobCount >= 4) break;
               currentWork = { company: '', position: '' };
             }
-            
+
             // Heuristic: The two lines above the date are usually the Position Title and Company Name
-            if (i > 0) currentWork.position = workLines[i-1];
-            if (i > 1 && !/(?:19|20)\d{2}/.test(workLines[i-2])) {
-              currentWork.company = workLines[i-2];
+            if (i > 0) currentWork.position = workLines[i - 1];
+            if (i > 1 && !/(?:19|20)\d{2}/.test(workLines[i - 2])) {
+              currentWork.company = workLines[i - 2];
             }
           }
         }
-        
+
         if ((currentWork.company || currentWork.position) && jobCount < 4) {
           parsedData.work_experience.push(currentWork);
         }
@@ -157,7 +157,7 @@ class ApplicantsServiceClass {
     if (checkResult.rows.length > 0) return checkResult.rows[0];
 
     const appId = require('crypto').randomUUID();
-    
+
     // Generate application_number in format YYYYMMDD-00001
     const today = new Date();
     // Use local timezone format if possible, but safely using UTC or basic padStart
@@ -186,7 +186,7 @@ class ApplicantsServiceClass {
       VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
       RETURNING *
     `, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
-    
+
     return result.rows[0];
   }
 
@@ -237,7 +237,7 @@ class ApplicantsServiceClass {
         throw new Error('Email address already exists');
       }
     }
-    
+
     let passwordHash: string | null = null;
     if (data.password) {
       passwordHash = await bcrypt.hash(data.password, 10);
@@ -277,7 +277,8 @@ class ApplicantsServiceClass {
         educational_background, civil_service_eligibility, work_experience, voluntary_work,
         learning_and_development, other_information, questionnaire_responses, family_background
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+        , $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28
       ) RETURNING *
     `, [
@@ -315,7 +316,7 @@ class ApplicantsServiceClass {
 
     if (data.positionId) {
       const appId = require('crypto').randomUUID();
-      
+
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -406,7 +407,7 @@ class ApplicantsServiceClass {
 
     values.push(id);
     const query = `UPDATE applicants SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
-    
+
     const result = await pool.query(query, values);
     return result.rows[0];
   }

@@ -330,6 +330,15 @@ export default function ApplicationModal({
       : userData.other_information
     : {};
 
+  const getDocUrl = (docName: string) => {
+    const url = otherInfo?.documents?.[docName];
+    if (!url) return null;
+    if (url.startsWith("http")) {
+      return `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   if (!isOpen) return null;
 
   const tabs = [
@@ -534,7 +543,7 @@ export default function ApplicationModal({
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
                         First Name
                       </span>
-                      <input
+                      <input name="first_name"
                         required
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         type="text"
@@ -604,7 +613,7 @@ export default function ApplicationModal({
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
                         City, town, etc.
                       </span>
-                      <input
+                      <input name="place_of_birth"
                         required
                         placeholder="Enter place of birth"
                         className="w-full border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]"
@@ -1137,7 +1146,7 @@ export default function ApplicationModal({
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
                         Telephone No.
                       </span>
-                      <input
+                      <input name="telephone_no"
                         required
                         placeholder="Enter telephone no."
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
@@ -1183,11 +1192,11 @@ export default function ApplicationModal({
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
                         Alternate
                       </span>
-                      <input
+                      <input name="alternate_email"
                         placeholder="Enter alternate email"
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         type="email"
-                        defaultValue=""
+                        defaultValue={otherInfo?.alternate_email || ""}
                       />
                     </div>
                   </div>
@@ -1371,7 +1380,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[0]?.school_name || ""}
+                        name="edu_0_school_name" defaultValue={eduBg[0]?.school_name || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1383,7 +1392,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[0]?.degree_course || ""}
+                        name="edu_0_degree_course" defaultValue={eduBg[0]?.degree_course || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1396,13 +1405,13 @@ export default function ApplicationModal({
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          defaultValue={eduBg[0]?.period_from || ""}
+                          name="edu_0_period_from" defaultValue={eduBg[0]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
                         <input
                           type="date"
-                          defaultValue={eduBg[0]?.period_to || ""}
+                          name="edu_0_period_to" defaultValue={eduBg[0]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1415,7 +1424,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[0]?.highest_level || ""}
+                        name="edu_0_highest_level" defaultValue={eduBg[0]?.highest_level || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1427,7 +1436,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[0]?.year_graduated || ""}
+                        name="edu_0_year_graduated" defaultValue={eduBg[0]?.year_graduated || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1446,7 +1455,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[1]?.school_name || ""}
+                        name="edu_1_school_name" defaultValue={eduBg[1]?.school_name || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1458,7 +1467,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[1]?.degree_course || ""}
+                        name="edu_1_degree_course" defaultValue={eduBg[1]?.degree_course || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1471,13 +1480,13 @@ export default function ApplicationModal({
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          defaultValue={eduBg[1]?.period_from || ""}
+                          name="edu_1_period_from" defaultValue={eduBg[1]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
                         <input
                           type="date"
-                          defaultValue={eduBg[1]?.period_to || ""}
+                          name="edu_1_period_to" defaultValue={eduBg[1]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1490,7 +1499,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[1]?.highest_level || ""}
+                        name="edu_1_highest_level" defaultValue={eduBg[1]?.highest_level || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1502,7 +1511,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[1]?.year_graduated || ""}
+                        name="edu_1_year_graduated" defaultValue={eduBg[1]?.year_graduated || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1521,7 +1530,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[2]?.school_name || ""}
+                        name="edu_2_school_name" defaultValue={eduBg[2]?.school_name || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1533,7 +1542,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[2]?.degree_course || ""}
+                        name="edu_2_degree_course" defaultValue={eduBg[2]?.degree_course || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1546,13 +1555,13 @@ export default function ApplicationModal({
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          defaultValue={eduBg[2]?.period_from || ""}
+                          name="edu_2_period_from" defaultValue={eduBg[2]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
                         <input
                           type="date"
-                          defaultValue={eduBg[2]?.period_to || ""}
+                          name="edu_2_period_to" defaultValue={eduBg[2]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1565,7 +1574,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[2]?.highest_level || ""}
+                        name="edu_2_highest_level" defaultValue={eduBg[2]?.highest_level || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1577,7 +1586,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[2]?.year_graduated || ""}
+                        name="edu_2_year_graduated" defaultValue={eduBg[2]?.year_graduated || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1596,7 +1605,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[3]?.school_name || ""}
+                        name="edu_3_school_name" defaultValue={eduBg[3]?.school_name || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1608,7 +1617,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[3]?.degree_course || ""}
+                        name="edu_3_degree_course" defaultValue={eduBg[3]?.degree_course || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1621,13 +1630,13 @@ export default function ApplicationModal({
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          defaultValue={eduBg[3]?.period_from || ""}
+                          name="edu_3_period_from" defaultValue={eduBg[3]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
                         <input
                           type="date"
-                          defaultValue={eduBg[3]?.period_to || ""}
+                          name="edu_3_period_to" defaultValue={eduBg[3]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1640,7 +1649,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[3]?.highest_level || ""}
+                        name="edu_3_highest_level" defaultValue={eduBg[3]?.highest_level || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1652,7 +1661,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[3]?.year_graduated || ""}
+                        name="edu_3_year_graduated" defaultValue={eduBg[3]?.year_graduated || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1671,7 +1680,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[4]?.school_name || ""}
+                        name="edu_4_school_name" defaultValue={eduBg[4]?.school_name || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1683,7 +1692,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[4]?.degree_course || ""}
+                        name="edu_4_degree_course" defaultValue={eduBg[4]?.degree_course || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1696,13 +1705,13 @@ export default function ApplicationModal({
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          defaultValue={eduBg[4]?.period_from || ""}
+                          name="edu_4_period_from" defaultValue={eduBg[4]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
                         <input
                           type="date"
-                          defaultValue={eduBg[4]?.period_to || ""}
+                          name="edu_4_period_to" defaultValue={eduBg[4]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1715,7 +1724,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[4]?.highest_level || ""}
+                        name="edu_4_highest_level" defaultValue={eduBg[4]?.highest_level || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -1727,7 +1736,7 @@ export default function ApplicationModal({
 
                       <input
                         type="text"
-                        defaultValue={eduBg[4]?.year_graduated || ""}
+                        name="edu_4_year_graduated" defaultValue={eduBg[4]?.year_graduated || ""}
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                       />
                     </div>
@@ -2378,44 +2387,79 @@ export default function ApplicationModal({
                   <div className="flex flex-col text-[14px] text-gray-700">
                     {/* Item 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Personal Data Sheet <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_pds" accept=".pdf,.doc,.docx" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Personal Data Sheet <span className="text-red-500">*</span></span>
+                        {getDocUrl("Personal Data Sheet") && (
+                          <a href={getDocUrl("Personal Data Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_pds" accept=".pdf,.doc,.docx" required={!getDocUrl("Personal Data Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
                     
                     {/* Item 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Work Experience Sheet <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_work_exp" accept=".pdf,.doc,.docx" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Work Experience Sheet <span className="text-red-500">*</span></span>
+                        {getDocUrl("Work Experience Sheet") && (
+                          <a href={getDocUrl("Work Experience Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_work_exp" accept=".pdf,.doc,.docx" required={!getDocUrl("Work Experience Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 3 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Certificate of Eligibility <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_eligibility" accept=".pdf,.doc,.docx" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Certificate of Eligibility <span className="text-red-500">*</span></span>
+                        {getDocUrl("Certificate of Eligibility") && (
+                          <a href={getDocUrl("Certificate of Eligibility") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_eligibility" accept=".pdf,.doc,.docx" required={!getDocUrl("Certificate of Eligibility")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 4 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Transcript of Records <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_tor" accept=".pdf,.doc,.docx" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Transcript of Records <span className="text-red-500">*</span></span>
+                        {getDocUrl("Transcript of Records") && (
+                          <a href={getDocUrl("Transcript of Records") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_tor" accept=".pdf,.doc,.docx" required={!getDocUrl("Transcript of Records")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 5 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Updated PRC License/ID <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_prc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Updated PRC License/ID <span className="text-red-500">*</span></span>
+                        {getDocUrl("Updated PRC License/ID") && (
+                          <a href={getDocUrl("Updated PRC License/ID") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_prc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required={!getDocUrl("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <span className="font-medium text-gray-700">Diploma (optional)</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Diploma (optional)</span>
+                        {getDocUrl("Diploma (optional)") && (
+                          <a href={getDocUrl("Diploma (optional)") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
                       <input type="file" name="doc_diploma" accept=".pdf,.doc,.docx" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 7 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5">
-                      <span className="font-medium text-gray-700">Resume <span className="text-red-500">*</span></span>
-                      <input type="file" name="doc_resume" accept=".pdf,.doc,.docx" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Resume <span className="text-red-500">*</span></span>
+                        {getDocUrl("Resume") && (
+                          <a href={getDocUrl("Resume") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_resume" accept=".pdf,.doc,.docx" required={!getDocUrl("Resume")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
                   </div>
                 </div>
@@ -2538,7 +2582,9 @@ export default function ApplicationModal({
                         children: rawData["children_list"] ? JSON.parse(rawData["children_list"] as string) : [],
                       };
 
+                      const existingOtherInfo = userData?.other_information ? (typeof userData.other_information === 'string' ? JSON.parse(userData.other_information) : userData.other_information) : {};
                       data.other_information = {
+                        ...existingOtherInfo,
                         height: rawData["height"],
                         weight: rawData["weight"],
                         agency_employee_no: rawData["agency_employee_no"],
@@ -2548,6 +2594,22 @@ export default function ApplicationModal({
                         distinctions: rawData["distinctions"] ? JSON.parse(rawData["distinctions"] as string) : [],
                         memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"] as string) : [],
                       };
+
+                      
+                      // --- Educational Background ---
+                      const edBg = [];
+                      for (let i = 0; i < 5; i++) {
+                        edBg.push({
+                          school_name: rawData[`edu_${i}_school_name`] || "",
+                          degree_course: rawData[`edu_${i}_degree_course`] || "",
+                          period_from: rawData[`edu_${i}_period_from`] || "",
+                          period_to: rawData[`edu_${i}_period_to`] || "",
+                          highest_level: rawData[`edu_${i}_highest_level`] || "",
+                          year_graduated: rawData[`edu_${i}_year_graduated`] || "",
+                          honors_received: rawData[`edu_${i}_honors_received`] || ""
+                        });
+                      }
+                      data.educational_background = edBg;
 
                       if (rawData["civil_service_eligibility"]) {
                         data.civil_service_eligibility = JSON.parse(rawData["civil_service_eligibility"] as string);

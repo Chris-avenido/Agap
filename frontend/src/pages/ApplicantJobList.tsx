@@ -170,6 +170,7 @@ export default function ApplicantJobList() {
   };
 
   const [childrenList, setChildrenList] = useState<any[]>([{ name: '', dob: null }]);
+  const [debugRawEdu, setDebugRawEdu] = useState<any>(null);
   const [educationalDates, setEducationalDates] = useState<Record<string, { school: string, degree: string, from: Date | null, to: Date | null, units: string, year: string, honors: string }>>({});
 
   const handleFamilyBackgroundSubmit = (e: React.FormEvent) => {
@@ -819,11 +820,12 @@ export default function ApplicantJobList() {
           }
 
           if (p.educational_background) {
-            let edParsed = Array.isArray(p.educational_background) ? p.educational_background : (typeof p.educational_background === 'string' ? JSON.parse(p.educational_background) : p.educational_background);
-            const newEd = { ...educationalDates };
-            if (Array.isArray(edParsed)) {
-              edParsed.forEach((ed: any) => {
-                if (ed.level) {
+            try {
+              let edParsed = Array.isArray(p.educational_background) ? p.educational_background : (typeof p.educational_background === 'string' ? JSON.parse(p.educational_background) : p.educational_background);
+              const newEd = { ...educationalDates };
+              if (Array.isArray(edParsed)) {
+                console.log("Parsing Educational Background:", edParsed);
+                edParsed.forEach((ed: any, idx: number) => {
                   const levelMap: any = {
                     'ELEMENTARY': 'elementary',
                     'SECONDARY': 'secondary',
@@ -833,36 +835,104 @@ export default function ApplicantJobList() {
                     'GRADUATE STUDIES': 'graduate',
                     'GRADUATE': 'graduate'
                   };
-                  const matchedLevel = levelMap[ed.level.toUpperCase()] || ed.level.toLowerCase();
-                  newEd[matchedLevel] = {
-                    school: ed.school || '',
-                    degree: ed.degree || '',
-                    from: ed.from || '',
-                    to: ed.to || '',
-                    units: ed.units || '',
-                    year: ed.year || '',
-                    honors: ed.honors || ''
-                  };
-                }
-              });
-              setEducationalDates(newEd);
+                  const fallbackLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate'];
+                  
+                  // Extract level or use fallback
+                  let matchedLevel = null;
+                  if (ed.level) {
+                     matchedLevel = levelMap[ed.level.toUpperCase()] || ed.level.toLowerCase();
+                  } else if (idx < fallbackLevels.length) {
+                     matchedLevel = fallbackLevels[idx];
+                  }
+
+                  if (matchedLevel) {
+                    newEd[matchedLevel] = {
+                      school: ed.school || ed.school_name || '',
+                      degree: ed.degree || ed.degree_course || '',
+                      from: ed.from || ed.period_from || ed.attendance_from || '',
+                      to: ed.to || ed.period_to || ed.attendance_to || '',
+                      units: ed.units || ed.highest_level || '',
+                      year: ed.year || ed.year_graduated || '',
+                      honors: ed.honors || ed.honors_received || ''
+                    };
+                  }
+                });
+                console.log("Parsed result:", newEd);
+                                setEducationalDates(newEd);
+                setDebugRawEdu(edParsed);
+              }
+            } catch (e) {
+              console.error("Failed to parse educational background", e);
             }
           }
           if (p.civil_service_eligibility) setCivilServiceList(Array.isArray(p.civil_service_eligibility) ? p.civil_service_eligibility : (typeof p.civil_service_eligibility === 'string' ? JSON.parse(p.civil_service_eligibility) : p.civil_service_eligibility));
-          if (p.work_experience) setWorkExperienceList(Array.isArray(p.work_experience) ? p.work_experience : (typeof p.work_experience === 'string' ? JSON.parse(p.work_experience) : p.work_experience));
-          if (p.voluntary_work) setVoluntaryWorkList(Array.isArray(p.voluntary_work) ? p.voluntary_work : (typeof p.voluntary_work === 'string' ? JSON.parse(p.voluntary_work) : p.voluntary_work));
-          if (p.learning_and_development) setLearningDevelopmentList(Array.isArray(p.learning_and_development) ? p.learning_and_development : (typeof p.learning_and_development === 'string' ? JSON.parse(p.learning_and_development) : p.learning_and_development));
+          if (p.work_experience) {
+            let we = Array.isArray(p.work_experience) ? p.work_experience : (typeof p.work_experience === 'string' ? JSON.parse(p.work_experience) : p.work_experience);
+            we = we.map((w: any) => ({
+              company: w.company || '',
+              positionTitle: w.positionTitle || w.position || '',
+              fromDate: w.fromDate || w.from_date || '',
+              toDate: w.toDate || w.to_date || '',
+              monthlySalary: w.monthlySalary || w.salary || '',
+              salaryGrade: w.salaryGrade || w.pay_grade || '',
+              statusOfAppointment: w.statusOfAppointment || w.status || '',
+              govtService: w.govtService || w.govt_service || ''
+            }));
+            setWorkExperienceList(we);
+          }
+          if (p.voluntary_work) {
+            let vw = Array.isArray(p.voluntary_work) ? p.voluntary_work : (typeof p.voluntary_work === 'string' ? JSON.parse(p.voluntary_work) : p.voluntary_work);
+            vw = vw.map((v: any) => ({
+              nameAddress: v.nameAddress || v.organization || '',
+              fromDate: v.fromDate || v.from_date || '',
+              toDate: v.toDate || v.to_date || '',
+              hours: v.hours || '',
+              position: v.position || ''
+            }));
+            setVoluntaryWorkList(vw);
+          }
+          if (p.learning_and_development) {
+            let ld = Array.isArray(p.learning_and_development) ? p.learning_and_development : (typeof p.learning_and_development === 'string' ? JSON.parse(p.learning_and_development) : p.learning_and_development);
+            ld = ld.map((l: any) => ({
+              title: l.title || '',
+              fromDate: l.fromDate || l.from_date || '',
+              toDate: l.toDate || l.to_date || '',
+              hours: l.hours || '',
+              type: l.type || '',
+              sponsor: l.sponsor || l.conducted_by || ''
+            }));
+            setLearningDevelopmentList(ld);
+          }
 
           if (p.other_information) {
             const oi = typeof p.other_information === 'string' ? JSON.parse(p.other_information) : p.other_information;
-            if (oi.extensionName) setExtensionName(oi.extensionName);
+            if (oi.extensionName || oi.extension_name) setExtensionName(oi.extensionName || oi.extension_name);
             if (oi.height) setHeight(oi.height);
             if (oi.weight) setWeight(oi.weight);
-            if (oi.agencyEmployeeNo) setAgencyEmployeeNo(oi.agencyEmployeeNo);
-            if (oi.citizenshipType) setCitizenshipType(oi.citizenshipType);
-            if (oi.skills) setSkillsList(oi.skills);
-            if (oi.distinctions) setDistinctionsList(oi.distinctions);
-            if (oi.memberships) setMembershipsList(oi.memberships);
+            if (oi.agencyEmployeeNo || oi.agency_employee_no) setAgencyEmployeeNo(oi.agencyEmployeeNo || oi.agency_employee_no);
+            if (oi.citizenshipType || oi.citizenship_type) setCitizenshipType(oi.citizenshipType || oi.citizenship_type);
+                      // Handle skills, mapping from both legacy 'skills' and current 'special_skills'
+          const rawSkills = oi.special_skills || oi.skills;
+          if (rawSkills) {
+             const formattedSkills = Array.isArray(rawSkills) 
+               ? rawSkills.map((s: any) => typeof s === 'string' ? { value: s } : s)
+               : [{ value: String(rawSkills) }];
+             setSkillsList(formattedSkills);
+          }
+
+          if (oi.distinctions) {
+             const formattedDist = Array.isArray(oi.distinctions)
+               ? oi.distinctions.map((d: any) => typeof d === 'string' ? { value: d } : d)
+               : [{ value: String(oi.distinctions) }];
+             setDistinctionsList(formattedDist);
+          }
+
+          if (oi.memberships) {
+             const formattedMem = Array.isArray(oi.memberships)
+               ? oi.memberships.map((m: any) => typeof m === 'string' ? { value: m } : m)
+               : [{ value: String(oi.memberships) }];
+             setMembershipsList(formattedMem);
+          }
             if (oi.references) setReferencesList(oi.references);
             if (oi.governmentId) setGovernmentId(oi.governmentId);
             if (oi.children) setChildrenList(oi.children);
@@ -872,14 +942,58 @@ export default function ApplicantJobList() {
           if (p.questionnaire_responses) {
             const parsedQ = typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses;
             const normalizedQ: any = {};
+            
+            // Extract references and gov ID if they exist inside questionnaire_responses
+            const refs: any[] = [];
+            const newGovId = { type: '', idNo: '', datePlace: '' };
+            let foundRefs = false;
+            let foundGov = false;
+
             for (const k in parsedQ) {
-              const ans = parsedQ[k]?.answer;
-              normalizedQ[k] = {
-                answer: ans?.toUpperCase() === 'YES' ? 'Yes' : (ans?.toUpperCase() === 'NO' ? 'No' : ans),
-                details: parsedQ[k]?.details || ''
+              const val = parsedQ[k];
+              
+              if (k.startsWith('ref')) {
+                  foundRefs = true;
+                  const match = k.match(/ref(\d+)_(name|address|tel)/);
+                  if (match) {
+                      const idx = parseInt(match[1]) - 1;
+                      const field = match[2] === 'tel' ? 'telephone' : match[2];
+                      while (refs.length <= idx) refs.push({ name: '', address: '', telephone: '' });
+                      refs[idx][field] = val || '';
+                  }
+                  continue;
+              }
+              
+              if (k.startsWith('gov_id')) {
+                  foundGov = true;
+                  if (k === 'gov_id_type') newGovId.type = val || '';
+                  if (k === 'gov_id_no') newGovId.idNo = val || '';
+                  if (k === 'gov_id_issuance') newGovId.datePlace = val || '';
+                  continue;
+              }
+
+              let ans = val;
+              let details = '';
+              if (val && typeof val === 'object') {
+                ans = val.answer;
+                details = val.details || '';
+              }
+              
+              if (ans === null || ans === undefined) {
+                  ans = '';
+              }
+              
+              let mapKey = k;
+              if (mapKey.startsWith('q')) mapKey = mapKey.substring(1);
+              
+              normalizedQ[mapKey] = {
+                answer: String(ans).toUpperCase() === 'YES' ? 'Yes' : (String(ans).toUpperCase() === 'NO' ? 'No' : ans),
+                details: details
               };
             }
             setQuestionnaire(normalizedQ);
+            if (foundRefs && refs.length > 0) setReferencesList(refs);
+            if (foundGov) setGovernmentId(newGovId);
           }
           setIsProfileLoaded(true);
         }
@@ -1988,6 +2102,7 @@ export default function ApplicantJobList() {
 
                     <div className={currentStep === 'Educational Background' ? 'block' : 'hidden'}>
                       <form id="form-Educational Background" className="w-full max-w-5xl space-y-6" onSubmit={handleEducationalBackgroundSubmit}>
+
                         <div className="mb-6">
                           <p className="text-[13px] text-gray-500 italic">Please fill in your educational background. Write "N/A" if not applicable.</p>
                         </div>

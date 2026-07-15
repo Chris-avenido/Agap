@@ -89,11 +89,132 @@ export default function ApplicationPage() {
     const form = formRef.current;
     if (form) {
       const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
+      const rawData = Object.fromEntries(formData.entries());
+      const data: any = { ...rawData };
       data.jobTitle = jobTitle;
       if (jobId) {
         data.positionId = jobId.toString();
       }
+
+      // Structure Family Background
+      data.family_background = {
+        spouse: {
+          surname: rawData["spouse_surname"] || "",
+          first_name: rawData["spouse_first_name"] || "",
+          occupation: rawData["spouse_occupation"] || "",
+        },
+        father: {
+          surname: rawData["father_surname"] || "",
+          first_name: rawData["father_first_name"] || "",
+        },
+        mother: {
+          maiden_surname: rawData["mother_maiden_surname"] || "",
+        }
+      };
+
+      // Structure Educational Background
+      data.educational_background = [];
+      ['Elementary', 'Secondary', 'Vocational / Trade', 'College', 'Graduate Studies'].forEach((level, idx) => {
+        const schoolName = rawData[`edu_${idx}_school_name`];
+        if (schoolName) {
+          data.educational_background.push({
+            level: level,
+            school_name: schoolName,
+            degree_course: rawData[`edu_${idx}_degree_course`] || "",
+            attendance_from: rawData[`edu_${idx}_attendance_from`] || "",
+            highest_level: rawData[`edu_${idx}_highest_level`] || "",
+            year_graduated: rawData[`edu_${idx}_year_graduated`] || "",
+          });
+        }
+      });
+
+      // Structure Civil Service Eligibility
+      data.civil_service_eligibility = [];
+      [1, 2, 3].forEach((_, idx) => {
+        const name = rawData[`elig_${idx}_name`];
+        if (name) {
+          data.civil_service_eligibility.push({
+            name: name,
+            rating: rawData[`elig_${idx}_rating`] || "",
+            date_of_exam: rawData[`elig_${idx}_date_exam`] || "",
+            place_of_exam: rawData[`elig_${idx}_place_exam`] || "",
+            license_number: rawData[`elig_${idx}_license_number`] || "",
+            license_validity: rawData[`elig_${idx}_license_validity`] || "",
+          });
+        }
+      });
+
+      // Structure Work Experience
+      data.work_experience = [];
+      [1, 2, 3, 4].forEach((row) => {
+        const company = rawData[`work_company_${row}`];
+        if (company) {
+          data.work_experience.push({
+            company: company,
+            position: rawData[`work_position_${row}`] || "",
+            from_date: rawData[`work_from_${row}`] || "",
+            to_date: rawData[`work_to_${row}`] || "",
+            salary: rawData[`work_salary_${row}`] || "",
+            pay_grade: rawData[`work_pay_grade_${row}`] || "",
+            status: rawData[`work_status_${row}`] || "",
+            govt_service: rawData[`work_govt_${row}`] || "",
+          });
+        }
+      });
+
+      // Structure Voluntary Work
+      data.voluntary_work = [];
+      [1, 2].forEach((_, idx) => {
+        const org = rawData[`vol_${idx}_organization`];
+        if (org) {
+          data.voluntary_work.push({
+            organization: org,
+            from_date: rawData[`vol_${idx}_from`] || "",
+            to_date: rawData[`vol_${idx}_to`] || "",
+            hours: rawData[`vol_${idx}_hours`] || "",
+            position: rawData[`vol_${idx}_position`] || "",
+          });
+        }
+      });
+
+      // Structure L&D
+      data.learning_and_development = [];
+      [1, 2, 3].forEach((_, idx) => {
+        const title = rawData[`ld_${idx}_title`];
+        if (title) {
+          data.learning_and_development.push({
+            title: title,
+            from_date: rawData[`ld_${idx}_from`] || "",
+            to_date: rawData[`ld_${idx}_to`] || "",
+            hours: rawData[`ld_${idx}_hours`] || "",
+            type: rawData[`ld_${idx}_type`] || "",
+            conducted_by: rawData[`ld_${idx}_conducted`] || "",
+          });
+        }
+      });
+
+      // Structure Other Information
+      data.other_information = {
+        special_skills: rawData["special_skills"] ? [rawData["special_skills"]] : [],
+        distinctions: rawData["distinctions"] ? [rawData["distinctions"]] : [],
+        memberships: rawData["memberships"] ? [rawData["memberships"]] : [],
+      };
+
+      // Structure Questionnaire
+      data.questionnaire_responses = {
+        q34a: rawData["q34a"],
+        q34b: rawData["q34b"],
+        q34b_details: rawData["q34b_details"],
+        q35a: rawData["q35a"],
+        q35a_details: rawData["q35a_details"],
+        q35b: rawData["q35b"],
+        q35b_date: rawData["q35b_date"],
+        q35b_status: rawData["q35b_status"],
+        q36: rawData["q36"],
+        q36_details: rawData["q36_details"],
+        q37: rawData["q37"],
+        q37_details: rawData["q37_details"],
+      };
 
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants`, {
@@ -333,30 +454,30 @@ export default function ApplicationPage() {
                     <h4 className="font-bold text-[#0a6fa6] text-sm">Spouse Information</h4>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">SPOUSE'S SURNAME</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="spouse_surname" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">FIRST NAME</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="spouse_first_name" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">OCCUPATION</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="spouse_occupation" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                   </div>
                   <div className="space-y-5">
                     <h4 className="font-bold text-[#0a6fa6] text-sm">Parents Information</h4>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">FATHER'S SURNAME</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="father_surname" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">FATHER'S FIRST NAME</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="father_first_name" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5">MOTHER'S MAIDEN SURNAME</label>
-                      <input type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                      <input name="mother_maiden_surname" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                     </div>
                   </div>
                 </div>
@@ -378,14 +499,14 @@ export default function ApplicationPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {['Elementary', 'Secondary', 'Vocational / Trade', 'College', 'Graduate Studies'].map(level => (
+                      {['Elementary', 'Secondary', 'Vocational / Trade', 'College', 'Graduate Studies'].map((level, idx) => (
                         <tr key={level} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-4 py-3 border-r border-gray-100 font-bold text-gray-700 whitespace-nowrap">{level}</td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`edu_${idx}_school_name`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`edu_${idx}_degree_course`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`edu_${idx}_attendance_from`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" placeholder="From - To" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`edu_${idx}_highest_level`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1"><input name={`edu_${idx}_year_graduated`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -412,14 +533,14 @@ export default function ApplicationPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {[1, 2, 3].map(row => (
+                      {[1, 2, 3].map((row, idx) => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_name`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_rating`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_date_exam`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_place_exam`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_license_number`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1"><input name={`elig_${idx}_license_validity`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -493,13 +614,13 @@ export default function ApplicationPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {[1, 2].map(row => (
+                      {[1, 2].map((row, idx) => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_organization`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_from`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_to`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_hours`} type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1"><input name={`vol_${idx}_position`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -526,14 +647,14 @@ export default function ApplicationPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {[1, 2, 3].map(row => (
+                      {[1, 2, 3].map((row, idx) => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1"><input type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_title`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_from`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_to`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_hours`} type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_type`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
+                          <td className="px-2 py-1"><input name={`ld_${idx}_conducted`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -547,15 +668,15 @@ export default function ApplicationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-3">
                     <h4 className="font-bold text-[#0a6fa6] text-sm">Special Skills and Hobbies</h4>
-                    <textarea className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4}></textarea>
+                    <textarea name="special_skills" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4} placeholder="Enter Special Skills"></textarea>
                   </div>
                   <div className="space-y-3">
                     <h4 className="font-bold text-[#0a6fa6] text-sm">Non-Academic Distinctions / Recognition</h4>
-                    <textarea className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4}></textarea>
+                    <textarea name="distinctions" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4} placeholder="Enter Non-Academic Distinctions"></textarea>
                   </div>
                   <div className="space-y-3">
                     <h4 className="font-bold text-[#0a6fa6] text-sm">Membership in Association/Organization</h4>
-                    <textarea className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4}></textarea>
+                    <textarea name="memberships" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all resize-none" rows={4} placeholder="Enter Memberships in Organizations"></textarea>
                   </div>
                 </div>
               </div>
@@ -588,7 +709,7 @@ export default function ApplicationPage() {
                         <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q34b" value="yes" className="w-4 h-4 accent-[#0a6fa6]" /> Yes</label>
                         <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q34b" value="no" className="w-4 h-4 accent-[#0a6fa6]" /> No</label>
                       </div>
-                      <input type="text" placeholder="If YES, give details" className="mt-2 p-2.5 border border-gray-200 rounded-xl w-full bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                      <input name="q34b_details" type="text" placeholder="If YES, give details" className="mt-2 p-2.5 border border-gray-200 rounded-xl w-full bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
                     </div>
                   </div>
                 </div>
@@ -602,7 +723,7 @@ export default function ApplicationPage() {
                         <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q35a" value="yes" className="w-4 h-4 accent-[#0a6fa6]" /> Yes</label>
                         <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q35a" value="no" className="w-4 h-4 accent-[#0a6fa6]" /> No</label>
                       </div>
-                      <input type="text" placeholder="If YES, give details" className="ml-6 mt-1 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                      <input name="q35a_details" type="text" placeholder="If YES, give details" className="ml-6 mt-1 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
                     </div>
 
                     <div className="flex flex-col gap-2.5">
@@ -612,8 +733,8 @@ export default function ApplicationPage() {
                         <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q35b" value="no" className="w-4 h-4 accent-[#0a6fa6]" /> No</label>
                       </div>
                       <div className="ml-6 flex flex-col gap-3 mt-1">
-                        <input type="text" placeholder="If YES, give details (Date Filed)" className="p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
-                        <input type="text" placeholder="Status of Case/s" className="p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                        <input name="q35b_date" type="text" placeholder="If YES, give details (Date Filed)" className="p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                        <input name="q35b_status" type="text" placeholder="Status of Case/s" className="p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
                       </div>
                     </div>
                   </div>
@@ -628,7 +749,7 @@ export default function ApplicationPage() {
                     <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q36" value="yes" className="w-4 h-4 accent-[#0a6fa6]" /> Yes</label>
                     <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q36" value="no" className="w-4 h-4 accent-[#0a6fa6]" /> No</label>
                   </div>
-                  <input type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                  <input name="q36_details" type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
@@ -639,7 +760,7 @@ export default function ApplicationPage() {
                     <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q37" value="yes" className="w-4 h-4 accent-[#0a6fa6]" /> Yes</label>
                     <label className="flex items-center gap-2 cursor-pointer hover:text-[#0a6fa6]"><input type="radio" name="q37" value="no" className="w-4 h-4 accent-[#0a6fa6]" /> No</label>
                   </div>
-                  <input type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
+                  <input name="q37_details" type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2.5 border border-gray-200 rounded-xl w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-[#0a6fa6] transition-all" />
                 </div>
               </div>
             </div>
