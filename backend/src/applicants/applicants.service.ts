@@ -169,7 +169,7 @@ class ApplicantsServiceClass {
     const lastApp = await pool.query(`
       SELECT application_number FROM applications 
       WHERE application_number LIKE $1 
-      ORDER BY id DESC LIMIT 1
+      ORDER BY application_number DESC LIMIT 1
     `, [`${dateStr}-%`]);
 
     let nextAppNum = 1;
@@ -258,7 +258,7 @@ class ApplicantsServiceClass {
     });
 
     // Generate AGAP-0001 format for applicant_number
-    const lastApplicant = await pool.query(`SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`);
+    const lastApplicant = await pool.query(`SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY applicant_number DESC LIMIT 1`);
     let nextApplicantNum = 1;
     if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
       const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
@@ -324,7 +324,7 @@ class ApplicantsServiceClass {
       const lastApp = await pool.query(`
         SELECT application_number FROM applications 
         WHERE application_number LIKE $1 
-        ORDER BY id DESC LIMIT 1
+        ORDER BY application_number DESC LIMIT 1
       `, [`${dateStr}-%`]);
 
       let nextAppNum = 1;
