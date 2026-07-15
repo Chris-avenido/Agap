@@ -89,8 +89,8 @@ export default function ApplicantJobDetails() {
             <GraduationCap className="w-6 h-6 text-[#003366]" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-xl leading-tight tracking-wide">DEPED</span>
-            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">DEPARTMENT OF EDUCATION</span>
+            <span className="font-bold text-xl leading-tight tracking-wide">AGAP Portal</span>
+            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
           </div>
         </div>
         <button onClick={handleLogout} className="flex items-center gap-2 text-white hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20">

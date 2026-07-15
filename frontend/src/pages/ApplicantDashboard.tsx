@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, FileText, LogOut, GraduationCap } from 'lucide-react';
+import { Briefcase, CheckCircle2, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ApplicantHeader from '../components/ApplicantHeader';
+import ApplicationModal from '../components/ApplicationModal';
 
 export default function ApplicantDashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<any[]>([]);
+  const [savedJobs, setSavedJobs] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'past' | 'saved'>('active');
 
   useEffect(() => {
     const sessionStr = localStorage.getItem('session_data');
@@ -15,77 +22,129 @@ export default function ApplicantDashboard() {
     }
     const session = JSON.parse(sessionStr);
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          setApplications(data.data.map((app: any) => ({
+    Promise.all([
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/saved-jobs`).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`).then(res => res.json())
+    ])
+      .then(([appsData, savedData, profileData]) => {
+        if (appsData.success && appsData.data) {
+          setApplications(appsData.data.map((app: any) => ({
             id: app.id,
             position: app.job_title || 'Unknown Position',
-            office: 'Department of Education',
+            office: app.office || 'Department of Education',
             date: new Date(app.created_at).toLocaleDateString(),
-            stage: app.status || 'Applied',
-            status: 'Active'
+            stage: app.status || 'Pending',
+            status: app.status === 'Hired' || app.status === 'Rejected' ? 'Past' : 'Active'
           })));
         }
+        if (savedData.success && savedData.data) {
+          setSavedJobs(savedData.data.map((job: any) => ({
+            id: job.id,
+            position: job.position_title || 'Unknown Position',
+            office: job.office || 'Department of Education',
+            date: 'N/A',
+            stage: 'Saved',
+            status: 'Saved'
+          })));
+        }
+        if (profileData.success && profileData.data) {
+          setProfile(profileData.data);
+        }
       })
-      .catch(err => console.error('Error fetching applications:', err))
+      .catch(err => console.error('Error fetching dashboard data:', err))
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('session_data');
-    navigate('/');
+  const activeApps = applications.filter(app => app.status === 'Active');
+  const pastApps = applications.filter(app => app.status === 'Past');
+  const savedPositionsCount = savedJobs.length;
+
+  const getFilteredData = () => {
+    if (activeFilter === 'active') return activeApps;
+    if (activeFilter === 'past') return pastApps;
+    if (activeFilter === 'saved') return savedJobs;
+    return [];
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 bg-[#003366] text-white px-6 py-4 flex justify-between items-center z-30 shadow-md">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/applicant-dashboard')}>
-          <div className="w-10 h-10 bg-[#facc15] rounded-[10px] flex items-center justify-center shrink-0">
-            <GraduationCap className="w-6 h-6 text-[#003366]" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-xl leading-tight tracking-wide">DEPED</span>
-            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">DEPARTMENT OF EDUCATION</span>
-          </div>
-        </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 text-white hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20">
-          <LogOut className="w-5 h-5" />
-          <span className="font-semibold text-sm">Logout</span>
-        </button>
-      </header>
+  const filteredData = getFilteredData();
 
-      <main className="max-w-6xl mx-auto py-8 px-4 space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back, Maria!</h1>
+  let photoUrl = null;
+  if (profile?.other_information) {
+     const otherInfo = typeof profile.other_information === 'string' ? JSON.parse(profile.other_information) : profile.other_information;
+     photoUrl = otherInfo.photoUrl;
+  }
+
+  return (
+    <div 
+      className="min-h-screen font-sans flex flex-col relative"
+      style={{
+        background: `
+        radial-gradient(circle at 78% 14%, rgba(253,186,34,.30), transparent 32%),
+        radial-gradient(circle at 70% 86%, rgba(10,111,166,.18), transparent 34%),
+        linear-gradient(135deg, #EAF7FC 0%, #F8FCFF 52%, #FFF2C6 100%)
+        `
+      }}
+    >
+      <ApplicantHeader 
+        firstName={profile?.first_name || ''} 
+        lastName={profile?.surname || ''} 
+        photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null} 
+      />
+
+      <main className="max-w-6xl mx-auto py-8 px-4 space-y-6 w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}!</h1>
+          <button
+            onClick={() => navigate('/applicant-jobs')}
+            className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2.5 rounded-lg font-medium shadow-sm transition-colors text-sm"
+          >
+            Go to Job Board
+          </button>
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
-            <div className="p-3 bg-blue-100 text-blue-600 rounded-md mr-4"><FileText /></div>
+          <button 
+            onClick={() => setActiveFilter('active')}
+            className={`bg-white p-6 rounded-lg shadow-sm border flex items-center text-left hover:shadow-md transition-all focus:outline-none ${activeFilter === 'active' ? 'border-[#003366] ring-1 ring-[#003366]' : 'border-gray-200 hover:border-gray-300'}`}
+          >
+            <div className="p-3 bg-purple-100 text-purple-600 rounded-md mr-4 shrink-0"><Briefcase /></div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Profile Completion</p>
-              <p className="text-2xl font-bold text-gray-900">100%</p>
+              <p className="text-sm text-gray-500 font-medium leading-tight mb-1">Active Applications</p>
+              <p className="text-2xl font-bold text-gray-900">{activeApps.length}</p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
-            <div className="p-3 bg-purple-100 text-purple-600 rounded-md mr-4"><Briefcase /></div>
+          </button>
+
+          <button 
+            onClick={() => setActiveFilter('past')}
+            className={`bg-white p-6 rounded-lg shadow-sm border flex items-center text-left hover:shadow-md transition-all focus:outline-none ${activeFilter === 'past' ? 'border-[#003366] ring-1 ring-[#003366]' : 'border-gray-200 hover:border-gray-300'}`}
+          >
+            <div className="p-3 bg-gray-100 text-gray-600 rounded-md mr-4 shrink-0"><History /></div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Active Applications</p>
-              <p className="text-2xl font-bold text-gray-900">{applications.length}</p>
+              <p className="text-sm text-gray-500 font-medium leading-tight mb-1">Past Applications</p>
+              <p className="text-2xl font-bold text-gray-900">{pastApps.length}</p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center">
-            <div className="p-3 bg-green-100 text-green-600 rounded-md mr-4"><CheckCircle2 /></div>
+          </button>
+
+          <button 
+            onClick={() => setActiveFilter('saved')}
+            className={`bg-white p-6 rounded-lg shadow-sm border flex items-center text-left hover:shadow-md transition-all focus:outline-none ${activeFilter === 'saved' ? 'border-[#003366] ring-1 ring-[#003366]' : 'border-gray-200 hover:border-gray-300'}`}
+          >
+            <div className="p-3 bg-green-100 text-green-600 rounded-md mr-4 shrink-0"><CheckCircle2 /></div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Saved Positions</p>
-              <p className="text-2xl font-bold text-gray-900">3</p>
+              <p className="text-sm text-gray-500 font-medium leading-tight mb-1">Saved Positions</p>
+              <p className="text-2xl font-bold text-gray-900">{savedPositionsCount}</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">My Applications</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              {activeFilter === 'active' && 'Active Applications'}
+              {activeFilter === 'past' && 'Past Applications'}
+              {activeFilter === 'saved' && 'Saved Positions'}
+            </h3>
           </div>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -101,17 +160,19 @@ export default function ApplicantDashboard() {
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    Loading your applications...
+                    Loading your data...
                   </td>
                 </tr>
-              ) : applications.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    You haven't applied for any positions yet.
+                    {activeFilter === 'active' && "You don't have any active applications."}
+                    {activeFilter === 'past' && "You don't have any past applications."}
+                    {activeFilter === 'saved' && "You haven't saved any positions yet."}
                   </td>
                 </tr>
               ) : (
-                applications.map((app) => (
+                filteredData.map((app) => (
                   <tr key={app.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{app.position}</div>
@@ -121,13 +182,13 @@ export default function ApplicantDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.stage}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        app.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        app.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
                         {app.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-primary-600 hover:text-primary-900">View Details</button>
+                      <button className="text-[#003366] hover:underline focus:outline-none">View Details</button>
                     </td>
                   </tr>
                 ))
@@ -136,6 +197,14 @@ export default function ApplicantDashboard() {
           </table>
         </div>
       </main>
+
+      {isModalOpen && (
+        <ApplicationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          jobTitle="Profile Update"
+        />
+      )}
     </div>
   );
 }

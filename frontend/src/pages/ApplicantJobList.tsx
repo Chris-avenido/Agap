@@ -2,16 +2,213 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {
-  Search, Clock, Hash,
+  Search, LayoutGrid, List,
   Briefcase, ArrowRight, CalendarDays, Star,
   Building2, CircleDollarSign, MapPin,
   FileText, Bookmark,
-  GraduationCap, ChevronLeft, ChevronRight, HelpCircle, Plus, Trash2
+  GraduationCap, ChevronLeft, ChevronRight, HelpCircle, Plus, Trash2, ArrowLeft
 } from 'lucide-react';
 import CustomDatePicker from '../components/CustomDatePicker';
 import ApplicantHeader from '../components/ApplicantHeader';
 // @ts-ignore
 import { regions, provinces, city_mun, barangays } from 'phil-reg-prov-mun-brgy';
+
+const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
+  const isApplied = appliedJobIds.includes(job.id || job.positionId);
+  const isSaved = savedJobIds.includes(job.id || job.positionId);
+  const title = job.title || job.position || 'Unknown Position';
+
+  return (
+    <div className="bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col hover:shadow-lg transition-shadow relative">
+      {/* Top Section */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex flex-col gap-2">
+          {/* Top Tags */}
+          <div className="flex items-center gap-2">
+            {job.location && (
+              <span className="px-3 py-1 bg-gray-50 text-[#003366] text-[10px] font-bold rounded-full uppercase tracking-wider border border-gray-100">{job.location}</span>
+            )}
+            {job.division && (
+              <span className="px-3 py-1 bg-gray-50 text-[#003366] text-[10px] font-bold rounded-full uppercase tracking-wider border border-gray-100">{job.division}</span>
+            )}
+          </div>
+          
+          {/* Title */}
+          <h3 className="text-lg font-bold text-[#2563eb] leading-tight uppercase line-clamp-2 mt-1">
+            {title}
+          </h3>
+          
+          {/* Item No & Type */}
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">IPC: {job.itemNo || 'N/A'}</span>
+            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">{job.type || 'Permanent'}</span>
+          </div>
+        </div>
+        
+        {/* Days Left Box */}
+        <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0 ml-4">
+          <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
+          <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
+          <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br/>LEFT</span>
+        </div>
+      </div>
+      
+      {/* Rows Section */}
+      <div className="flex flex-col gap-3 mb-6 mt-2">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PLACE OF ASSIGNMENT / SALARY GRADE</span>
+            <span className="text-[14px] font-bold text-gray-800">{job.office || 'N/A'} • SG {job.sg || 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+            <CircleDollarSign className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DATE POSTED</span>
+            <span className="text-[14px] font-bold text-gray-800">{job.posted || 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-5 h-5 text-gray-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DEADLINE OF APPLICATION</span>
+            <span className="text-[14px] font-bold text-gray-800">{job.deadline || 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Footer */}
+      {tab === 'my-applications' && (
+        <div className="flex flex-col gap-2 pt-4 border-t border-gray-100 mb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-blue-50 text-blue-700 border border-blue-200 tracking-wide uppercase">
+              STATUS: {job.stage || job.realStatus || 'PENDING'}
+            </span>
+            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-purple-50 text-purple-700 border border-purple-200 tracking-wide uppercase">
+              ASSESSMENT: {job.assessmentStatus || 'N/A'}
+            </span>
+            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wide uppercase">
+              APPOINTMENT: {job.appointmentStatus || 'N/A'}
+            </span>
+          </div>
+        </div>
+      )}
+      
+      {/* Buttons */}
+      <div className={`flex items-center gap-3 mt-auto ${tab !== 'my-applications' ? 'pt-4 border-t border-gray-100' : ''}`}>
+        {isApplied ? (
+           <button disabled className="flex-1 bg-gray-400 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
+             ALREADY APPLIED
+           </button>
+        ) : (
+          <button onClick={() => handleApply(job)} className="flex-1 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
+            <Briefcase className="w-4 h-4" /> APPLY NOW
+          </button>
+        )}
+        <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`flex-1 border font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+          <Star className={`w-4 h-4 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
+  return (
+    <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden w-full mt-6">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-6 py-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">Position Title</th>
+              <th className="px-6 py-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">Assignment / Location</th>
+              <th className="px-6 py-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">Details</th>
+              {tab === 'my-applications' && (
+                <th className="px-6 py-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+              )}
+              <th className="px-6 py-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {jobs.map((job: any) => {
+              const isApplied = appliedJobIds.includes(job.id || job.positionId);
+              const isSaved = savedJobIds.includes(job.id || job.positionId);
+              const title = job.title || job.position || 'Unknown Position';
+
+              return (
+                <tr key={job.id || job.positionId} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-[#2563eb]">{title}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase">IPC: {job.itemNo || 'N/A'}</span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded uppercase">{job.type || 'Permanent'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-gray-800 text-sm">{job.office || 'N/A'}</span>
+                      {job.division && <span className="text-gray-500 text-xs">{job.division}</span>}
+                      {job.location && <span className="text-gray-500 text-xs flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> {job.location}</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1 text-sm text-gray-600">
+                      <span className="font-medium">SG {job.sg || 'N/A'}</span>
+                      <span className="text-xs">Posted: {job.posted || 'N/A'}</span>
+                      <span className="text-xs text-[#f59e0b] font-semibold">Deadline: {job.deadline || 'N/A'} ({job.daysLeft || 0} days left)</span>
+                    </div>
+                  </td>
+                  {tab === 'my-applications' && (
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-blue-50 text-blue-700 uppercase tracking-wider">
+                          STATUS: {job.stage || job.realStatus || 'PENDING'}
+                        </span>
+                        <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-purple-50 text-purple-700 uppercase tracking-wider">
+                          ASSESS: {job.assessmentStatus || 'N/A'}
+                        </span>
+                        <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-emerald-50 text-emerald-700 uppercase tracking-wider">
+                          APPT: {job.appointmentStatus || 'N/A'}
+                        </span>
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col gap-2 items-end">
+                      {isApplied ? (
+                        <button disabled className="w-32 bg-gray-400 text-white font-bold py-1.5 px-3 rounded-lg text-xs cursor-not-allowed">
+                          APPLIED
+                        </button>
+                      ) : (
+                        <button onClick={() => handleApply(job)} className="w-32 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors">
+                          APPLY NOW
+                        </button>
+                      )}
+                      <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-32 border font-bold py-1.5 px-3 rounded-lg text-xs transition-colors ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                        {isSaved ? 'SAVED' : 'SAVE'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 export default function ApplicantJobList() {
   const navigate = useNavigate();
@@ -21,6 +218,7 @@ export default function ApplicantJobList() {
   const [savedJobIds, setSavedJobIds] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'job-board' | 'my-applications' | 'my-saved-jobs' | 'application-form'>('job-board');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [applyingJob, setApplyingJob] = useState<any>(null);
   const [birthDate, setBirthDate] = useState<Date | null>(new Date(1997, 7, 11)); // Default Aug 11, 1997 per reference
   const [sameAsResidential, setSameAsResidential] = useState(false);
@@ -956,7 +1154,7 @@ export default function ApplicantJobList() {
       }}
     >
       {/* Header */}
-      <ApplicantHeader percentage={percentage} firstName={firstName} lastName={lastName} photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null} />
+      <ApplicantHeader firstName={firstName} lastName={lastName} photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null} />
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-8">
@@ -965,6 +1163,12 @@ export default function ApplicantJobList() {
           {/* Tabs */}
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between border-b border-gray-100 px-2 sm:px-0">
             <div className="flex items-center overflow-x-auto hide-scrollbar">
+              <button
+                onClick={() => navigate('/applicant-dashboard')}
+                className="flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap text-gray-500 hover:text-[#003366] transition-colors border-r border-gray-100"
+              >
+                <ArrowLeft className="w-[18px] h-[18px]" /> Back to Dashboard
+              </button>
               <button
                 onClick={() => setActiveTab('job-board')}
                 className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap transition-colors ${activeTab === 'job-board' ? 'text-[#003366] border-b-[3px] border-[#003366]' : 'text-gray-400 hover:text-gray-600'}`}
@@ -1075,112 +1279,41 @@ export default function ApplicantJobList() {
                     </select>
                     <span className="text-[13px] font-semibold text-gray-500">entries</span>
                   </div>
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button onClick={() => setViewMode('card')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'card' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <LayoutGrid className="w-4 h-4" /> Card View
+                    </button>
+                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <List className="w-4 h-4" /> Table View
+                    </button>
+                  </div>
                 </div>
 
                 {/* Job List */}
-                <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100">
-                  {currentJobs.map((job) => {
-                    const isTemporary = job.type.toLowerCase() === 'temporary';
-                    return (
-                      <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
-
-                        {/* Left Content */}
-                        <div
-                          className="flex-1 space-y-3.5 cursor-pointer"
-                          onClick={() => navigate(`/applicant-jobs/${job.id}`)}
-                        >
-                          {/* Badges */}
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[13px] font-bold ${isTemporary ? 'bg-gray-200/60 text-orange-500' : 'bg-[#e8f5e9] text-[#2e7d32]'}`}>
-                              {job.type}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-extrabold tracking-widest uppercase">
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#2e7d32]"></div>
-                              OPEN
-                            </span>
-                          </div>
-
-                          {/* Title & Division */}
-                          <div>
-                            <h3 className="text-xl sm:text-[22px] font-bold text-[#022851] leading-tight mb-2">
-                              {job.title}
-                            </h3>
-                            <div className="flex items-center gap-2 text-gray-500 text-[15px] font-medium">
-                              <Building2 className="w-4 h-4 shrink-0 text-gray-400" />
-                              <span>{job.office}</span>
-                            </div>
-                            {job.division && (
-                              <div className="text-sm text-gray-400 font-medium ml-6">
-                                {job.division}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-gray-500 text-[15px] leading-relaxed max-w-4xl line-clamp-2">
-                            {job.description}
-                          </p>
-
-                          {/* Specs Row */}
-                          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13.5px] text-gray-500 pt-2">
-                            <div className="flex items-center gap-1.5">
-                              <CalendarDays className="w-4 h-4 text-gray-400" />
-                              <span>Posted {job.posted} • Deadline {job.deadline}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <CircleDollarSign className="w-4 h-4 text-gray-400" />
-                              <span>Salary Grade {job.sg}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Hash className="w-4 h-4 text-gray-400" />
-                              <span>Item No. {job.itemNo}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="w-4 h-4 text-gray-400" />
-                              <span>{job.location || 'Pasig City'}</span>
-                            </div>
-                          </div>
-
-                          {/* Alert Row */}
-                          <div className="flex items-center gap-1.5 text-[13px] font-bold text-red-500 pt-1">
-                            <Clock className="w-4 h-4" />
-                            Only {job.daysLeft} days left to apply!
-                          </div>
-                        </div>
-
-                        {/* Right Buttons */}
-                        <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
-                          <button
-                            onClick={() => toggleSaveJob(job.id)}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-[15px] ${savedJobIds.includes(job.id)
-                              ? 'border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100'
-                              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                              }`}
-                          >
-                            <Star className={`w-[18px] h-[18px] ${savedJobIds.includes(job.id) ? 'fill-[#3b82f6]' : ''}`} />
-                            {savedJobIds.includes(job.id) ? 'Saved' : 'Save'}
-                          </button>
-                          {appliedJobIds.includes(job.id) ? (
-                            <button
-                              disabled
-                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-semibold rounded-xl shadow-sm text-[15px] cursor-not-allowed"
-                            >
-                              Already Applied
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleApply(job)}
-                              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#022851] hover:bg-[#033a76] text-white font-semibold rounded-xl transition-all shadow-sm group text-[15px]"
-                            >
-                              Apply Now
-                              <ArrowRight className="w-[18px] h-[18px] group-hover:translate-x-1 transition-transform" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {viewMode === 'table' ? (
+                  <JobTableList 
+                    jobs={currentJobs} 
+                    tab={activeTab} 
+                    appliedJobIds={appliedJobIds} 
+                    savedJobIds={savedJobIds} 
+                    toggleSaveJob={toggleSaveJob} 
+                    handleApply={handleApply} 
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-gray-100">
+                    {currentJobs.map((job) => (
+                      <JobCard 
+                        key={job.id}
+                        job={job} 
+                        tab={activeTab} 
+                        appliedJobIds={appliedJobIds} 
+                        savedJobIds={savedJobIds} 
+                        toggleSaveJob={toggleSaveJob} 
+                        handleApply={handleApply} 
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* Pagination Controls */}
                 <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-6">
@@ -1225,56 +1358,45 @@ export default function ApplicantJobList() {
             )}
 
             {activeTab === 'my-applications' && (
-              <div className="space-y-4 max-w-4xl">
+              <div className="space-y-4 w-full">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h3 className="text-xl font-bold text-[#003366]">My Applications</h3>
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button onClick={() => setViewMode('card')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'card' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <LayoutGrid className="w-4 h-4" /> Card View
+                    </button>
+                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <List className="w-4 h-4" /> Table View
+                    </button>
+                  </div>
+                </div>
                 {applications.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 font-medium border border-gray-200 rounded-xl">
                     You haven't applied for any positions yet.
                   </div>
+                ) : viewMode === 'table' ? (
+                  <JobTableList 
+                    jobs={currentApps} 
+                    tab={activeTab} 
+                    appliedJobIds={appliedJobIds} 
+                    savedJobIds={savedJobIds} 
+                    toggleSaveJob={toggleSaveJob} 
+                    handleApply={handleApply} 
+                  />
                 ) : (
-                  currentApps.map((app) => (
-                    <div
-                      key={app.id}
-                      className="border border-gray-200 bg-white rounded-md p-5 hover:border-blue-300 transition-colors shadow-sm cursor-pointer"
-                      onClick={() => navigate(`/applicant-jobs/${app.positionId}`)}
-                    >
-                      <div className="mb-2">
-                        <span className="text-[#3b82f6] text-lg font-medium hover:underline">
-                          {app.position}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-gray-600 text-sm">{app.office}</span>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded ${app.type.toLowerCase() === 'permanent' ? 'bg-[#5cb85c]' : 'bg-[#f0ad4e]'} uppercase tracking-wider`}>
-                          {app.type}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                          Status: {app.stage}
-                        </span>
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-purple-50 text-purple-700 border border-purple-200">
-                          Assessment: {app.assessmentStatus}
-                        </span>
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Appointment: {app.appointmentStatus}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span>Posted on <strong>{app.posted}</strong> and deadline of application is on <strong>{app.deadline}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-5 text-sm text-gray-500">
-                        <div className="flex items-center gap-1.5">
-                          <CircleDollarSign className="w-4 h-4 text-[#5c7a99]" />
-                          <span>Salary Grade : {app.sg}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Hash className="w-4 h-4 text-[#5c7a99]" />
-                          <span>Item No : {app.itemNo}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {currentApps.map((app) => (
+                      <JobCard 
+                        key={app.id}
+                        job={app} 
+                        tab={activeTab} 
+                        appliedJobIds={appliedJobIds} 
+                        savedJobIds={savedJobIds} 
+                        toggleSaveJob={toggleSaveJob} 
+                        handleApply={handleApply} 
+                      />
+                    ))}
+                  </div>
                 )}
 
                 {applications.length > 0 && (
@@ -1302,78 +1424,44 @@ export default function ApplicantJobList() {
             )}
 
             {activeTab === 'my-saved-jobs' && (
-              <div className="max-w-[1200px]">
-                <h3 className="text-xl font-bold text-[#003366] mb-6">My Saved Jobs</h3>
+              <div className="w-full">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                  <h3 className="text-xl font-bold text-[#003366]">My Saved Jobs</h3>
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button onClick={() => setViewMode('card')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'card' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <LayoutGrid className="w-4 h-4" /> Card View
+                    </button>
+                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      <List className="w-4 h-4" /> Table View
+                    </button>
+                  </div>
+                </div>
                 {savedJobIds.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 font-medium bg-white rounded-xl shadow-sm border border-gray-200">
                     You haven't saved any jobs yet.
                   </div>
+                ) : viewMode === 'table' ? (
+                  <JobTableList 
+                    jobs={positions.filter(job => savedJobIds.includes(job.id))} 
+                    tab={activeTab} 
+                    appliedJobIds={appliedJobIds} 
+                    savedJobIds={savedJobIds} 
+                    toggleSaveJob={toggleSaveJob} 
+                    handleApply={handleApply} 
+                  />
                 ) : (
-                  <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100 bg-white px-6 rounded-xl shadow-sm border border-gray-200">
-                    {positions.filter(job => savedJobIds.includes(job.id)).map((job) => {
-                      const isTemporary = job.type.toLowerCase() === 'temporary';
-                      return (
-                        <div key={job.id} className="py-8 flex flex-col lg:flex-row justify-between items-start gap-6 group hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-xl">
-                          <div
-                            className="flex-1 space-y-3.5 cursor-pointer"
-                            onClick={() => navigate(`/applicant-jobs/${job.id}`)}
-                          >
-                            <div className="flex flex-wrap items-center gap-3">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${isTemporary ? 'bg-[#fff8e1] text-[#eab308] border-[#fef08a]' : 'bg-[#e8f5e9] text-[#2e7d32] border-[#bbf7d0]'}`}>
-                                {job.type}
-                              </span>
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e8f5e9] text-[#2e7d32] text-[10px] font-extrabold tracking-widest uppercase">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#2e7d32]"></div> OPEN
-                              </span>
-                              <span className="text-[13px] font-medium text-gray-500 ml-1">{job.office}</span>
-                            </div>
-                            <div>
-                              <h3 className="text-xl sm:text-[22px] font-bold text-[#003366] leading-tight mb-2">
-                                {job.title}
-                              </h3>
-                              <div className="flex items-center gap-2 text-gray-500 text-sm">
-                                <Building2 className="w-[18px] h-[18px] text-gray-400" />
-                                <span>{job.division || job.office}</span>
-                              </div>
-                            </div>
-                            <p className="text-gray-500 text-[15px] leading-relaxed max-w-4xl line-clamp-2">
-                              {job.description}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13.5px] text-gray-500 pt-2">
-                              <div className="flex items-center gap-1.5">
-                                <CalendarDays className="w-4 h-4 text-gray-400" />
-                                <span>Posted {job.posted} • Deadline {job.deadline}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <CircleDollarSign className="w-4 h-4 text-gray-400" />
-                                <span>Salary Grade {job.sg}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-3 w-full lg:w-[160px] shrink-0 lg:mt-2">
-                            <button
-                              onClick={() => toggleSaveJob(job.id)}
-                              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl font-semibold transition-colors text-sm border-[#3b82f6] text-[#3b82f6] bg-blue-50 hover:bg-blue-100`}
-                            >
-                              <Star className={`w-[18px] h-[18px] fill-[#3b82f6]`} /> Saved
-                            </button>
-                            {appliedJobIds.includes(job.id) ? (
-                              <button disabled className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-400 text-white font-extrabold rounded-xl shadow-sm text-sm cursor-not-allowed">
-                                Already Applied
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleApply(job)}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#facc15] hover:bg-[#eab308] text-[#003366] font-extrabold rounded-xl transition-colors shadow-sm group text-sm"
-                              >
-                                Apply Now <ArrowRight className="w-[18px] h-[18px] group-hover:translate-x-1 transition-transform" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {positions.filter(job => savedJobIds.includes(job.id)).map((job) => (
+                      <JobCard 
+                        key={job.id}
+                        job={job} 
+                        tab={activeTab} 
+                        appliedJobIds={appliedJobIds} 
+                        savedJobIds={savedJobIds} 
+                        toggleSaveJob={toggleSaveJob} 
+                        handleApply={handleApply} 
+                      />
+                    ))}
                   </div>
                 )}
               </div>

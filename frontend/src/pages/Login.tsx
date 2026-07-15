@@ -22,7 +22,7 @@ export default function Login() {
       try {
         const session = JSON.parse(sessionStr);
         if (session.expiry && session.expiry > new Date().getTime()) {
-          navigate('/applicant-jobs');
+          navigate('/applicant-dashboard');
         } else {
           localStorage.removeItem('session_data');
         }
@@ -53,7 +53,7 @@ export default function Login() {
           expiry: now.getTime() + 3 * 60 * 60 * 1000,
         };
         localStorage.setItem('session_data', JSON.stringify(item));
-        navigate('/applicant-jobs');
+        navigate('/applicant-dashboard');
       } else {
         Swal.fire('Error', 'Invalid credentials', 'error');
       }
@@ -73,7 +73,12 @@ export default function Login() {
             <div className="w-12 h-12 bg-white border-2 border-[var(--blue)] rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
               <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-3xl font-extrabold text-[var(--ink)]" style={{ fontFamily: 'var(--font-heading)' }}>AGAP Portal</h2>
+            <div className="flex items-center">
+              <div className="flex flex-col">
+                <span className="text-[var(--ink)] font-bold text-lg leading-tight tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>AGAP Portal</span>
+                <span className="text-[var(--ink)]/70 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
+              </div>
+            </div>
           </div>
           <h2 className="mt-6 text-2xl font-bold text-[var(--ink)]" style={{ fontFamily: 'var(--font-heading)' }}>
             Sign in to your account
@@ -150,6 +155,17 @@ export default function Login() {
                   className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--blue)] hover:bg-[var(--blue-deep)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--blue)] transition-colors"
                 >
                   {loading ? 'Authenticating...' : 'Sign in'}
+                </button>
+              </div>
+
+              <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(true)}
+                  className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
+                >
+                  Register here
                 </button>
               </div>
             </form>

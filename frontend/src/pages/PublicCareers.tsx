@@ -183,8 +183,11 @@ export default function PublicCareers() {
           <div className="w-11 h-11 bg-[#022851] rounded-full flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-[#022851]">
             <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain p-1" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-[#022851] font-bold text-lg leading-tight tracking-tight">AGAP Portal</span>
+          <div className="flex items-center">
+            <div className="flex flex-col">
+              <span className="text-[#022851] font-bold text-lg leading-tight tracking-tight">AGAP Portal</span>
+              <span className="text-[#022851]/70 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
+            </div>
           </div>
         </div>
 

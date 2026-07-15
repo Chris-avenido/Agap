@@ -158,8 +158,28 @@ class ApplicantsServiceClass {
 
     const appId = require('crypto').randomUUID();
     
-    // Make application_number unique by appending a short portion of the UUID
-    const uniqueApplicationNumber = applicantNumber ? `${applicantNumber}-${appId.substring(0, 6).toUpperCase()}` : `APP-${appId.substring(0, 8).toUpperCase()}`;
+    // Generate application_number in format YYYYMMDD-00001
+    const today = new Date();
+    // Use local timezone format if possible, but safely using UTC or basic padStart
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}${mm}${dd}`;
+
+    const lastApp = await pool.query(`
+      SELECT application_number FROM applications 
+      WHERE application_number LIKE $1 
+      ORDER BY id DESC LIMIT 1
+    `, [`${dateStr}-%`]);
+
+    let nextAppNum = 1;
+    if (lastApp.rows.length > 0 && lastApp.rows[0].application_number) {
+      const match = lastApp.rows[0].application_number.split('-');
+      if (match.length > 1) {
+        nextAppNum = parseInt(match[1], 10) + 1;
+      }
+    }
+    const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
     const result = await pool.query(`
       INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
@@ -171,7 +191,12 @@ class ApplicantsServiceClass {
   }
 
   async findApplications(applicantId: number) {
-    const result = await pool.query('SELECT * FROM applications WHERE applicant_id = $1', [applicantId.toString()]);
+    const result = await pool.query(`
+      SELECT a.*, v.title as job_title, v.school as office
+      FROM applications a
+      LEFT JOIN vacancies v ON a.vacancy_id::text = v.id::text
+      WHERE a.applicant_id = $1
+    `, [applicantId.toString()]);
     return result.rows.map(r => ({ ...r, position_id: r.vacancy_id }));
   }
 
@@ -193,7 +218,12 @@ class ApplicantsServiceClass {
   }
 
   async findSavedJobs(applicantId: number) {
-    const result = await pool.query('SELECT * FROM saved_jobs WHERE applicant_id = $1 AND is_saved = true', [applicantId]);
+    const result = await pool.query(`
+      SELECT s.*, v.title as position_title, v.school as office
+      FROM saved_jobs s
+      LEFT JOIN vacancies v ON s.position_id::text = v.id::text
+      WHERE s.applicant_id = $1 AND s.is_saved = true
+    `, [applicantId]);
     return result.rows;
   }
 
@@ -227,18 +257,30 @@ class ApplicantsServiceClass {
       q40c: data.q40c,
     });
 
+    // Generate AGAP-0001 format for applicant_number
+    const lastApplicant = await pool.query(`SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`);
+    let nextApplicantNum = 1;
+    if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
+      const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+      if (match) {
+        nextApplicantNum = parseInt(match[1], 10) + 1;
+      }
+    }
+    const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+
     const result = await pool.query(`
       INSERT INTO applicants (
-        password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
+        applicant_number, password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
         sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
         sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
         educational_background, civil_service_eligibility, work_experience, voluntary_work,
         learning_and_development, other_information, questionnaire_responses, family_background
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, $27
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28
       ) RETURNING *
     `, [
+      newApplicantNumber,
       passwordHash,
       data.surname || 'UNKNOWN',
       data.first_name || 'UNKNOWN',
@@ -270,16 +312,30 @@ class ApplicantsServiceClass {
 
     const applicant = result.rows[0];
 
-    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).replace(/-/g, '');
-    const paddedId = applicant.id.toString().padStart(4, '0');
-    const applicantNumber = `${dateStr}-${paddedId}`;
-
-    await pool.query('UPDATE applicants SET applicant_number = $1 WHERE id = $2', [applicantNumber, applicant.id]);
-    applicant.applicant_number = applicantNumber;
-
     if (data.jobTitle) {
       const appId = require('crypto').randomUUID();
-      const uniqueApplicationNumber = `${applicantNumber}-${appId.substring(0, 6).toUpperCase()}`;
+      
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}${mm}${dd}`;
+
+      const lastApp = await pool.query(`
+        SELECT application_number FROM applications 
+        WHERE application_number LIKE $1 
+        ORDER BY id DESC LIMIT 1
+      `, [`${dateStr}-%`]);
+
+      let nextAppNum = 1;
+      if (lastApp.rows.length > 0 && lastApp.rows[0].application_number) {
+        const match = lastApp.rows[0].application_number.split('-');
+        if (match.length > 1) {
+          nextAppNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
+
       await pool.query(`
         INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
         VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())

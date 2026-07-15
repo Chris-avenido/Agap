@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import { X, ChevronRight, ChevronLeft, UploadCloud, Eye, EyeOff } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, User, Briefcase, GraduationCap, FileText } from 'lucide-react';
 
 interface ApplicationModalProps {
   isOpen: boolean;
@@ -11,250 +11,162 @@ interface ApplicationModalProps {
 
 export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: ApplicationModalProps) {
   const [activeTab, setActiveTab] = useState('C1');
-  const [isParsing, setIsParsing] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [userData, setUserData] = useState<any>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.pdf') && !file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
-      Swal.fire('Error', 'Please upload a PDF or DOCX file.', 'error');
-      return;
+  useEffect(() => {
+    const sessionStr = localStorage.getItem('session_data');
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setUserData(data.data);
+          }
+        });
     }
+  }, []);
 
-    setIsParsing(true);
-    const formData = new FormData();
-    formData.append('resume', file);
+      const formRef = useRef<HTMLFormElement>(null);
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/parse-resume`, {
-        method: 'POST',
-        body: formData,
-      });
-      const resData = await response.json();
-      
-      if (response.ok && resData.success && resData.data && formRef.current) {
-        const data = resData.data;
-        const form = formRef.current;
-        
-        if (data.surname) (form.elements.namedItem('surname') as HTMLInputElement).value = data.surname;
-        if (data.first_name) (form.elements.namedItem('first_name') as HTMLInputElement).value = data.first_name;
-        if (data.middle_name) (form.elements.namedItem('middle_name') as HTMLInputElement).value = data.middle_name;
-        if (data.email_address) (form.elements.namedItem('email_address') as HTMLInputElement).value = data.email_address;
-        if (data.mobile_no) (form.elements.namedItem('mobile_no') as HTMLInputElement).value = data.mobile_no;
-        if (data.residential_address) (form.elements.namedItem('residential_address') as HTMLInputElement).value = data.residential_address;
-        if (data.sex) (form.elements.namedItem('sex') as HTMLSelectElement).value = data.sex;
 
-        if (data.work_experience && Array.isArray(data.work_experience)) {
-          data.work_experience.forEach((work: any, index: number) => {
-            const row = index + 1;
-            if (row <= 4) {
-              const posInput = form.elements.namedItem(`work_position_${row}`) as HTMLInputElement;
-              const compInput = form.elements.namedItem(`work_company_${row}`) as HTMLInputElement;
-              if (posInput && work.position) posInput.value = work.position;
-              if (compInput && work.company) compInput.value = work.company;
-            }
-          });
-        }
-
-        Swal.fire('Success', 'Resume parsed! Fields have been auto-filled.', 'success');
-      } else {
-        Swal.fire('Error', resData.message || 'Failed to parse resume.', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Error', 'Server error while parsing resume.', 'error');
-    } finally {
-      setIsParsing(false);
-      // Reset input so they can upload again if needed
-      e.target.value = '';
-    }
-  };
 
   if (!isOpen) return null;
 
   const tabs = [
-    { id: 'C1', label: 'C1 - Personal Info' },
-    { id: 'C2', label: 'C2 - Eligibility & Work' },
-    { id: 'C3', label: 'C3 - Training & Others' },
-    { id: 'C4', label: 'C4 - Questionnaire' }
+    { id: 'C1', label: 'Personal Information', icon: User },
+    { id: 'C2', label: 'Family Background', icon: FileText },
+    { id: 'C3', label: 'Educational Background', icon: GraduationCap },
+    { id: 'C4', label: 'Eligibility', icon: FileText },
+    { id: 'C5', label: 'Work Experience', icon: Briefcase },
+    { id: 'C6', label: 'Voluntary Work', icon: FileText },
+    { id: 'C7', label: 'Learning & Development', icon: FileText },
+    { id: 'C8', label: 'Other Information', icon: FileText },
+    { id: 'C9', label: 'Legal Questionnaire', icon: FileText },
+    { id: 'C10', label: 'Essential Documents', icon: FileText }
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b flex justify-between items-center bg-brand-700 text-white rounded-t-lg">
-          <div>
-            <h2 className="text-xl font-semibold">CS Form No. 212 Application</h2>
-            <p className="text-sm opacity-90 text-gray-200">Applying for: {jobTitle}</p>
-          </div>
-          <button onClick={onClose} className="hover:bg-brand-600 p-2 rounded-full transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 md:p-4">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 bg-[#eff3f8] p-4 md:p-6 w-full max-w-7xl h-[95vh] md:h-[90vh] max-h-[1000px] overflow-hidden rounded-lg shadow-2xl relative">
+        
+        {/* Close Button Absolute */}
+        <button onClick={onClose} className="absolute top-2 right-2 md:top-4 md:right-4 hover:bg-gray-200 p-2 rounded-full transition-colors text-gray-500 bg-white shadow-sm z-50">
+          <X className="w-5 h-5" />
+        </button>
 
-        {/* Tabs */}
-        <div className="flex border-b bg-gray-100 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-brand-600 text-brand-700 bg-white'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
-          
-          {/* AI Resume Upload Zone */}
-          <div className="mb-6 p-6 border-2 border-dashed border-brand-300 rounded-lg bg-brand-50 text-center hover:bg-brand-100 transition-colors relative">
-            <input 
-              type="file" 
-              accept=".pdf,.docx,.doc" 
-              onChange={handleFileUpload} 
-              disabled={isParsing}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-            />
-            <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
-              <UploadCloud className={`w-10 h-10 text-brand-600 ${isParsing ? 'animate-bounce' : ''}`} />
-              {isParsing ? (
-                <p className="font-semibold text-brand-700">Scanning Resume with AI...</p>
+        {/* Left Sidebar */}
+        <div className="w-full md:w-[280px] lg:w-[320px] flex flex-col bg-white shadow-sm shrink-0 md:h-fit h-auto max-h-[40vh] md:max-h-full border border-gray-100 rounded-sm overflow-hidden md:overflow-y-auto scrollbar-thin z-10">
+          <div className="bg-[#1a73e8] p-4 md:p-5 flex items-center gap-3 md:gap-4 border-b-4 border-red-500 rounded-none shrink-0">
+            <div className="w-[48px] h-[48px] md:w-[60px] md:h-[60px] bg-white rounded-full flex flex-col items-center justify-center font-extrabold text-[9px] md:text-[11px] leading-none text-center text-black shrink-0 shadow-sm overflow-hidden">
+              {userData?.photo_url ? (
+                <img src={userData.photo_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <>
-                  <p className="font-semibold text-brand-700">Drag & Drop Resume to Auto-Fill (AI)</p>
-                  <p className="text-sm text-brand-600/80">Supports PDF and DOCX</p>
+                  <span>UPLOAD</span>
+                  <span>PHOTO</span>
                 </>
               )}
             </div>
+            <div className="flex flex-col text-white">
+              <span className="font-bold text-[14px] md:text-[16px] uppercase tracking-wide">
+                {userData ? `${userData.first_name || ''} ${userData.surname || ''}`.trim() : 'APPLICANT'}
+              </span>
+              <span className="text-[12px] md:text-[13px] leading-snug mt-0.5 md:mt-1 opacity-90">Applying for {jobTitle}</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-visible scrollbar-hide border-b md:border-b-0 border-gray-100 shrink-0">
+            {tabs.map((tab, idx) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              
+              // We can determine 'completed' visually if it's before the active tab roughly
+              const currentIndex = tabs.findIndex(t => t.id === activeTab);
+              const isCompleted = idx < currentIndex;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-between px-4 md:px-5 py-3 md:py-3.5 text-left border-r md:border-r-0 md:border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap min-w-max md:min-w-0 ${isActive ? 'bg-blue-50/30' : ''}`}
+                >
+                  <div className="flex items-center gap-2 md:gap-3.5">
+                    <div className={`w-[24px] h-[24px] md:w-[30px] md:h-[30px] rounded-full flex items-center justify-center shrink-0 ${isActive || isCompleted ? 'bg-[#34a853]' : 'bg-gray-100'}`}>
+                      <Icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isActive || isCompleted ? 'text-white' : 'text-gray-300'}`} />
+                    </div>
+                    <span className={`text-[13px] md:text-[14px] font-semibold tracking-wide ${isActive ? 'text-[#1a73e8]' : 'text-[#8599ad]'}`}>{tab.label}</span>
+                  </div>
+                  <div className={`hidden md:block w-2 h-2 rounded-full shrink-0 ml-4 ${isCompleted ? 'bg-[#34a853]' : (isActive ? 'bg-red-500' : 'bg-gray-200')}`}></div>
+                </button>
+              );
+            })}
           </div>
 
-          <form id="application-form" ref={formRef} className="space-y-6">
+          <div className="hidden md:flex flex-col mt-4 border border-gray-200 rounded p-4 mx-4 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-[34px] h-[38px] bg-gray-100 flex flex-col items-center justify-center relative border border-gray-200 rounded-sm overflow-hidden shrink-0">
+                <div className="absolute top-1 text-orange-400 font-extrabold text-[14px]">↑</div>
+                <div className="w-full h-1.5 bg-blue-500 absolute bottom-0"></div>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[13px] text-gray-700">Upload Letter of Intent</span>
+                  <div className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold">?</div>
+                </div>
+                <span className="text-[11px] text-gray-500">For this position.</span>
+              </div>
+            </div>
+            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
+              Upload Now
+              <input className="hidden" type="file" />
+            </label>
+          </div>
+        </div>
+
+        {/* Right Content */}
+        <div className="flex-1 flex flex-col gap-4 md:gap-6 overflow-y-auto max-h-full pr-1 md:pr-2 scrollbar-thin pb-10">
+
+          {/* Progress Alert */}
+          <div className="bg-[#e8f5e9] border border-[#bbf7d0] p-3 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl shadow-sm shrink-0">
+            <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-[#2e7d32] rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                <FileText className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-[14px] md:text-[15px] font-bold text-[#1b5e20]">Complete your Profile</h2>
+                <p className="text-xs md:text-sm text-[#2e7d32] font-medium leading-snug">
+                  Your profile is 100.00% complete. Fill in the missing information below to improve your chances.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-64 shrink-0">
+              <div className="flex items-center justify-between mb-1.5 px-1">
+                <span className="text-[11px] font-extrabold text-[#1b5e20] tracking-wider uppercase">Progress</span>
+                <span className="text-[11px] font-extrabold text-[#1b5e20]">100.00%</span>
+              </div>
+              <div className="w-full bg-[#bbf7d0] h-2.5 rounded-full overflow-hidden">
+                <div className="bg-[#2e7d32] h-full transition-all duration-500 rounded-full" style={{ width: `100%` }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Content Box */}
+          <div className="bg-white p-4 md:p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase [&_input[type='email']]:uppercase [&_textarea]:uppercase">
+            <h3 className="text-[16px] md:text-[18px] text-gray-500 uppercase tracking-widest mb-6 md:mb-10 text-center font-light">
+              {tabs.find(t => t.id === activeTab)?.label || 'PERSONAL INFORMATION'}
+            </h3>
+          <form id="application-form" ref={formRef} className="space-y-4 md:space-y-6 w-full">
             
             {/* C1: Personal Information */}
             <div className={activeTab === 'C1' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
-                
-                {/* Section I */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">I. Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">SURNAME</label>
-                        <input name="surname" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">FIRST NAME</label>
-                        <input name="first_name" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">MIDDLE NAME</label>
-                        <input name="middle_name" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                    </div>
+<div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Name <span className="text-red-500">*</span></label><div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span><input required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue={userData?.first_name || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Middle Name</span><input  placeholder="Enter middle name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"  type="text"   name="middle_name" defaultValue={userData?.middle_name || ''} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Last Name</span><input  required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"  type="text"   name="surname" defaultValue={userData?.surname || ''} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Extension Name</span><input  placeholder="Enter extension name" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"  type="text"   name="extension_name" defaultValue={userData?.extension_name || ''} /></div></div></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Birth Details <span className="text-red-500">*</span></label><div className="flex-1 flex flex-col sm:flex-row gap-4"><div className="w-full sm:w-[35%] flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span><input  placeholder="Select date of birth" className="w-full border border-gray-300 bg-white rounded p-2.5 text-[14px] outline-none cursor-pointer focus:border-blue-500 text-gray-700 "  type="date"   name="date_of_birth" defaultValue={userData?.date_of_birth ? userData.date_of_birth.split('T')[0] : ''} /></div><div className="flex-1 flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">City, town, etc.</span><input required placeholder="Enter place of birth" className="w-full border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" type="text" defaultValue={userData?.place_of_birth || ""} /></div></div></div><div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Sex <span className="text-red-500">*</span></label><div className="flex gap-4"><button type="button" className="bg-[#3498db] text-white px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]"><div className="w-2.5 h-2.5 rounded-full bg-white"></div> MALE</button><button type="button" className="bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]"><div className="w-2.5 h-2.5 rounded-full bg-gray-400"></div> FEMALE</button></div></div><div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Civil Status <span className="text-red-500">*</span></label><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 min-w-[200px] h-[42px] "><option value="">Select civil status</option><option value="Single">Single</option><option value="Married">Married</option><option value="Widowed">Widowed</option><option value="Separated">Separated</option></select></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Statistics <span className="text-red-500">*</span><div className="text-[10px] text-gray-400 font-normal mt-0.5 leading-tight">Specify your Height,<br />Weight, and Blood Type</div></label><div className="flex-1 flex flex-col sm:flex-row gap-4"><div className="w-full sm:w-1/3 flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Height</span><div className="flex"><input required placeholder="Enter height" className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]" type="text" defaultValue={userData?.height || ""} /><span className="border border-l-0 border-gray-300 rounded-r px-3 py-2.5 text-[13px] text-gray-500 flex items-center justify-center bg-gray-200 font-medium">m</span></div></div><div className="w-full sm:w-1/3 flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Weight</span><div className="flex"><input required placeholder="Enter weight" className="w-full border border-gray-300 rounded-l p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]" type="text" defaultValue={userData?.weight || ""} /><span className="border border-l-0 border-gray-300 rounded-r px-3 py-2.5 text-[13px] text-gray-500 flex items-center justify-center bg-gray-200 font-medium">kg</span></div></div><div className="w-full sm:w-1/3 flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Blood Type</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"><option value="">Select blood type</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option><option value="Unknown">Unknown</option></select></div></div></div><div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Agency Employee No.<br /><span className="text-[12px] text-gray-400 font-normal">(if any)</span></label><input placeholder="Enter agency employee number" className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]" type="text" defaultValue="" /></div><div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Citizenship <span className="text-red-500">*</span></label><div className="flex-1 flex flex-col sm:flex-row items-center gap-6"><select required className="w-full sm:w-[240px] border border-gray-300 rounded p-2.5 text-[14px] text-gray-500 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px]"><option value="">Enter citizenship</option><option value="Filipino">Filipino</option><option value="Dual Citizenship">Dual Citizenship</option></select><div className="flex items-center gap-6"><label className="flex items-center gap-2.5 cursor-pointer text-[13px] text-gray-600"><input className="w-3.5 h-3.5 text-blue-600 border-gray-300" type="radio" name="citizenship_type" />by Birth</label><label className="flex items-center gap-2.5 cursor-pointer text-[13px] text-gray-600"><input className="w-3.5 h-3.5 text-blue-600 border-gray-300" type="radio" name="citizenship_type" />by Naturalization</label></div></div></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Residential Address <span className="text-red-500">*</span></label><div className="flex-1 flex flex-col gap-4"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">House / Block / Lot No.</span><input placeholder="Enter house / block / lot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" type="text" defaultValue={userData?.residential_address?.house_no || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Street</span><input placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" type="text" defaultValue={userData?.residential_address?.street || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Subdivision / Village</span><input placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" type="text" defaultValue={userData?.place_of_birth || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">ZIP Code</span><input placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue={userData?.residential_address?.zip_code || ""} /></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Region</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"><option value="">Select region</option><option value="01">REGION I (ILOCOS REGION)</option><option value="02">REGION II (CAGAYAN VALLEY)</option><option value="03">REGION III (CENTRAL LUZON)</option><option value="04">REGION IV-A (CALABARZON)</option><option value="17">REGION IV-B (MIMAROPA)</option><option value="05">REGION V (BICOL REGION)</option><option value="06">REGION VI (WESTERN VISAYAS)</option><option value="07">REGION VII (CENTRAL VISAYAS)</option><option value="08">REGION VIII (EASTERN VISAYAS)</option><option value="09">REGION IX (ZAMBOANGA PENINSULA)</option><option value="10">REGION X (NORTHERN MINDANAO)</option><option value="11">REGION XI (DAVAO REGION)</option><option value="12">REGION XII (SOCCSKSARGEN)</option><option value="13">NATIONAL CAPITAL REGION (NCR)</option><option value="14">CORDILLERA ADMINISTRATIVE REGION (CAR)</option><option value="15">AUTONOMOUS REGION IN MUSLIM MINDANAO (ARMM)</option><option value="16">REGION XIII (Caraga)</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Province</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"><option value="">Select province</option><option value="1602">AGUSAN DEL NORTE</option><option value="1603">AGUSAN DEL SUR</option><option value="1667">SURIGAO DEL NORTE</option><option value="1668">SURIGAO DEL SUR</option><option value="1685">DINAGAT ISLANDS</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">City / Municipality</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"><option value="">Select city / municipality</option><option value="160301">CITY OF BAYUGAN</option><option value="160302">BUNAWAN</option><option value="160303">ESPERANZA</option><option value="160304">LA PAZ</option><option value="160305">LORETO</option><option value="160306">PROSPERIDAD (Capital)</option><option value="160307">ROSARIO</option><option value="160308">SAN FRANCISCO</option><option value="160309">SAN LUIS</option><option value="160310">SANTA JOSEFA</option><option value="160311">TALACOGON</option><option value="160312">TRENTO</option><option value="160313">VERUELA</option><option value="160314">SIBAGAT</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Barangay</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"><option value="">Select barangay</option><option value="BuenaGracia">BuenaGracia</option><option value="Causwagan">Causwagan</option><option value="Culi">Culi</option><option value="Del Monte">Del Monte</option><option value="Desamparados">Desamparados</option><option value="Labnig">Labnig</option><option value="Sabang Gibung">Sabang Gibung</option><option value="San Agustin (Pob.)">San Agustin (Pob.)</option><option value="San Isidro (Pob.)">San Isidro (Pob.)</option><option value="San Nicolas (Pob.)">San Nicolas (Pob.)</option><option value="Zamora">Zamora</option><option value="Zillovia">Zillovia</option><option value="La Flora">La Flora</option><option value="Maharlika">Maharlika</option><option value="Marbon">Marbon</option><option value="Batucan">Batucan</option></select></div></div></div></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Permanent Address <span className="text-red-500">*</span></label><div className="flex-1 flex flex-col gap-4"><label className="flex items-center gap-2 cursor-pointer text-[12px] text-gray-600 mb-1"><input className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded" type="checkbox" /><span className="font-bold">Same as Residential Address?</span> <span className="italic text-gray-400">(check if permanent address is same with the above address)</span></label><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">House / Block / Lot No.</span><input placeholder="Enter house / block / lot No." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue="" /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Street</span><input placeholder="Enter street" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue="" /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Subdivision / Village</span><input placeholder="Enter subdivision / village" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue="" /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">ZIP Code</span><input placeholder="Enter ZIP code" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue="" /></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Region</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"><option value="">Select region</option><option value="01">REGION I (ILOCOS REGION)</option><option value="02">REGION II (CAGAYAN VALLEY)</option><option value="03">REGION III (CENTRAL LUZON)</option><option value="04">REGION IV-A (CALABARZON)</option><option value="17">REGION IV-B (MIMAROPA)</option><option value="05">REGION V (BICOL REGION)</option><option value="06">REGION VI (WESTERN VISAYAS)</option><option value="07">REGION VII (CENTRAL VISAYAS)</option><option value="08">REGION VIII (EASTERN VISAYAS)</option><option value="09">REGION IX (ZAMBOANGA PENINSULA)</option><option value="10">REGION X (NORTHERN MINDANAO)</option><option value="11">REGION XI (DAVAO REGION)</option><option value="12">REGION XII (SOCCSKSARGEN)</option><option value="13">NATIONAL CAPITAL REGION (NCR)</option><option value="14">CORDILLERA ADMINISTRATIVE REGION (CAR)</option><option value="15">AUTONOMOUS REGION IN MUSLIM MINDANAO (ARMM)</option><option value="16">REGION XIII (Caraga)</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Province</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full" disabled><option value="">Select province</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">City / Municipality</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full" disabled><option value="">Select city / municipality</option></select></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Barangay</span><select required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full" disabled><option value="">Select barangay</option></select></div></div></div></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Contact Nos. <span className="text-red-500">*</span></label><div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span><input required placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" defaultValue={userData?.telephone_no || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Mobile No.</span><input  required placeholder="Enter mobile no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"  type="text"   name="mobile_no" defaultValue={userData?.mobile_no || ''} /></div></div></div><div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8"><label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Email Address <span className="text-red-500">*</span></label><div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Primary</span><input required className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" type="email" defaultValue={userData?.email || ""} /></div><div className="flex flex-col justify-between h-full"><span className="text-[12px] text-gray-400 mb-1.5 font-medium">Alternate</span><input placeholder="Enter alternate email" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="email" defaultValue="" /></div></div></div>
+              </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">DATE OF BIRTH (mm/dd/yyyy)</label>
-                      <input name="date_of_birth" type="date" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">PLACE OF BIRTH</label>
-                      <input name="place_of_birth" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">SEX</label>
-                      <select name="sex" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500">
-                        <option value="">Select...</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">CIVIL STATUS</label>
-                      <select name="civil_status" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500">
-                        <option value="">Select...</option>
-                        <option value="Single">Single</option>
-                        <option value="Married">Married</option>
-                        <option value="Widowed">Widowed</option>
-                        <option value="Separated">Separated</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">CITIZENSHIP</label>
-                      <input name="citizenship" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" defaultValue="Filipino" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">BLOOD TYPE</label>
-                      <input name="blood_type" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-
-                    <div className="col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">GSIS ID NO.</label>
-                        <input name="gsis_id_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">PAG-IBIG ID NO.</label>
-                        <input name="pag_ibig_id_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">PHILHEALTH NO.</label>
-                        <input name="philhealth_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">SSS NO.</label>
-                        <input name="sss_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                      </div>
-                    </div>
-                    
-                    <div className="col-span-3 mt-2 border-t pt-4">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">RESIDENTIAL ADDRESS</label>
-                      <textarea name="residential_address" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" rows={2}></textarea>
-                    </div>
-                    <div className="col-span-3">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">PERMANENT ADDRESS</label>
-                      <textarea name="permanent_address" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" rows={2}></textarea>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">TELEPHONE NO.</label>
-                      <input name="telephone_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">MOBILE NO.</label>
-                      <input name="mobile_no" type="text" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">E-MAIL ADDRESS</label>
-                      <input name="email_address" type="email" className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">PASSWORD (For Portal Access)</label>
-                      <div className="relative">
-                        <input name="password" type={showPassword ? "text" : "password"} className="w-full p-2 pr-10 border rounded bg-gray-50 focus:bg-white outline-brand-500" required minLength={8} />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
+            {/* C2: Family Background */}
+            <div className={activeTab === 'C2' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
                 {/* Section II */}
                 <div className="bg-white p-6 rounded border shadow-sm space-y-4">
                   <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">II. Family Background</h3>
@@ -291,375 +203,890 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
                     </div>
                   </div>
                 </div>
-
-                {/* Section III */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">III. Educational Background</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase">
-                        <tr>
-                          <th className="px-4 py-2 border">Level</th>
-                          <th className="px-4 py-2 border">Name of School (Write in full)</th>
-                          <th className="px-4 py-2 border">Basic Education/Degree/Course (Write in full)</th>
-                          <th className="px-4 py-2 border">Period of Attendance (From - To)</th>
-                          <th className="px-4 py-2 border">Highest Level/Units Earned (if not graduated)</th>
-                          <th className="px-4 py-2 border">Year Graduated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {['Elementary', 'Secondary', 'Vocational / Trade Course', 'College', 'Graduate Studies'].map(level => (
-                          <tr key={level}>
-                            <td className="px-4 py-2 border font-medium">{level}</td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border">
-                              <div className="flex items-center gap-1">
-                                <input type="date" className="w-full p-1 bg-transparent outline-none text-xs" />
-                                <span className="text-gray-400 text-xs">-</span>
-                                <input type="date" className="w-full p-1 bg-transparent outline-none text-xs" />
-                              </div>
-                            </td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </div>
 
-            {/* C2: Eligibility & Work Experience */}
-            <div className={activeTab === 'C2' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
-                {/* Section IV */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">IV. Eligibility</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase">
-                        <tr>
-                          <th className="px-4 py-2 border">Career Service/ RA 1080 (Board/ Bar) / Under Special Laws / CES / CSEE / Barangay Eligibility / Driver's License</th>
-                          <th className="px-4 py-2 border">Rating (If Applicable)</th>
-                          <th className="px-4 py-2 border">Date of Examination/Conferment</th>
-                          <th className="px-4 py-2 border">Place of Examination / Conferment</th>
-                          <th className="px-4 py-2 border">License Number</th>
-                          <th className="px-4 py-2 border">License Date of Validity</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[1, 2, 3].map(row => (
-                          <tr key={row}>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            
+            {/* C3: Educational Background */}
+            <div className={activeTab === 'C3' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Elementary</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Section V */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">V. Work Experience</h3>
-                  <p className="text-xs text-gray-500">(Include private employment. Start from your recent work) Description of duties should be indicated in the attached Work Experience Sheet.</p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border min-w-[800px]">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase">
-                        <tr>
-                          <th className="px-4 py-2 border text-center" colSpan={2}>Inclusive Dates (mm/dd/yyyy)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Position Title (Write in full/Do not abbreviate)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Department/Agency/Office/Company (Write in full/Do not abbreviate)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Monthly Salary</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Salary/ Job/ Pay Grade</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Status of Appointment</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Gov't Service (Y/N)</th>
-                        </tr>
-                        <tr>
-                          <th className="px-4 py-2 border">From</th>
-                          <th className="px-4 py-2 border">To</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[1, 2, 3, 4].map(row => (
-                          <tr key={row}>
-                            <td className="px-2 py-1 border"><input name={`work_from_${row}`} type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_to_${row}`} type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_position_${row}`} type="text" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_company_${row}`} type="text" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_salary_${row}`} type="text" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_pay_grade_${row}`} type="text" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input name={`work_status_${row}`} type="text" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border">
-                              <select name={`work_govt_${row}`} className="w-full p-1 bg-transparent outline-none text-xs">
-                                <option value="">-</option>
-                                <option value="Y">Y</option>
-                                <option value="N">N</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Secondary</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
                   </div>
                 </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Vocational / Trade Course</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">College</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Graduate Studies</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                
+
+              
             </div>
 
-            {/* C3: Training & Others */}
-            <div className={activeTab === 'C3' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
-                {/* Section VI */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">VI. Voluntary Work or Involvement in Civic/Non-Government / People / Voluntary Organizations</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase">
-                        <tr>
-                          <th className="px-4 py-2 border" rowSpan={2}>Name & Address of Organization (Write in full)</th>
-                          <th className="px-4 py-2 border text-center" colSpan={2}>Inclusive Dates (mm/dd/yyyy)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Number of Hours</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Position / Nature of Work</th>
-                        </tr>
-                        <tr>
-                          <th className="px-4 py-2 border">From</th>
-                          <th className="px-4 py-2 border">To</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[1, 2].map(row => (
-                          <tr key={row}>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input type="number" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            {/* C4: Civil Service Eligibility */}
+            <div className={activeTab === 'C4' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #1</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Career Service/ RA 1080 / Under Special Laws / CES / CSEE</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Rating (If Applicable)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Examination/Conferment</span>
+
+                      <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Number</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Date of Validity</span>
+
+                      <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Section VII */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">VII. Learning and Development (L&D) Interventions/Training Programs Attended</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border">
-                      <thead className="bg-gray-100 text-xs text-gray-600 uppercase">
-                        <tr>
-                          <th className="px-4 py-2 border" rowSpan={2}>Title of L&D Interventions/Training Programs (Write in full)</th>
-                          <th className="px-4 py-2 border text-center" colSpan={2}>Inclusive Dates of Attendance (mm/dd/yyyy)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Number of Hours</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Type of L&D (Managerial/ Supervisory/ Technical/ etc)</th>
-                          <th className="px-4 py-2 border" rowSpan={2}>Conducted/Sponsored By (Write in full)</th>
-                        </tr>
-                        <tr>
-                          <th className="px-4 py-2 border">From</th>
-                          <th className="px-4 py-2 border">To</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[1, 2, 3].map(row => (
-                          <tr key={row}>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input type="date" className="w-full p-1 bg-transparent outline-none text-xs" /></td>
-                            <td className="px-2 py-1 border"><input type="number" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                            <td className="px-2 py-1 border"><input type="text" className="w-full p-1 bg-transparent outline-none" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #2</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Career Service/ RA 1080 / Under Special Laws / CES / CSEE</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Rating (If Applicable)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Examination/Conferment</span>
+
+                      <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Number</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">License Date of Validity</span>
+
+                      <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Section VIII */}
-                <div className="bg-white p-6 rounded border shadow-sm space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 border-b pb-2 uppercase text-brand-700">VIII. Other Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-700 text-sm">Special Skills and Hobbies</h4>
-                      <textarea className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" rows={4}></textarea>
+                <div className="flex justify-end pt-2">
+                  <button type="button" className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus w-4 h-4" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> 
+                    Add Eligibility
+                  </button>
+                </div>
+
+                
+
+              
+            </div>
+
+            {/* C5: Work Experience */}
+            <div className={activeTab === 'C5' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #1</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Position Title</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-700 text-sm">Non-Academic Distinctions / Recognition</h4>
-                      <textarea className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" rows={4}></textarea>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Department / Agency / Office / Company</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-700 text-sm">Membership in Association/Organization</h4>
-                      <textarea className="w-full p-2 border rounded bg-gray-50 focus:bg-white outline-brand-500" rows={4}></textarea>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Dates (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
                     </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade (if applicable)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Status of Appointment</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Govt Service? (Yes / No)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
                   </div>
                 </div>
-              </div>
 
-            {/* C4: Questionnaire & References */}
-            <div className={activeTab === 'C4' ? "space-y-8 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-sm text-yellow-800">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #2</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Position Title</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Department / Agency / Office / Company</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Dates (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade (if applicable)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Status of Appointment</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Govt Service? (Yes / No)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button type="button" className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus w-4 h-4" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> 
+                    Add Work Experience
+                  </button>
+                </div>
+
+                
+
+              
+            </div>
+
+            {/* C6: Voluntary Work */}
+            <div className={activeTab === 'C6' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #1</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name & Address of Organization</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Dates (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Position / Nature of Work</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button type="button" className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus w-4 h-4" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> 
+                    Add Voluntary Work
+                  </button>
+                </div>
+
+                
+
+              
+            </div>
+
+            {/* C7: Learning and Development */}
+            <div className={activeTab === 'C7' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #1</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Title of Learning and Development Interventions</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Dates (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Type of L&D (Managerial/Supervisory/Technical/etc)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Conducted/Sponsored By</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #2</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Title of Learning and Development Interventions</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full lg:col-span-2 sm:col-span-2">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Inclusive Dates (From - To)</span>
+
+                      <div className="flex items-center gap-2">
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <span className="text-gray-400">-</span>
+                        <input type="date" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Type of L&D (Managerial/Supervisory/Technical/etc)</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Conducted/Sponsored By</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button type="button" className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus w-4 h-4" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> 
+                    Add L&D
+                  </button>
+                </div>
+
+                
+
+              
+            </div>
+
+            {/* C8: Other Information */}
+            <div className={activeTab === 'C8' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6 last:border-0">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Record #1</label>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Special Skills and Hobbies</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Non-Academic Distinctions / Recognition</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                    <div className="flex flex-col justify-between h-full">
+                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Membership in Association/Organization</span>
+
+                      <input type="text" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+
+                    </div>
+
+                  </div>
+                </div>
+
+                
+
+              
+            </div>
+
+            {/* C9: Legal Questionnaire */}
+            <div className={activeTab === 'C9' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-sm text-yellow-800 rounded">
                   <p className="font-bold mb-1">DECLARATION</p>
                   <p>Please answer the following questions truthfully. Misrepresentation of any information is a ground for administrative/criminal cases.</p>
                 </div>
-
-                {/* Q34 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-4">
-                  <p className="font-medium text-sm text-gray-800">
-                    34. Are you related by consanguinity or affinity to the appointing or recommending authority, or to the chief of bureau or office or to the person who has immediate supervision over you in the Office, Bureau or Department where you will be appointed,
-                  </p>
-                  
-                  <div className="pl-6 space-y-4 text-sm text-gray-700">
-                    <div className="flex flex-col gap-2">
-                      <p>a. within the third degree?</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2"><input type="radio" name="q34a" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q34a" value="no" className="accent-brand-600" /> No</label>
+                
+                
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q34. Consanguinity</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <p className="font-medium text-gray-800">Are you related by consanguinity or affinity to the appointing or recommending authority, or to the chief of bureau or office or to the person who has immediate supervision over you in the Office, Bureau or Department where you will be appointed,</p>
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>a. within the third degree?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="no" className="accent-blue-600" /> No</label>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <p>b. within the fourth degree (for Local Government Unit - Career Employees)?</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2"><input type="radio" name="q34b" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q34b" value="no" className="accent-brand-600" /> No</label>
-                      </div>
-                      <input type="text" placeholder="If YES, give details" className="mt-2 p-2 border rounded w-full bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Q35 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-4">
-                  <div className="space-y-4 text-sm text-gray-800">
-                    <div className="flex flex-col gap-2">
-                      <p className="font-medium">35. a. Have you ever been found guilty of any administrative offense?</p>
-                      <div className="flex gap-4 pl-6">
-                        <label className="flex items-center gap-2"><input type="radio" name="q35a" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q35a" value="no" className="accent-brand-600" /> No</label>
-                      </div>
-                      <input type="text" placeholder="If YES, give details" className="ml-6 mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <p className="font-medium">b. Have you been criminally charged before any court?</p>
-                      <div className="flex gap-4 pl-6">
-                        <label className="flex items-center gap-2"><input type="radio" name="q35b" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q35b" value="no" className="accent-brand-600" /> No</label>
-                      </div>
-                      <div className="ml-6 flex flex-col gap-2">
-                        <input type="text" placeholder="If YES, give details (Date Filed)" className="p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                        <input type="text" placeholder="Status of Case/s" className="p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
+                      <div className="flex flex-col gap-2">
+                        <p>b. within the fourth degree (for Local Government Unit - Career Employees)?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Q36 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-3">
-                  <p className="font-medium text-sm text-gray-800">
-                    36. Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?
-                  </p>
-                  <div className="flex gap-4 pl-6 text-sm">
-                    <label className="flex items-center gap-2"><input type="radio" name="q36" value="yes" className="accent-brand-600" /> Yes</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="q36" value="no" className="accent-brand-600" /> No</label>
-                  </div>
-                  <input type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2 border rounded w-full md:w-2/3 text-sm bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                </div>
-
-                {/* Q37 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-3">
-                  <p className="font-medium text-sm text-gray-800">
-                    37. Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?
-                  </p>
-                  <div className="flex gap-4 pl-6 text-sm">
-                    <label className="flex items-center gap-2"><input type="radio" name="q37" value="yes" className="accent-brand-600" /> Yes</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="q37" value="no" className="accent-brand-600" /> No</label>
-                  </div>
-                  <input type="text" placeholder="If YES, give details" className="ml-6 mt-2 p-2 border rounded w-full md:w-2/3 text-sm bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                </div>
-
-                {/* Q38 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-4">
-                  <div className="space-y-4 text-sm text-gray-800">
-                    <div className="flex flex-col gap-2">
-                      <p className="font-medium">38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?</p>
-                      <div className="flex gap-4 pl-6">
-                        <label className="flex items-center gap-2"><input type="radio" name="q38a" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q38a" value="no" className="accent-brand-600" /> No</label>
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q35. Offenses & Charges</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>a. Have you ever been found guilty of any administrative offense?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                       </div>
-                      <input type="text" placeholder="If YES, give details" className="ml-6 mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <p className="font-medium">b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?</p>
-                      <div className="flex gap-4 pl-6">
-                        <label className="flex items-center gap-2"><input type="radio" name="q38b" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q38b" value="no" className="accent-brand-600" /> No</label>
+                      <div className="flex flex-col gap-2">
+                        <p>b. Have you been criminally charged before any court?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details (Date Filed)" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                        <input type="text" placeholder="Status of Case/s" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                       </div>
-                      <input type="text" placeholder="If YES, give details" className="ml-6 mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
                     </div>
                   </div>
                 </div>
 
-                {/* Q39 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-3">
-                  <p className="font-medium text-sm text-gray-800">
-                    39. Have you acquired the status of an immigrant or permanent resident of another country?
-                  </p>
-                  <div className="flex gap-4 pl-6 text-sm">
-                    <label className="flex items-center gap-2"><input type="radio" name="q39" value="yes" className="accent-brand-600" /> Yes</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="q39" value="no" className="accent-brand-600" /> No</label>
-                  </div>
-                  <input type="text" placeholder="If YES, give details (country)" className="ml-6 mt-2 p-2 border rounded w-full md:w-2/3 text-sm bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                </div>
-
-                {/* Q40 */}
-                <div className="bg-white p-5 rounded border shadow-sm space-y-4">
-                  <p className="font-medium text-sm text-gray-800">
-                    40. Pursuant to: (a) Indigenous People's Act (RA 8371); (b) Magna Carta for Disabled Persons (RA 7277); and (c) Solo Parents Welfare Act of 2000 (RA 8972), please answer the following items:
-                  </p>
-                  
-                  <div className="pl-6 space-y-4 text-sm text-gray-700">
-                    <div className="flex flex-col gap-2">
-                      <p>a. Are you a member of any indigenous group?</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2"><input type="radio" name="q40a" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q40a" value="no" className="accent-brand-600" /> No</label>
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q36. Conviction</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                       </div>
-                      <input type="text" placeholder="If YES, please specify" className="mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <p>b. Are you a person with disability?</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2"><input type="radio" name="q40b" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q40b" value="no" className="accent-brand-600" /> No</label>
-                      </div>
-                      <input type="text" placeholder="If YES, please specify ID No" className="mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <p>c. Are you a solo parent?</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2"><input type="radio" name="q40c" value="yes" className="accent-brand-600" /> Yes</label>
-                        <label className="flex items-center gap-2"><input type="radio" name="q40c" value="no" className="accent-brand-600" /> No</label>
-                      </div>
-                      <input type="text" placeholder="If YES, please specify ID No" className="mt-1 p-2 border rounded w-full md:w-2/3 bg-gray-50 focus:bg-white focus:outline-brand-500" />
                     </div>
                   </div>
                 </div>
 
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q37. Separation</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q38. Elections</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p>b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q39. Immigrant Status</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>Have you acquired the status of an immigrant or permanent resident of another country?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, give details (country)" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Q40. Special Groups</label>
+                  <div className="flex-1 space-y-4 text-gray-700 text-[14px]">
+                    <p className="font-medium text-gray-800">Pursuant to: (a) Indigenous People's Act (RA 8371); (b) Magna Carta for Disabled Persons (RA 7277); and (c) Solo Parents Welfare Act of 2000 (RA 8972), please answer the following items:</p>
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <p>a. Are you a member of any indigenous group?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, please specify" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p>b. Are you a person with disability?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, please specify ID No" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p>c. Are you a solo parent?</p>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="yes" className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="no" className="accent-blue-600" /> No</label>
+                        </div>
+                        <input type="text" placeholder="If YES, please specify ID No" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                
+              
             </div>
-            
-          </form>
-        </div>
+
+            {/* C10: Essential Documents */}
+            <div className={activeTab === 'C10' ? "w-full animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+              
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pb-6">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Upload Files</label>
+                  <div className="flex-1">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-4"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m16 16-4-4-4 4"></path></svg>
+                      <span className="text-gray-600 font-medium mb-1">Click to upload or drag and drop</span>
+                      <span className="text-gray-400 text-sm">PDF, DOC, or DOCX (max. 10MB)</span>
+                    </div>
+                  </div>
+                </div>
+              
+            </div>
+
+
+
+            </form>
+          </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-white flex justify-between items-center rounded-b-lg">
+        <div className="mt-4 bg-white p-4 border border-gray-200 flex justify-between items-center rounded-sm shadow-sm w-full">
           <div className="text-sm text-gray-500 font-medium">
-            Step {tabs.findIndex(t => t.id === activeTab) + 1} of 4
+            Step {tabs.findIndex(t => t.id === activeTab) + 1} of 10
           </div>
           <div className="flex gap-3">
             {activeTab !== 'C1' && (
@@ -674,7 +1101,7 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
               </button>
             )}
             
-            {activeTab !== 'C4' ? (
+            {activeTab !== 'C10' ? (
               <button 
                 type="button"
                 onClick={() => {
@@ -738,6 +1165,7 @@ export default function ApplicationModal({ isOpen, onClose, jobTitle, jobId }: A
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
