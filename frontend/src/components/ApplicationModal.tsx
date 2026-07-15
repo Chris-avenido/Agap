@@ -12,12 +12,7 @@ import {
   Plus
 } from "lucide-react";
 // @ts-ignore
-import {
-  regions,
-  provinces,
-  city_mun,
-  barangays,
-} from "phil-reg-prov-mun-brgy";
+import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
 
 interface ApplicationModalProps {
   isOpen: boolean;
