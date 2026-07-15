@@ -280,10 +280,10 @@ router.get('/get-sas-url', async (req, res) => {
   }
 });
 
-router.get('/:id/print-pds', async (req: Request, res: Response) => {
+router.get('/:id/print-pds', async (req, res) => {
   try {
     const applicantId = parseInt(req.params.id, 10);
-    const applicant = await applicantsService.findProfileByApplicantId(applicantId);
+    const applicant = await ApplicantsService.findOne(applicantId);
     if (!applicant) {
       return res.status(404).send('Applicant not found');
     }

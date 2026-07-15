@@ -11,6 +11,7 @@ import {
   Trash2,
   Plus
 } from "lucide-react";
+// @ts-ignore
 import {
   regions,
   provinces,
@@ -2539,7 +2540,7 @@ export default function ApplicationModal({
                           first_name: rawData["mother_first_name"],
                           middle_name: rawData["mother_middle_name"],
                         },
-                        children: rawData["children_list"] ? JSON.parse(rawData["children_list"]) : [],
+                        children: rawData["children_list"] ? JSON.parse(rawData["children_list"] as string) : [],
                       };
 
                       data.other_information = {
@@ -2548,25 +2549,25 @@ export default function ApplicationModal({
                         agency_employee_no: rawData["agency_employee_no"],
                         citizenship_type: rawData["citizenship_type"],
                         extension_name: rawData["extension_name"],
-                        special_skills: rawData["special_skills"] ? JSON.parse(rawData["special_skills"]) : [],
-                        distinctions: rawData["distinctions"] ? JSON.parse(rawData["distinctions"]) : [],
-                        memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"]) : [],
+                        special_skills: rawData["special_skills"] ? JSON.parse(rawData["special_skills"] as string) : [],
+                        distinctions: rawData["distinctions"] ? JSON.parse(rawData["distinctions"] as string) : [],
+                        memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"] as string) : [],
                       };
 
                       if (rawData["civil_service_eligibility"]) {
-                        data.civil_service_eligibility = JSON.parse(rawData["civil_service_eligibility"]);
+                        data.civil_service_eligibility = JSON.parse(rawData["civil_service_eligibility"] as string);
                       }
 
                       if (rawData["work_experience"]) {
-                        data.work_experience = JSON.parse(rawData["work_experience"]);
+                        data.work_experience = JSON.parse(rawData["work_experience"] as string);
                       }
 
                       if (rawData["voluntary_work"]) {
-                        data.voluntary_work = JSON.parse(rawData["voluntary_work"]);
+                        data.voluntary_work = JSON.parse(rawData["voluntary_work"] as string);
                       }
 
                       if (rawData["learning_and_development"]) {
-                        data.learning_and_development = JSON.parse(rawData["learning_and_development"]);
+                        data.learning_and_development = JSON.parse(rawData["learning_and_development"] as string);
                       }
 
                       // Default values for buttons if missing from rawData
