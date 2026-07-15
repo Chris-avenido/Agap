@@ -760,9 +760,12 @@ export default function ApplicantJobList() {
           setCitizenship(p.citizenship || '');
           setBloodType(p.blood_type || '');
           if (p.date_of_birth) {
-            const d = new Date(p.date_of_birth);
-            if (!isNaN(d.getTime())) {
-               setBirthDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dateStr = p.date_of_birth.split("T")[0];
+            if (dateStr) {
+              const [year, month, day] = dateStr.split("-").map(Number);
+              setBirthDate(new Date(year, month - 1, day));
+            } else {
+              setBirthDate(null);
             }
           } else {
             setBirthDate(null);
@@ -1602,11 +1605,11 @@ export default function ApplicantJobList() {
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
                           <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Sex <span className="text-red-500">*</span></label>
                           <div className="flex gap-4">
-                            <button type="button" onClick={() => setSex('Male')} className={`${sex === 'Male' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]`}>
-                              <div className={`w-2.5 h-2.5 rounded-full ${sex === 'Male' ? 'bg-white' : 'bg-gray-400'}`}></div> MALE
+                            <button type="button" onClick={() => setSex('MALE')} className={`${sex?.toUpperCase() === 'MALE' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]`}>
+                              <div className={`w-2.5 h-2.5 rounded-full ${sex?.toUpperCase() === 'MALE' ? 'bg-white' : 'bg-gray-400'}`}></div> MALE
                             </button>
-                            <button type="button" onClick={() => setSex('Female')} className={`${sex === 'Female' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]`}>
-                              <div className={`w-2.5 h-2.5 rounded-full ${sex === 'Female' ? 'bg-white' : 'bg-gray-400'}`}></div> FEMALE
+                            <button type="button" onClick={() => setSex('FEMALE')} className={`${sex?.toUpperCase() === 'FEMALE' ? 'bg-[#3498db] text-white' : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'} px-10 rounded text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-sm min-w-[120px] transition-colors h-[42px]`}>
+                              <div className={`w-2.5 h-2.5 rounded-full ${sex?.toUpperCase() === 'FEMALE' ? 'bg-white' : 'bg-gray-400'}`}></div> FEMALE
                             </button>
                           </div>
                         </div>

@@ -243,20 +243,7 @@ class ApplicantsServiceClass {
       passwordHash = await bcrypt.hash(data.password, 10);
     }
 
-    const questionnaire_responses = JSON.stringify({
-      q34a: data.q34a,
-      q34b: data.q34b,
-      q35a: data.q35a,
-      q35b: data.q35b,
-      q36: data.q36,
-      q37: data.q37,
-      q38a: data.q38a,
-      q38b: data.q38b,
-      q39: data.q39,
-      q40a: data.q40a,
-      q40b: data.q40b,
-      q40c: data.q40c,
-    });
+    const questionnaire_responses = JSON.stringify(data.questionnaire_responses || {});
 
     // Generate AGAP-0001 format for applicant_number
     const lastApplicant = await pool.query(`SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY applicant_number DESC LIMIT 1`);

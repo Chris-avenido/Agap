@@ -598,6 +598,7 @@ export default function ApplicationModal({
                         Date of Birth
                       </span>
                       <input
+                        required
                         placeholder="Select date of birth"
                         className="w-full border border-gray-300 bg-white rounded p-2.5 text-[14px] outline-none cursor-pointer focus:border-blue-500 text-gray-700 "
                         type="date"

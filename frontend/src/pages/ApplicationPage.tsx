@@ -88,6 +88,10 @@ export default function ApplicationPage() {
   const handleSubmit = async () => {
     const form = formRef.current;
     if (form) {
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
       const formData = new FormData(form);
       const rawData = Object.fromEntries(formData.entries());
       const data: any = { ...rawData };
@@ -364,11 +368,11 @@ export default function ApplicationPage() {
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">DATE OF BIRTH</label>
-                    <input name="date_of_birth" type="date" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                    <input required name="date_of_birth" type="date" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">PLACE OF BIRTH</label>
-                    <input name="place_of_birth" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                    <input required name="place_of_birth" type="text" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">SEX</label>
