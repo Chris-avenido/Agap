@@ -58,3 +58,25 @@ export const deleteFromAzure = async (blobUrlOrName: string) => {
     console.error("Failed to delete blob from Azure:", error);
   }
 };
+
+export const getBlobSasUrl = async (blobUrlOrName: string) => {
+  if (!blobServiceClient) throw new Error('Azure Storage Connection String is missing.');
+  
+  const blobName = decodeURIComponent(blobUrlOrName.split('/').pop() || '');
+  if (!blobName) throw new Error('Invalid blob URL');
+  
+  const containerClient = blobServiceClient.getContainerClient(containerName);
+  const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  
+  // @ts-ignore - generateSasUrl exists if using connection string
+  if (blockBlobClient.generateSasUrl) {
+    return await blockBlobClient.generateSasUrl({
+      // @ts-ignore
+      permissions: require('@azure/storage-blob').BlobSASPermissions.parse("r"),
+      expiresOn: new Date(new Date().valueOf() + 3600 * 1000) // 1 hour
+    });
+  }
+  
+  throw new Error('generateSasUrl is not supported on this client');
+};
+

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, GraduationCap, ArrowRight } from 'lucide-react';
+import ApplicationModal from '../components/ApplicationModal';
 
 // Hardcoded positions removed, fetching dynamically
 
@@ -66,8 +67,10 @@ export default function ApplicantJobDetails() {
     navigate('/');
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleApplyClick = () => {
-    navigate('/applicant-jobs', { state: { applyingJob: job } });
+    navigate('/applicant-jobs', { state: { applyJob: job } });
   };
 
   if (!job) return null;

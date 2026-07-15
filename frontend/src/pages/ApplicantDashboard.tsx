@@ -102,6 +102,33 @@ export default function ApplicantDashboard() {
             Go to Job Board
           </button>
         </div>
+
+        {/* Profile Completion Card */}
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="w-full bg-[#e8f5e9] border border-[#bbf7d0] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left focus:outline-none"
+        >
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="w-10 h-10 bg-[#2e7d32] rounded-full flex items-center justify-center shrink-0 shadow-inner">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-[15px] font-bold text-[#1b5e20]">Profile Completion</h2>
+              <p className="text-sm text-[#2e7d32] font-medium leading-snug">
+                Click here to view or update your profile information.
+              </p>
+            </div>
+          </div>
+          <div className="w-full sm:w-64 shrink-0 mt-2 sm:mt-0">
+            <div className="flex items-center justify-between mb-1.5 px-1">
+              <span className="text-[11px] font-extrabold text-[#1b5e20] tracking-wider uppercase">Progress</span>
+              <span className="text-[11px] font-extrabold text-[#1b5e20]">100%</span>
+            </div>
+            <div className="w-full bg-[#bbf7d0] h-2.5 rounded-full overflow-hidden">
+              <div className="bg-[#2e7d32] h-full transition-all duration-500 rounded-full" style={{ width: `100%` }}></div>
+            </div>
+          </div>
+        </button>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <button 

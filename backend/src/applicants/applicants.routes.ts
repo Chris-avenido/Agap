@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res, next) => {
-  if (['parse-resume', 'login', 'apply-job', 'proxy-blob'].includes(req.params.id)) {
+  if (['parse-resume', 'login', 'apply-job', 'proxy-blob', 'get-sas-url'].includes(req.params.id)) {
     return next(); // Let other routes handle it
   }
   try {
@@ -179,6 +179,11 @@ router.post('/:id/documents', upload.array('files'), async (req, res) => {
 
     await Promise.all(uploadPromises);
 
+    // Sync profile_photo to photoUrl if present
+    if (otherInfo.documents.profile_photo) {
+      otherInfo.photoUrl = otherInfo.documents.profile_photo;
+    }
+
     // Update applicant with new other_information
     await ApplicantsService.update(applicantId, { other_information: otherInfo });
 
@@ -253,6 +258,53 @@ router.get('/proxy-blob', async (req, res) => {
   } catch (error: any) {
     console.error("Error proxying blob:", error);
     res.status(500).send('Error proxying blob');
+  }
+});
+
+router.get('/get-sas-url', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).send('URL is required');
+    }
+    
+    // Import dynamically if needed or it's already exported from azureStorage
+    const { getBlobSasUrl } = require('../utils/azureStorage');
+    const sasUrl = await getBlobSasUrl(url);
+    
+    // Redirect the browser to the secure SAS URL
+    res.redirect(sasUrl);
+  } catch (error: any) {
+    console.error("Error generating SAS URL:", error);
+    res.status(500).send('Error generating secure download link');
+  }
+});
+
+router.get('/:id/print-pds', async (req: Request, res: Response) => {
+  try {
+    const applicantId = parseInt(req.params.id, 10);
+    const applicant = await applicantsService.findProfileByApplicantId(applicantId);
+    if (!applicant) {
+      return res.status(404).send('Applicant not found');
+    }
+    
+    const path = require('path');
+    const fs = require('fs');
+    // Go up from dist/applicants/applicants.routes.js to frontend/src/assets
+    const templatePath = path.join(__dirname, '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx');
+    
+    if (!fs.existsSync(templatePath)) {
+       return res.status(500).send("Excel template not found at: " + templatePath);
+    }
+    
+    const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
+    const cleanLastName = (applicant.last_name || 'Name').replace(/[^a-zA-Z0-9]/g, '');
+    const fileName = `PDS_${cleanFirstName}_${cleanLastName}.xlsx`;
+    
+    res.download(templatePath, fileName);
+  } catch (error: any) {
+    console.error("Error generating PDS:", error);
+    res.status(500).send(`Error generating Personal Data Sheet: ${error.message} - ${error.stack}`);
   }
 });
 

@@ -1,13 +1,15 @@
 import React from 'react';
 import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
+  const navigate = useNavigate();
   const isApplied = appliedJobIds.includes(job.id || job.positionId);
   const isSaved = savedJobIds.includes(job.id || job.positionId);
   const title = job.title || job.position || 'Unknown Position';
 
   return (
-    <div className="bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col hover:shadow-lg transition-shadow relative">
+    <div onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className="bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col hover:shadow-lg transition-shadow relative cursor-pointer">
       {/* Top Section */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex flex-col gap-2">
@@ -20,27 +22,37 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
               <span className="px-3 py-1 bg-gray-50 text-[#003366] text-[10px] font-bold rounded-full uppercase tracking-wider border border-gray-100">{job.division}</span>
             )}
           </div>
-          
+
           {/* Title */}
           <h3 className="text-lg font-bold text-[#2563eb] leading-tight uppercase line-clamp-2 mt-1">
             {title}
           </h3>
-          
+
           {/* Item No & Type */}
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">IPC: {job.itemNo || 'N/A'}</span>
             <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">{job.type || 'Permanent'}</span>
           </div>
         </div>
-        
-        {/* Days Left Box */}
-        <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0 ml-4">
-          <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
-          <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
-          <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br/>LEFT</span>
+
+        <div className="flex items-center gap-4 shrink-0 ml-4">
+          {tab === 'my-applications' && (
+            <div className="flex flex-col gap-1 items-end">
+              <span className="text-[9px] font-bold text-gray-400 tracking-widest uppercase">Vacancy Status</span>
+              <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase whitespace-nowrap">
+                {job.vacancyStatus || 'UNKNOWN'}
+              </span>
+            </div>
+          )}
+          {/* Days Left Box */}
+          <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0">
+            <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
+            <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
+            <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br />LEFT</span>
+          </div>
         </div>
       </div>
-      
+
       {/* Rows Section */}
       <div className="flex flex-col gap-3 mb-6 mt-2">
         <div className="flex items-center gap-4">
@@ -52,7 +64,7 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
             <span className="text-[14px] font-bold text-gray-800">{job.office || 'N/A'} • SG {job.sg || 'N/A'}</span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
             <CircleDollarSign className="w-5 h-5 text-green-600" />
@@ -62,7 +74,7 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
             <span className="text-[14px] font-bold text-gray-800">{job.posted || 'N/A'}</span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
             <CalendarDays className="w-5 h-5 text-gray-500" />
@@ -77,26 +89,67 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
       {/* Status Footer */}
       {tab === 'my-applications' && (
         <div className="flex flex-col gap-2 pt-4 border-t border-gray-100 mb-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-blue-50 text-blue-700 border border-blue-200 tracking-wide uppercase">
-              STATUS: {job.stage || job.realStatus || 'PENDING'}
+          <div className="flex items-center gap-1.5 w-full">
+            <span 
+              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-blue-50 text-blue-700 border border-blue-200 tracking-wider uppercase truncate text-center"
+              title={`STATUS: ${job.stage || job.realStatus || 'PENDING'}`}
+            >
+              STAT: {job.stage || job.realStatus || 'PENDING'}
             </span>
-            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-purple-50 text-purple-700 border border-purple-200 tracking-wide uppercase">
-              ASSESSMENT: {job.assessmentStatus || 'N/A'}
+            <span 
+              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-purple-50 text-purple-700 border border-purple-200 tracking-wider uppercase truncate text-center"
+              title={`ASSESSMENT: ${job.assessmentStatus || 'N/A'}`}
+            >
+              ASSESS: {job.assessmentStatus || 'N/A'}
             </span>
-            <span className="px-2.5 py-1 text-[11px] font-extrabold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wide uppercase">
-              APPOINTMENT: {job.appointmentStatus || 'N/A'}
+            <span 
+              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wider uppercase truncate text-center"
+              title={`APPOINTMENT: ${job.appointmentStatus || 'N/A'}`}
+            >
+              APPT: {job.appointmentStatus || 'N/A'}
             </span>
           </div>
+          {job.comparativeAssessmentScores && (() => {
+            let scores: any = {};
+            try {
+              scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
+            } catch (e) {
+              scores = {};
+            }
+            return (
+              <div className="flex flex-col gap-1 w-full mt-1.5">
+                {scores.bei !== undefined && (
+                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
+                    Behavioral Events Interview (BEI): {scores.bei}
+                  </span>
+                )}
+                {scores.wst !== undefined && (
+                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
+                    Work Sample Test (WST): {scores.wst}
+                  </span>
+                )}
+                {scores.we !== undefined && (
+                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
+                    Written Examination (WE): {scores.we}
+                  </span>
+                )}
+                {job.overallFit && (
+                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-rose-50 text-rose-700 border border-rose-200 tracking-wider uppercase text-center truncate">
+                    OVERALL FIT: {job.overallFit}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
-      
+
       {/* Buttons */}
       <div className={`flex items-center gap-3 mt-auto ${tab !== 'my-applications' ? 'pt-4 border-t border-gray-100' : ''}`}>
         {(isApplied || tab === 'my-applications') ? (
-           <button disabled className="flex-1 bg-gray-400 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
-             APPLIED
-           </button>
+          <button disabled className="flex-1 bg-gray-400 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
+            APPLIED
+          </button>
         ) : (
           <button onClick={() => handleApply(job)} className="flex-1 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
             <Briefcase className="w-4 h-4" /> APPLY NOW
@@ -111,6 +164,7 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
 };
 
 const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
+  const navigate = useNavigate();
   return (
     <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden w-full mt-6">
       <div className="overflow-x-auto">
@@ -133,7 +187,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
               const title = job.title || job.position || 'Unknown Position';
 
               return (
-                <tr key={job.id || job.positionId} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={job.id || job.positionId} onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
                       <span className="font-bold text-[#2563eb]">{title}</span>
@@ -147,7 +201,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                     <div className="flex flex-col gap-1">
                       <span className="font-semibold text-gray-800 text-sm">{job.office || 'N/A'}</span>
                       {job.division && <span className="text-gray-500 text-xs">{job.division}</span>}
-                      {job.location && <span className="text-gray-500 text-xs flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3"/> {job.location}</span>}
+                      {job.location && <span className="text-gray-500 text-xs flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {job.location}</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -169,6 +223,41 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                         <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-emerald-50 text-emerald-700 uppercase tracking-wider">
                           APPT: {job.appointmentStatus || 'N/A'}
                         </span>
+                        <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
+                          VACANCY: {job.vacancyStatus || 'UNKNOWN'}
+                        </span>
+                        {job.comparativeAssessmentScores && (() => {
+                          let scores: any = {};
+                          try {
+                            scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
+                          } catch (e) {
+                            scores = {};
+                          }
+                          return (
+                            <>
+                              {scores.bei !== undefined && (
+                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
+                                  Behavioral Events Interview (BEI): {scores.bei}
+                                </span>
+                              )}
+                              {scores.wst !== undefined && (
+                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
+                                  Work Sample Test (WST): {scores.wst}
+                                </span>
+                              )}
+                              {scores.we !== undefined && (
+                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
+                                  Written Examination (WE): {scores.we}
+                                </span>
+                              )}
+                              {job.overallFit && (
+                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-rose-50 text-rose-700 uppercase tracking-wider">
+                                  OVERALL FIT: {job.overallFit}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                   )}

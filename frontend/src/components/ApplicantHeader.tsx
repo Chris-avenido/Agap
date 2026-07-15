@@ -123,7 +123,6 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, 
             className="flex flex-col items-end gap-0.5 text-white hover:text-white transition-colors bg-transparent px-2 py-1 rounded-lg font-semibold tracking-wide uppercase"
           >
             <div className="flex items-center gap-2 text-sm">
-              {photoUrl ? <img src={photoUrl} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-white/20" /> : null}
               {(firstName || lastName) ? `${firstName} ${lastName}`.trim() : 'APPLICANT'} <ChevronDown className="w-4 h-4" />
             </div>
             {(() => {

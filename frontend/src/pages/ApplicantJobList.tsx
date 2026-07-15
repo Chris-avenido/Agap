@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import {
@@ -156,7 +156,8 @@ export default function ApplicantJobList() {
 
   const itemsPerPage = 5;
 
-  const totalSteps = 9;
+  const isSubsequentApplication = applications.length > 0;
+  const totalSteps = isSubsequentApplication ? 11 : 10; // +1 for Letter of Intent
 
 
   const handleTabClick = (targetStep: string) => {
@@ -226,28 +227,107 @@ export default function ApplicantJobList() {
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadedDocumentUrls, setUploadedDocumentUrls] = useState<Record<string, string>>({});
+  const [editingDocs, setEditingDocs] = useState<Record<string, boolean>>({});
+  const [documentsConfirmed, setDocumentsConfirmed] = useState<Record<string, boolean>>({});
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const handlePhotoUpload = async (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire('Error', 'Image size should be less than 2MB', 'error');
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Uploading Photo...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      const sessionStr = localStorage.getItem('session_data');
+      if (!sessionStr) throw new Error('Not logged in');
+      const session = JSON.parse(sessionStr);
+
+      const formData = new FormData();
+      formData.append('files', file);
+      formData.append('documentNames', 'profile_photo');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const uploadedUrl = result.documents.profile_photo;
+        
+        // Also update the applicant's other_information with the new photoUrl
+        const pResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`);
+        if (pResponse.ok) {
+            const pData = await pResponse.json();
+            const applicant = pData.data;
+            const oi = typeof applicant.other_information === 'string' ? JSON.parse(applicant.other_information) : (applicant.other_information || {});
+            oi.photoUrl = uploadedUrl;
+            await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ other_information: oi })
+            });
+        }
+        
+        setPhotoUrl(uploadedUrl);
+        Swal.fire('Success', 'Photo uploaded successfully!', 'success');
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to upload photo', 'error');
+    }
+  };
   const [questionnaire, setQuestionnaire] = useState<Record<string, { answer: string, details: string }>>({});
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
   const [governmentId, setGovernmentId] = useState({ type: '', idNo: '', datePlace: '' });
 
   const completedSteps = useMemo(() => {
     const steps: string[] = [];
-    if (firstName.trim() && lastName.trim() && placeOfBirth.trim() && sex && civilStatus && citizenship) steps.push('Personal Information');
-    if (motherSurname.trim() || motherFirst.trim() || fatherSurname.trim() || fatherFirst.trim() || spouseSurname.trim() || spouseFirst.trim()) steps.push('Family Background');
-    if (Object.values(educationalDates).some(ed => ed.school.trim() !== '')) steps.push('Educational Background');
-    if (civilServiceList.some(cs => cs.eligibility.trim() !== '')) steps.push('Eligibility');
-    if (workExperienceList.some(we => we.company.trim() !== '' || we.positionTitle.trim() !== '')) steps.push('Work Experience');
-    if (voluntaryWorkList.some(vw => vw.nameAddress.trim() !== '')) steps.push('Voluntary Work');
-    if (learningDevelopmentList.some(ld => ld.title.trim() !== '')) steps.push('Learning & Development');
-    if (skillsList.some(s => s.value.trim() !== '') || distinctionsList.some(d => d.value.trim() !== '') || membershipsList.some(m => m.value.trim() !== '')) steps.push('Other Information');
+    if (firstName?.trim() && lastName?.trim() && placeOfBirth?.trim() && sex && civilStatus && citizenship) steps.push('Personal Information');
+    if (motherSurname?.trim() || motherFirst?.trim() || fatherSurname?.trim() || fatherFirst?.trim() || spouseSurname?.trim() || spouseFirst?.trim()) steps.push('Family Background');
+    if (Object.values(educationalDates).some(ed => ed?.school?.trim() !== '')) steps.push('Educational Background');
+    if (civilServiceList?.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
+    if (workExperienceList?.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
+    if (voluntaryWorkList?.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
+    if (learningDevelopmentList?.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
+    if (skillsList?.some((s: any) => s?.value?.trim() !== '') || distinctionsList?.some((d: any) => d?.value?.trim() !== '') || membershipsList?.some((m: any) => m?.value?.trim() !== '')) steps.push('Other Information');
     if (Object.keys(questionnaire).length > 0) steps.push('Legal Questionnaire');
+    
+    const requiredDocs = [
+      'Personal Data Sheet',
+      'Work Experience Sheet',
+      'Certificate of Eligibility',
+      'Transcript of Records',
+      'Updated PRC License/ID',
+      'Resume'
+    ];
+    const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
+    if (isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
+    
+    if (uploadedDocumentUrls['Letter of Intent'] || documents['Letter of Intent']) {
+      steps.push('Letter of Intent');
+    }
+    
     return steps;
   }, [
     firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
     motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
     educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
-    skillsList, distinctionsList, membershipsList, questionnaire
+    skillsList, distinctionsList, membershipsList, questionnaire, isSubsequentApplication, documentsConfirmed
   ]);
 
   const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
@@ -295,6 +375,27 @@ export default function ApplicantJobList() {
   };
   const handleEssentialDocumentsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSubsequentApplication) {
+      const requiredDocs = [
+        'Personal Data Sheet',
+        'Work Experience Sheet',
+        'Certificate of Eligibility',
+        'Transcript of Records',
+        'Updated PRC License/ID',
+        'Resume'
+      ];
+      const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
+      if (!allDocumentsConfirmed) {
+        Swal.fire(
+          'Documents Not Confirmed',
+          'Please review and check the confirmation box for each required document before submitting.',
+          'warning'
+        );
+        setCurrentStep('Essential Documents');
+        return;
+      }
+    }
 
     // 1. Global Validation: Check all tabs for required fields before submitting
     const allTabs = [
@@ -350,31 +451,9 @@ export default function ApplicantJobList() {
       }
     }
 
-    // 3. Confirm Documents Modal (if applying for a job)
-    if (applyingJob) {
-      const result = await Swal.fire({
-        title: 'Confirm Documents',
-        text: 'Are you sure your documents are up to date? Please confirm that all required documents are current before submitting your application.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Proceed',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#022851',
-        cancelButtonColor: '#d33'
-      });
+    // 3. Confirm Documents Modal removed
 
-      if (!result.isConfirmed) {
-        // User clicked Cancel
-        setHighlightDocs(true);
-        Swal.fire({
-          title: 'Update Documents',
-          text: 'Please review and update your essential documents before applying.',
-          icon: 'info',
-          confirmButtonColor: '#022851'
-        });
-        return; // Abort submission
-      }
-    }
+
 
     // 4. Proceed with original upload and submission logic
     try {
@@ -577,6 +656,7 @@ export default function ApplicantJobList() {
 
         setActiveTab('job-board');
         setApplyingJob(null);
+        setDocumentsConfirmed({});
       } else {
         const errorData = await response.json();
         Swal.fire('Error', errorData.message || 'Failed to update profile.', 'error');
@@ -649,9 +729,12 @@ export default function ApplicantJobList() {
                     sg: jobDetails.sg || 'N/A',
                     itemNo: jobDetails.itemNo || 'N/A',
                     date: new Date(app.created_at).toLocaleDateString(),
-                    stage: app.status || 'Applied',
+                    stage: app.application_status || 'Applied',
                     assessmentStatus: app.assessment_status || 'Pending Assessment',
                     appointmentStatus: app.appointment_status || 'Pending Appointment',
+                    comparativeAssessmentScores: app.comparative_assessment_scores || '',
+                    overallFit: app.overall_fit || '',
+                    vacancyStatus: app.vacancy_status || jobDetails.status || 'Unknown',
                     status: 'Active'
                   };
                 }));
@@ -816,108 +899,24 @@ export default function ApplicantJobList() {
       .catch(err => console.error('Error fetching saved jobs:', err));
   }, [navigate]);
 
-  useEffect(() => {
-    if (isProfileLoaded && pendingApplyJob) {
-      const jobToApply = pendingApplyJob;
-      setPendingApplyJob(null);
-
-      setTimeout(() => {
-        if (Number(percentage) >= 100) {
-          Swal.fire({
-            title: 'Confirm Documents',
-            text: 'Are you sure your documents are up to date? Please confirm that all required documents are current before submitting your application.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Proceed',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#022851',
-            cancelButtonColor: '#d33'
-          }).then(async (result) => {
-            if (result.isConfirmed) {
-              try {
-                const sessionStr = localStorage.getItem('session_data');
-                if (!sessionStr) return navigate('/login');
-                const session = JSON.parse(sessionStr);
-
-                Swal.fire({
-                  title: 'Submitting Application...',
-                  text: 'Please wait...',
-                  allowOutsideClick: false,
-                  didOpen: () => {
-                    Swal.showLoading();
-                  }
-                });
-
-                const applyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/apply-job`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    applicantId: session.id,
-                    positionId: jobToApply.id,
-                    jobTitle: jobToApply.title
-                  })
-                });
-
-                if (applyResponse.ok) {
-                  const applyData = await applyResponse.json();
-                  Swal.fire('Success', 'Application submitted successfully!', 'success');
-                  setAppliedJobIds(prev => [...prev, jobToApply.id]);
-
-                  const newApp = {
-                    id: applyData?.data?.id || Date.now(),
-                    positionId: jobToApply.id,
-                    position: jobToApply.title,
-                    office: jobToApply.office || 'Department of Education',
-                    type: jobToApply.type || 'Permanent',
-                    posted: jobToApply.posted || 'N/A',
-                    deadline: jobToApply.deadline || 'N/A',
-                    sg: jobToApply.sg || 'N/A',
-                    itemNo: jobToApply.itemNo || 'N/A',
-                    date: new Date().toLocaleDateString(),
-                    stage: 'Applied',
-                    assessmentStatus: 'Pending Assessment',
-                    appointmentStatus: 'Pending Appointment',
-                    status: 'Active'
-                  };
-                  setApplications(prev => [newApp, ...prev]);
-                  setActiveTab('job-board');
-                  setApplyingJob(null);
-                } else {
-                  const err = await applyResponse.json();
-                  Swal.fire('Error', err.message || 'Failed to submit application.', 'error');
-                }
-              } catch (error) {
-                Swal.fire('Error', 'An unexpected error occurred.', 'error');
-              }
-            } else {
-              setCurrentStep('Essential Documents');
-              setHighlightDocs(true);
-              Swal.fire({
-                title: 'Update Documents',
-                text: 'Please review and update your essential documents before applying.',
-                icon: 'info',
-                confirmButtonColor: '#022851'
-              });
-            }
-          });
-        } else {
-          Swal.fire({
-            title: 'Complete your Profile',
-            text: `Your profile is only ${percentage}% complete. Please fill in the missing information to proceed with your application.`,
-            icon: 'warning',
-            confirmButtonText: 'Go to Profile',
-            confirmButtonColor: '#022851'
-          });
-        }
-      }, 100);
-    }
-  }, [isProfileLoaded, pendingApplyJob, percentage, navigate]);
-
   const handleApply = (job: any) => {
     setApplyingJob(job);
     setActiveTab('application-form');
-    setPendingApplyJob(job);
+    if (Number(percentage) >= 90) {
+      setCurrentStep('Essential Documents');
+    } else {
+      setCurrentStep('Personal Information');
+    }
   };
+
+  useEffect(() => {
+    if (location.state?.applyJob && isProfileLoaded) {
+      handleApply(location.state.applyJob);
+      // Clear the state so it doesn't re-trigger on reload
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, isProfileLoaded, navigate, percentage]);
+
 
 
   const toggleSaveJob = async (jobId: string | number) => {
@@ -994,13 +993,39 @@ export default function ApplicantJobList() {
               </button>
             </div>
 
-            {activeTab === 'application-form' && (
-              <div className="flex items-center gap-2 px-4 py-3 lg:py-0 overflow-x-auto hide-scrollbar w-full lg:w-auto border-t lg:border-t-0 border-gray-100">
-                <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">View Profile</button>
-                <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Print PDS</button>
-                <button className="bg-gray-500 text-white px-4 py-2 rounded text-[11px] font-bold uppercase whitespace-nowrap hover:bg-gray-600 transition-colors shadow-sm">Work Experience Sheet</button>
-              </div>
-            )}
+            <div className="hidden lg:flex items-center gap-2 pr-6 py-3">
+              {parseFloat(percentage) >= 90 ? (
+                <button 
+                  onClick={() => {
+                    const session = JSON.parse(localStorage.getItem('session_data') || '{}');
+                    if (session.id) {
+                      window.open(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/print-pds`, '_blank');
+                    }
+                  }}
+                  className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
+                >
+                  PRINT PDS
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    Swal.fire({
+                      title: 'Profile Incomplete',
+                      text: 'Your profile must be at least 90% complete before you can print your Personal Data Sheet.',
+                      icon: 'warning',
+                      confirmButtonColor: '#3085d6'
+                    });
+                  }}
+                  className="bg-gray-300 text-gray-500 font-bold py-2.5 px-4 rounded text-[11px] cursor-not-allowed tracking-wide uppercase shadow-sm"
+                >
+                  PRINT PDS
+                </button>
+              )}
+              <button className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm">
+                WORK EXPERIENCE SHEET
+              </button>
+            </div>
+
           </div>
 
           {/* Content Area */}
@@ -1277,10 +1302,26 @@ export default function ApplicantJobList() {
                 {/* Left Sidebar */}
                 <div className="w-full md:w-[280px] lg:w-[320px] flex flex-col bg-white shadow-sm shrink-0 h-fit border border-gray-100 rounded-sm overflow-hidden">
                   <div className="bg-[#1a73e8] p-5 flex items-center gap-4 border-b-4 border-red-500">
-                    <div className="w-[60px] h-[60px] bg-white rounded-full flex flex-col items-center justify-center font-extrabold text-[11px] leading-none text-center text-black shrink-0 shadow-sm">
-                      <span>UPLOAD</span>
-                      <span>PHOTO</span>
+                    <div 
+                      onClick={() => photoInputRef.current?.click()}
+                      className="w-[60px] h-[60px] bg-white rounded-full flex flex-col items-center justify-center font-extrabold text-[11px] leading-none text-center text-black shrink-0 shadow-sm cursor-pointer hover:bg-gray-100 overflow-hidden transition-colors"
+                    >
+                      {photoUrl ? (
+                        <img src={photoUrl.startsWith('http') ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(photoUrl)}` : photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <span>UPLOAD</span>
+                          <span>PHOTO</span>
+                        </>
+                      )}
                     </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={photoInputRef}
+                      onChange={handlePhotoUpload} 
+                    />
                     <div className="flex flex-col text-white">
                       <span className="font-bold text-[16px] uppercase tracking-wide">{firstName} {lastName}</span>
                       <span className="text-[13px] leading-snug mt-1 opacity-90">Applying for {applyingJob.title}</span>
@@ -1362,22 +1403,40 @@ export default function ApplicantJobList() {
                         <FileText className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex flex-col">
-                        <h2 className="text-[15px] font-bold text-[#1b5e20]">Complete your Profile</h2>
+                        <h2 className="text-[15px] font-bold text-[#1b5e20]">
+                          {parseFloat(percentage) >= 100 ? "Ready to Submit" : "Complete your Profile"}
+                        </h2>
                         <p className="text-sm text-[#2e7d32] font-medium leading-snug">
-                          Your profile is {percentage}% complete. Fill in the missing information below to improve your chances.
+                          {parseFloat(percentage) >= 100 
+                            ? "Your profile is fully complete! You can now submit your application." 
+                            : `Your profile is ${percentage}% complete. Fill in the missing information below to improve your chances.`}
                         </p>
                       </div>
                     </div>
 
-                    <div className="w-full sm:w-64 shrink-0">
-                      <div className="flex items-center justify-between mb-1.5 px-1">
-                        <span className="text-[11px] font-extrabold text-[#1b5e20] tracking-wider uppercase">Progress</span>
-                        <span className="text-[11px] font-extrabold text-[#1b5e20]">{percentage}%</span>
+                    {parseFloat(percentage) >= 100 ? (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const form = document.getElementById('form-Essential Documents') as HTMLFormElement;
+                          if (form) form.requestSubmit();
+                        }}
+                        className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold text-[13px] py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 whitespace-nowrap uppercase tracking-wider shrink-0"
+                      >
+                        Submit Application 
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      </button>
+                    ) : (
+                      <div className="w-full sm:w-64 shrink-0">
+                        <div className="flex items-center justify-between mb-1.5 px-1">
+                          <span className="text-[11px] font-extrabold text-[#1b5e20] tracking-wider uppercase">Progress</span>
+                          <span className="text-[11px] font-extrabold text-[#1b5e20]">{percentage}%</span>
+                        </div>
+                        <div className="w-full bg-[#bbf7d0] h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-[#2e7d32] h-full transition-all duration-500 rounded-full" style={{ width: `${percentage}%` }}></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-[#bbf7d0] h-2.5 rounded-full overflow-hidden">
-                        <div className="bg-[#2e7d32] h-full transition-all duration-500 rounded-full" style={{ width: `${percentage}%` }}></div>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Dynamic Content Box */}
@@ -1551,8 +1610,8 @@ export default function ApplicantJobList() {
                                   }}
                                 >
                                   <option value="">Select region</option>
-                                  {regions.map((r: any) => (
-                                    <option key={r.reg_code} value={r.reg_code}>{r.name}</option>
+                                  {regions.map((r: any, idx: number) => (
+                                        <option key={`${r.reg_code}-${idx}`} value={r.reg_code}>{r.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1570,8 +1629,8 @@ export default function ApplicantJobList() {
                                   disabled={!resRegion}
                                 >
                                   <option value="">Select province</option>
-                                  {resProvincesList.map((p: any) => (
-                                    <option key={p.prov_code} value={p.prov_code}>{p.name}</option>
+                                  {resProvincesList.map((p: any, idx: number) => (
+                                        <option key={`${p.prov_code}-${idx}`} value={p.prov_code}>{p.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1588,8 +1647,8 @@ export default function ApplicantJobList() {
                                   disabled={!resProvince}
                                 >
                                   <option value="">Select city / municipality</option>
-                                  {resCitiesList.map((c: any) => (
-                                    <option key={c.mun_code} value={c.mun_code}>{c.name}</option>
+                                  {resCitiesList.map((c: any, idx: number) => (
+                                        <option key={`${c.mun_code}-${idx}`} value={c.mun_code}>{c.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1660,8 +1719,8 @@ export default function ApplicantJobList() {
                                       }}
                                     >
                                       <option value="">Select region</option>
-                                      {regions.map((r: any) => (
-                                        <option key={r.reg_code} value={r.reg_code}>{r.name}</option>
+                                      {regions.map((r: any, idx: number) => (
+                                        <option key={`${r.reg_code}-${idx}`} value={r.reg_code}>{r.name}</option>
                                       ))}
                                     </select>
                                   </div>
@@ -1679,8 +1738,8 @@ export default function ApplicantJobList() {
                                       disabled={!permRegion}
                                     >
                                       <option value="">Select province</option>
-                                      {permProvincesList.map((p: any) => (
-                                        <option key={p.prov_code} value={p.prov_code}>{p.name}</option>
+                                      {permProvincesList.map((p: any, idx: number) => (
+                                        <option key={`${p.prov_code}-${idx}`} value={p.prov_code}>{p.name}</option>
                                       ))}
                                     </select>
                                   </div>
@@ -1697,8 +1756,8 @@ export default function ApplicantJobList() {
                                       disabled={!permProvince}
                                     >
                                       <option value="">Select city / municipality</option>
-                                      {permCitiesList.map((c: any) => (
-                                        <option key={c.mun_code} value={c.mun_code}>{c.name}</option>
+                                      {permCitiesList.map((c: any, idx: number) => (
+                                        <option key={`${c.mun_code}-${idx}`} value={c.mun_code}>{c.name}</option>
                                       ))}
                                     </select>
                                   </div>
@@ -2904,23 +2963,100 @@ export default function ApplicantJobList() {
                               'Updated PRC License/ID',
                               'Diploma (optional)',
                               'Resume'
-                            ].map(doc => (
-                              <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                                <span className="text-[14px] font-medium text-gray-700">{doc} {doc.includes('optional') ? '' : <span className="text-red-500">*</span>}</span>
-                                <input
-                                  type="file"
-                                  required={!doc.includes('optional')}
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      setDocuments({ ...documents, [doc]: e.target.files[0] });
-                                    }
-                                  }}
-                                  className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-semibold file:bg-blue-50 file:text-[#1a73e8] hover:file:bg-blue-100 file:transition-colors file:cursor-pointer outline-none w-full md:w-auto"
-                                />
-                              </div>
-                            ))}
+                            ].map(doc => {
+                              const existingUrl = uploadedDocumentUrls[doc];
+                              const isEditing = editingDocs[doc] || false;
+                              const isRequired = !doc.includes('optional');
+                              const isComplete = !!existingUrl || !!documents[doc];
+
+                              return (
+                                <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      {isSubsequentApplication && isRequired ? (
+                                        <input 
+                                          type="checkbox" 
+                                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                          checked={documentsConfirmed[doc] || false}
+                                          onChange={e => setDocumentsConfirmed(prev => ({ ...prev, [doc]: e.target.checked }))}
+                                        />
+                                      ) : (
+                                        isComplete ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        ) : (
+                                          isRequired ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                          ) : (
+                                            <div className="w-4 h-4"></div>
+                                          )
+                                        )
+                                      )}
+                                      <span className="text-[14px] font-medium text-gray-700 flex items-center gap-2">
+                                        {doc} {isRequired && <span className="text-red-500">*</span>}
+                                        {isSubsequentApplication && isRequired && (
+                                          <span className="text-[10px] text-gray-400 font-normal normal-case">(Check to confirm)</span>
+                                        )}
+                                      </span>
+                                    </div>
+                                    {existingUrl && (
+                                      <a 
+                                        href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        download={doc + ".pdf"}
+                                        className="text-[12px] text-blue-600 hover:underline mt-1 font-medium flex items-center gap-1 ml-6"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download File
+                                      </a>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex flex-col md:items-end gap-2">
+                                    {existingUrl && !isEditing ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingDocs(prev => ({ ...prev, [doc]: true }))}
+                                        className="text-[12px] font-bold text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50 px-3 py-1.5 rounded transition-colors self-start md:self-auto"
+                                      >
+                                        UPDATE
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="file"
+                                          required={isRequired && !existingUrl && !documents[doc]}
+                                          onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                              setDocuments({ ...documents, [doc]: e.target.files[0] });
+                                            }
+                                          }}
+                                          className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-semibold file:bg-blue-50 file:text-[#1a73e8] hover:file:bg-blue-100 file:transition-colors file:cursor-pointer outline-none w-full md:w-auto"
+                                        />
+                                        {existingUrl && isEditing && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingDocs(prev => ({ ...prev, [doc]: false }));
+                                              setDocuments(prev => {
+                                                const newDocs = { ...prev };
+                                                delete newDocs[doc];
+                                                return newDocs;
+                                              });
+                                            }}
+                                            className="text-[12px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-2 rounded transition-colors"
+                                          >
+                                            CANCEL
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
+
 
                         {/* Submit Button */}
                         <div className="flex justify-end pt-6 mt-4 border-t border-gray-100 gap-4">
