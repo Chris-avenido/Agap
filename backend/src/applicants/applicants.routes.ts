@@ -59,8 +59,11 @@ router.get('/:id', async (req, res, next) => {
   if (['parse-resume', 'login', 'apply-job', 'proxy-blob', 'get-sas-url'].includes(req.params.id)) {
     return next(); // Let other routes handle it
   }
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
+  
   try {
-    const applicant = await ApplicantsService.findOne(Number(req.params.id));
+    const applicant = await ApplicantsService.findOne(id);
     if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
     res.json({ success: true, data: applicant });
   } catch (error: any) {
@@ -70,9 +73,11 @@ router.get('/:id', async (req, res, next) => {
 });
 
 
-router.get('/:id/applications', async (req, res) => {
+router.get('/:id/applications', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const applications = await ApplicantsService.findApplications(Number(req.params.id));
+    const applications = await ApplicantsService.findApplications(id);
     res.json({ success: true, data: applications });
   } catch (error: any) {
     console.error("Error fetching applications:", error);
@@ -80,9 +85,11 @@ router.get('/:id/applications', async (req, res) => {
   }
 });
 
-router.post('/:id/save-job', async (req, res) => {
+router.post('/:id/save-job', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const result = await ApplicantsService.toggleSavedJob(Number(req.params.id), req.body.positionId);
+    const result = await ApplicantsService.toggleSavedJob(id, req.body.positionId);
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error("Error toggling saved job:", error);
@@ -90,9 +97,11 @@ router.post('/:id/save-job', async (req, res) => {
   }
 });
 
-router.get('/:id/saved-jobs', async (req, res) => {
+router.get('/:id/saved-jobs', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const savedJobs = await ApplicantsService.findSavedJobs(Number(req.params.id));
+    const savedJobs = await ApplicantsService.findSavedJobs(id);
     res.json({ success: true, data: savedJobs });
   } catch (error: any) {
     console.error("Error fetching saved jobs:", error);
@@ -111,10 +120,12 @@ router.post('/', async (req, res) => {
 });
 
 
-router.post('/:id/change-password', async (req, res) => {
+router.post('/:id/change-password', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
     const { currentPassword, newPassword } = req.body;
-    await ApplicantsService.changePassword(Number(req.params.id), currentPassword, newPassword);
+    await ApplicantsService.changePassword(id, currentPassword, newPassword);
     res.json({ success: true, message: 'Password updated successfully' });
   } catch (error: any) {
     console.error("Error changing password:", error);
@@ -122,9 +133,11 @@ router.post('/:id/change-password', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const applicant = await ApplicantsService.update(Number(req.params.id), req.body);
+    const applicant = await ApplicantsService.update(id, req.body);
     res.json({ success: true, message: 'Applicant profile updated successfully', data: applicant });
   } catch (error: any) {
     console.error("Error updating applicant:", error);
@@ -132,9 +145,11 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/documents', upload.array('files'), async (req, res) => {
+router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const applicantId = Number(req.params.id);
+    const applicantId = id;
     const files = (req as any).files;
     let documentNames = req.body.documentNames; // Array of doc names matching files array order
 
@@ -194,9 +209,11 @@ router.post('/:id/documents', upload.array('files'), async (req, res) => {
   }
 });
 
-router.post('/:id/photo', upload.single('photo'), async (req, res) => {
+router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
   try {
-    const applicantId = Number(req.params.id);
+    const applicantId = id;
     const file = (req as any).file;
 
     if (!file) {
@@ -280,9 +297,11 @@ router.get('/get-sas-url', async (req, res) => {
   }
 });
 
-router.get('/:id/print-pds', async (req, res) => {
+router.get('/:id/print-pds', async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return next();
   try {
-    const applicantId = parseInt(req.params.id, 10);
+    const applicantId = id;
     const applicant = await ApplicantsService.findOne(applicantId);
     if (!applicant) {
       return res.status(404).send('Applicant not found');
