@@ -46,12 +46,10 @@ const database_1 = require("./database");
 const applicants_routes_1 = __importDefault(require("./applicants/applicants.routes"));
 const vacancies_routes_1 = __importDefault(require("./vacancies/vacancies.routes"));
 const vacancies_cron_1 = require("./vacancies/vacancies.cron");
-const hq_sso_module_1 = require("./auth/hq-sso.module");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.use('/api/auth', (0, hq_sso_module_1.createHqSsoModuleRouter)());
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });

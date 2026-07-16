@@ -37,6 +37,34 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: error.message || 'Error logging in' });
     }
 });
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+router.post('/sso-login', async (req, res) => {
+    const { sso_token } = req.body;
+    if (!sso_token) {
+        return res.status(400).json({ message: 'SSO token is missing' });
+    }
+    try {
+        const secret = process.env.STRIDE_INSIGHTED_SECRET_2026_KEY_PROD;
+        if (!secret) {
+            console.error("Missing STRIDE_INSIGHTED_SECRET_2026_KEY_PROD in backend .env");
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
+        const decoded = jsonwebtoken_1.default.verify(sso_token, secret);
+        const userEmail = decoded.email || decoded.email_address;
+        if (!userEmail) {
+            return res.status(400).json({ message: 'SSO token does not contain a valid email' });
+        }
+        const applicant = await applicants_service_1.ApplicantsService.findByEmail(userEmail);
+        if (!applicant) {
+            return res.status(404).json({ message: 'Applicant account not found. Please register first.' });
+        }
+        res.json({ success: true, data: { id: applicant.id, applicant_number: applicant.applicant_number, email: applicant.email_address } });
+    }
+    catch (error) {
+        console.error("SSO verification error:", error);
+        res.status(401).json({ message: 'Invalid or expired SSO token' });
+    }
+});
 router.post('/apply-job', async (req, res) => {
     try {
         const result = await applicants_service_1.ApplicantsService.applyJob(req.body.applicantId, req.body.jobTitle, req.body.positionId);

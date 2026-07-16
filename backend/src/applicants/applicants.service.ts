@@ -121,6 +121,11 @@ class ApplicantsServiceClass {
     return result.rows[0];
   }
 
+  async findByEmail(email_address: string) {
+    const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+    return result.rows[0];
+  }
+
   async findAll() {
     const result = await pool.query(`
       SELECT a.*, 

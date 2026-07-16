@@ -10,8 +10,9 @@ declare class ApplicantsServiceClass {
         work_experience: any[];
     }>;
     findOne(id: number): Promise<any>;
+    findByEmail(email_address: string): Promise<any>;
     findAll(): Promise<any[]>;
-    login(email_address: string, password_raw: string): Promise<import("./applicants.repository").ApplicantAccount | null>;
+    login(email_address: string, password_raw: string): Promise<any>;
     applyJob(applicantId: number, jobTitle: string, positionId?: string): Promise<any>;
     findApplications(applicantId: number): Promise<any[]>;
     toggleSavedJob(applicantId: number, positionId: string): Promise<{

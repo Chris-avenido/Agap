@@ -36,10 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicantsService = void 0;
 const bcrypt = __importStar(require("bcryptjs"));
 const database_1 = require("../database");
-const applicants_repository_1 = require("./applicants.repository");
 const pdfParse = require('pdf-parse');
 const mammoth = __importStar(require("mammoth"));
-const applicantRepository = new applicants_repository_1.PostgresApplicantRepository(database_1.pool);
 class ApplicantsServiceClass {
     async parseResume(file) {
         try {
@@ -141,6 +139,10 @@ class ApplicantsServiceClass {
         const result = await database_1.pool.query('SELECT * FROM applicants WHERE id = $1', [id]);
         return result.rows[0];
     }
+    async findByEmail(email_address) {
+        const result = await database_1.pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+        return result.rows[0];
+    }
     async findAll() {
         const result = await database_1.pool.query(`
       SELECT a.*, 
@@ -157,7 +159,8 @@ class ApplicantsServiceClass {
         return result.rows;
     }
     async login(email_address, password_raw) {
-        const applicant = await applicantRepository.findByEmail(email_address);
+        const result = await database_1.pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+        const applicant = result.rows[0];
         if (!applicant || !applicant.password_hash)
             return null;
         const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
