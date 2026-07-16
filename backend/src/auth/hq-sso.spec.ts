@@ -1,59 +1,183 @@
 import { createHmac } from 'crypto';
 import express from 'express';
 import request from 'supertest';
-import { AgapUser, createHqSsoRouter, HqSsoConfig, HqSsoStore, ReusedTokenError } from './hq-sso';
+import { ApplicantAccountRepository } from '../applicants/applicants.repository';
+import { AuthTokenService } from './auth-token.service';
+import { HqTokenReplayRepository } from './hq-sso.repository';
+import { createHqSsoRouter, resolveSsoApplicantEmail } from './hq-sso.routes';
+import { HqSsoService } from './hq-sso.service';
 
-const config: HqSsoConfig = {
-  ssoSecret: 'hq-test-secret-that-is-at-least-32-characters', authSecret: 'agap-test-secret-that-is-at-least-32-characters',
-  issuer: 'insighted-hq', audience: 'agap-portal', authIssuer: 'agap-portal', authAudience: 'agap-web',
-  frontendCallback: '/auth/hq-callback', successRedirect: '/applicant-dashboard', authTokenTtlSeconds: 10800,
+const secret = 'shared-test-secret-that-is-at-least-32-characters';
+const applicant = {
+  id: 42,
+  applicant_number: 'AGAP-0042',
+  email_address: 'test@gmail.com',
 };
-const user: AgapUser = { uid: 'user-1', email: 'person@example.com', role: 'Human Resources', first_name: 'Test', last_name: 'User' };
 
-function sign(overrides: Record<string, unknown> = {}, secret = config.ssoSecret): string {
+function signHqToken(
+  overrides: Record<string, unknown> = {},
+  signingSecret = secret,
+): string {
   const now = Math.floor(Date.now() / 1000);
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({ iss: config.issuer, aud: config.audience, sub: 'hq-user', email: ' Person@Example.com ', iat: now, exp: now + 60, jti: `jti-${Math.random()}`, ...overrides })).toString('base64url');
-  return `${header}.${payload}.${createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url')}`;
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+  ).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      iss: 'insighted-hq',
+      aud: 'agap-applicants',
+      sub: 'hq-user-1',
+      type: 'hq_sso',
+      iat: now,
+      exp: now + 60,
+      jti: `jti-${Math.random()}`,
+      ...overrides,
+    }),
+  ).toString('base64url');
+  const signature = createHmac('sha256', signingSecret)
+    .update(`${header}.${payload}`)
+    .digest('base64url');
+  return `${header}.${payload}.${signature}`;
 }
 
-class MemoryStore implements HqSsoStore {
-  used = new Set<string>(); authorized = true; lastEmail?: string;
-  async consumeAndFindUser(jti: string, email: string) {
-    if (this.used.has(jti)) throw new ReusedTokenError();
-    this.used.add(jti); this.lastEmail = email;
-    return this.authorized ? user : null;
+class MemoryApplicants implements ApplicantAccountRepository {
+  enabled = true;
+  lastEmail?: string;
+
+  async findByEmail(email: string) {
+    this.lastEmail = email;
+    return this.enabled ? applicant : null;
   }
-  async findActiveUser(uid: string, email: string) { return this.authorized && uid === user.uid && email === user.email ? user : null; }
 }
-function appFor(store: HqSsoStore) { const app = express(); app.use('/api/auth', createHqSsoRouter(store, config)); return app; }
 
-describe('HQ SSO and AGAP token authentication', () => {
-  it('issues an AGAP token and redirects for a valid HQ token', async () => {
-    const store = new MemoryStore();
-    const response = await request(appFor(store)).get(`/api/auth/hq-sso?token=${encodeURIComponent(sign({ jti: 'valid' }))}`);
-    expect(response.status).toBe(302); expect(response.headers.location).toMatch(/^\/auth\/hq-callback#token=/); expect(store.lastEmail).toBe('person@example.com');
+class MemoryReplayTokens implements HqTokenReplayRepository {
+  used = new Set<string>();
+
+  async consume(jti: string) {
+    if (this.used.has(jti)) return false;
+    this.used.add(jti);
+    return true;
+  }
+}
+
+function createTestApp(
+  applicants = new MemoryApplicants(),
+  replayTokens = new MemoryReplayTokens(),
+) {
+  const service = new HqSsoService(
+    new AuthTokenService(secret),
+    applicants,
+    replayTokens,
+    'test@gmail.com',
+  );
+  const app = express();
+  app.use(express.json());
+  app.use('/api/auth', createHqSsoRouter(service));
+  return { app, applicants, replayTokens };
+}
+
+describe('POST /api/auth/hq/exchange', () => {
+  it('exchanges a valid HQ handoff for an applicant access token', async () => {
+    const { app, applicants } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ jti: 'valid-token' }) });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      data: {
+        user: {
+          id: 42,
+          applicant_number: 'AGAP-0042',
+          email: 'test@gmail.com',
+          role: 'Applicant',
+        },
+        landingRoute: '/applicant-dashboard',
+      },
+    });
+    expect(response.body.data.accessToken).toEqual(expect.any(String));
+    expect(applicants.lastEmail).toBe('test@gmail.com');
   });
-  it('rejects an expired token', async () => {
+
+  it('rejects an expired token with HTTP 401', async () => {
     const now = Math.floor(Date.now() / 1000);
-    expect((await request(appFor(new MemoryStore())).get(`/api/auth/hq-sso?token=${sign({ iat: now - 61, exp: now - 1 })}`)).status).toBe(401);
+    const { app } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ iat: now - 120, exp: now - 1 }) });
+    expect(response.status).toBe(401);
   });
-  it('rejects an invalid signature', async () => {
-    expect((await request(appFor(new MemoryStore())).get(`/api/auth/hq-sso?token=${sign({}, 'wrong-secret')}`)).status).toBe(401);
+
+  it('rejects a token with the wrong audience with HTTP 401', async () => {
+    const { app } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ aud: 'another-application' }) });
+    expect(response.status).toBe(401);
   });
-  it('rejects a reused jti', async () => {
-    const store = new MemoryStore(); const token = sign({ jti: 'one-time' }); const app = appFor(store);
-    await request(app).get(`/api/auth/hq-sso?token=${token}`); expect((await request(app).get(`/api/auth/hq-sso?token=${token}`)).status).toBe(409);
+
+  it('rejects a missing token with HTTP 401', async () => {
+    const { app } = createTestApp();
+    const response = await request(app).post('/api/auth/hq/exchange').send({});
+    expect(response.status).toBe(401);
   });
-  it('rejects an unauthorized user', async () => {
-    const store = new MemoryStore(); store.authorized = false;
-    expect((await request(appFor(store)).get(`/api/auth/hq-sso?token=${sign()}`)).status).toBe(403);
+
+  it('rejects a token with the wrong type or signature', async () => {
+    const { app } = createTestApp();
+    expect(
+      (
+        await request(app)
+          .post('/api/auth/hq/exchange')
+          .send({ token: signHqToken({ type: 'access' }) })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await request(app)
+          .post('/api/auth/hq/exchange')
+          .send({ token: signHqToken({}, 'wrong-secret') })
+      ).status,
+    ).toBe(401);
   });
-  it('validates the issued AGAP token through /auth/me', async () => {
-    const app = appFor(new MemoryStore());
-    const login = await request(app).get(`/api/auth/hq-sso?token=${sign({ jti: 'me-test' })}`);
-    const token = new URLSearchParams(login.headers.location.split('#')[1]).get('token')!;
-    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
-    expect(me.status).toBe(200); expect(me.body.data).toMatchObject({ uid: user.uid, email: user.email, role: user.role });
+
+  it('prevents reuse of a consumed jti', async () => {
+    const { app } = createTestApp();
+    const token = signHqToken({ jti: 'one-time-token' });
+    expect(
+      (await request(app).post('/api/auth/hq/exchange').send({ token })).status,
+    ).toBe(200);
+    expect(
+      (await request(app).post('/api/auth/hq/exchange').send({ token })).status,
+    ).toBe(401);
+  });
+
+  it('issues a token recognized by the protected-session endpoint', async () => {
+    const { app } = createTestApp();
+    const exchange = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ jti: 'protected-session' }) });
+    const me = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${exchange.body.data.accessToken}`);
+
+    expect(me.status).toBe(200);
+    expect(me.body.data).toEqual({
+      id: 42,
+      applicant_number: 'AGAP-0042',
+      email: 'test@gmail.com',
+      role: 'Applicant',
+    });
+  });
+});
+
+describe('SSO applicant configuration', () => {
+  it('uses the development fallback only outside production', () => {
+    expect(resolveSsoApplicantEmail({ NODE_ENV: 'development' })).toBe(
+      'test@gmail.com',
+    );
+    expect(() => resolveSsoApplicantEmail({ NODE_ENV: 'production' })).toThrow(
+      'AGAP_SSO_APPLICANT_EMAIL is required in production',
+    );
   });
 });
