@@ -55,6 +55,7 @@ function App() {
         <Route path="/apply" element={<ApplicationPage />} />
 
         <Route path="/login" element={<Login />} />
+        <Route path="/applicant-login" element={<Login />} />
         <Route path="/auth/hq-callback" element={<HqSsoCallback />} />
 
         {/* Applicant Facing Routes (No Sidebar for Registration) */}
