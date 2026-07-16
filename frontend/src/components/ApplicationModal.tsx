@@ -541,7 +541,7 @@ export default function ApplicationModal({
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        First Name
+                        First Name <span className="text-red-500">*</span>
                       </span>
                       <input name="first_name"
                         required
@@ -564,7 +564,7 @@ export default function ApplicationModal({
                     </div>
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Last Name
+                        Last Name <span className="text-red-500">*</span>
                       </span>
                       <input
                         required
@@ -595,7 +595,7 @@ export default function ApplicationModal({
                   <div className="flex-1 flex flex-col sm:flex-row gap-4">
                     <div className="w-full sm:w-[35%] flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Date of Birth
+                        Date of Birth <span className="text-red-500">*</span>
                       </span>
                       <input
                         required
@@ -612,7 +612,7 @@ export default function ApplicationModal({
                     </div>
                     <div className="flex-1 flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        City, town, etc.
+                        City, town, etc. <span className="text-red-500">*</span>
                       </span>
                       <input name="place_of_birth"
                         required
@@ -681,7 +681,7 @@ export default function ApplicationModal({
                   <div className="flex-1 flex flex-col sm:flex-row gap-4">
                     <div className="w-full sm:w-1/3 flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Height
+                        Height <span className="text-red-500">*</span>
                       </span>
                       <div className="flex">
                         <input
@@ -699,7 +699,7 @@ export default function ApplicationModal({
                     </div>
                     <div className="w-full sm:w-1/3 flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Weight
+                        Weight <span className="text-red-500">*</span>
                       </span>
                       <div className="flex">
                         <input
@@ -717,7 +717,7 @@ export default function ApplicationModal({
                     </div>
                     <div className="w-full sm:w-1/3 flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Blood Type
+                        Blood Type <span className="text-red-500">*</span>
                       </span>
                       <select
                         name="blood_type"
@@ -1145,7 +1145,7 @@ export default function ApplicationModal({
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Telephone No.
+                        Telephone No. <span className="text-red-500">*</span>
                       </span>
                       <input name="telephone_no"
                         required
@@ -1157,7 +1157,7 @@ export default function ApplicationModal({
                     </div>
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Mobile No.
+                        Mobile No. <span className="text-red-500">*</span>
                       </span>
                       <input
                         required
@@ -1177,7 +1177,7 @@ export default function ApplicationModal({
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Primary
+                        Primary <span className="text-red-500">*</span>
                       </span>
                       <input
                         name="email"
@@ -1210,7 +1210,7 @@ export default function ApplicationModal({
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col justify-between h-full">
                         <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                          Create Password
+                          Create Password <span className="text-red-500">*</span>
                         </span>
                         <input
                           name="password"
@@ -1222,7 +1222,7 @@ export default function ApplicationModal({
                       </div>
                       <div className="flex flex-col justify-between h-full">
                         <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                          Confirm Password
+                          Confirm Password <span className="text-red-500">*</span>
                         </span>
                         <input
                           name="confirm_password"

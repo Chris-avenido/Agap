@@ -429,14 +429,6 @@ export default function ApplicantJobList() {
       }
     }
 
-    if (applyingJob && Number(percentage) < 100) {
-      Swal.fire(
-        'Incomplete Profile',
-        `Your profile is only ${percentage}% complete. Please fill out all sections before applying.`,
-        'warning'
-      );
-      return;
-    }
 
     // 2. Vercel Limit Validation
     const docEntries = Object.entries(documents).filter(([_, file]) => file !== null);
