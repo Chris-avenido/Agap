@@ -147,6 +147,10 @@ class ApplicantsServiceClass {
   }
 
   async applyJob(applicantId: number, jobTitle: string, positionId?: string) {
+    if (!positionId || positionId === 'null' || positionId === 'undefined' || String(positionId).trim() === '') {
+      throw new Error("Invalid position ID provided.");
+    }
+    
     const applicantRes = await pool.query('SELECT applicant_number FROM applicants WHERE id = $1', [applicantId]);
     const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
 
@@ -301,7 +305,12 @@ class ApplicantsServiceClass {
 
     const applicant = result.rows[0];
 
-    if (data.positionId) {
+    const isValidPositionId = data.positionId && 
+      data.positionId !== 'null' && 
+      data.positionId !== 'undefined' && 
+      String(data.positionId).trim() !== '';
+
+    if (isValidPositionId) {
       const appId = require('crypto').randomUUID();
 
       const today = new Date();
