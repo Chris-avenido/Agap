@@ -25,8 +25,13 @@ export default function Login() {
         .then(async (response) => {
           if (!response.ok) throw new Error('Invalid token');
           const { data } = await response.json();
-          localStorage.setItem('agap_user', JSON.stringify({ uid: data.uid, email: data.email, role: data.role }));
-          localStorage.setItem('session_data', JSON.stringify({ id: data.uid, uid: data.uid, email: data.email, role: data.role, expiry: Date.now() + 3 * 60 * 60 * 1000 }));
+          localStorage.setItem('agap_user', JSON.stringify(data));
+          localStorage.setItem('session_data', JSON.stringify({
+            id: data.id,
+            applicant_number: data.applicant_number,
+            email: data.email,
+            expiry: Date.now() + 3 * 60 * 60 * 1000,
+          }));
           navigate('/applicant-dashboard', { replace: true });
         })
         .catch(() => {

@@ -1,37 +1,71 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth, type ApplicantUser } from '../auth/AuthContext';
 
-const saveAuthenticatedUser = (data: { uid: string; email: string; role: string }) => {
-  localStorage.setItem('agap_user', JSON.stringify(data));
-  // Keep current dashboard components compatible while they migrate to agap_user.
-  localStorage.setItem('session_data', JSON.stringify({ id: data.uid, uid: data.uid, email: data.email, role: data.role, expiry: Date.now() + 3 * 60 * 60 * 1000 }));
-};
+const HQ_URL = import.meta.env.VITE_HQ_URL || 'https://insighted-hq.vercel.app/';
 
 export default function HqSsoCallback() {
-  const [message, setMessage] = useState('Completing secure sign-in…');
+  const navigate = useNavigate();
+  const { completeAuthentication, clearAuthentication } = useAuth();
+  const started = useRef(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
-    if (!token) return setMessage('The sign-in response did not contain a token.');
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    if (!token) {
+      setError('The secure sign-in response did not contain a token. Please return to InsightED HQ and try again.');
+      return;
+    }
 
-    localStorage.setItem('agap_token', token);
-    window.history.replaceState(null, '', window.location.pathname);
-    fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${import.meta.env.VITE_API_URL}/api/auth/hq/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
       .then(async (response) => {
-        if (!response.ok) throw new Error('Token validation failed');
-        return response.json();
+        const body = await response.json().catch(() => null);
+        if (!response.ok || !body?.success) {
+          throw new Error(body?.message || 'The HQ sign-in token is invalid or expired.');
+        }
+        return body.data as {
+          accessToken: string;
+          user: ApplicantUser;
+          landingRoute: '/applicant-dashboard';
+        };
       })
-      .then(({ data }) => {
-        saveAuthenticatedUser({ uid: data.uid, email: data.email, role: data.role });
-        const basePath = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
-        window.location.replace(`${basePath}applicant-dashboard`);
+      .then(({ accessToken, user }) => {
+        completeAuthentication(accessToken, user);
+        navigate('/applicant-dashboard', { replace: true });
       })
-      .catch(() => {
-        localStorage.removeItem('agap_token');
-        localStorage.removeItem('agap_user');
-        localStorage.removeItem('session_data');
-        setMessage('Your sign-in token is invalid or expired. Please return to InsightED HQ and try again.');
+      .catch((reason: unknown) => {
+        clearAuthentication();
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Secure sign-in could not be completed. Please return to InsightED HQ and try again.',
+        );
       });
-  }, []);
+  }, [clearAuthentication, completeAuthentication, navigate]);
 
-  return <main className="min-h-screen grid place-items-center p-6"><p>{message}</p></main>;
+  return (
+    <main className="min-h-screen grid place-items-center p-6">
+      <section className="max-w-lg text-center">
+        {!error ? (
+          <p>Completing secure sign-in…</p>
+        ) : (
+          <>
+            <h1 className="text-xl font-semibold text-red-700">Secure sign-in failed</h1>
+            <p className="mt-3 text-gray-700">{error}</p>
+            <a className="mt-5 inline-block font-semibold text-blue-700 underline" href={HQ_URL}>
+              Return to InsightED HQ
+            </a>
+          </>
+        )}
+      </section>
+    </main>
+  );
 }
