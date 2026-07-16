@@ -1,10 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { pool } from '../database';
-import { PostgresApplicantRepository } from './applicants.repository';
 const pdfParse = require('pdf-parse');
 import * as mammoth from 'mammoth';
-
-const applicantRepository = new PostgresApplicantRepository(pool);
 
 class ApplicantsServiceClass {
 
@@ -141,7 +138,8 @@ class ApplicantsServiceClass {
   }
 
   async login(email_address: string, password_raw: string) {
-    const applicant = await applicantRepository.findByEmail(email_address);
+    const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+    const applicant = result.rows[0];
     if (!applicant || !applicant.password_hash) return null;
     const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
     if (!isMatch) return null;

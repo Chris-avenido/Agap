@@ -9,6 +9,7 @@
     "build": "tsc",
     "postinstall": "prisma generate --schema=database/schema.prisma",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "start:dev": "tsx watch src/index.ts",
     "start:prod": "node dist/index.js",

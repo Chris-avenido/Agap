@@ -8,14 +8,12 @@ import { pool } from './database';
 import applicantsRouter from './applicants/applicants.routes';
 import vacanciesRouter from './vacancies/vacancies.routes';
 import { setupVacanciesCron } from './vacancies/vacancies.cron';
-import { createHqSsoModuleRouter } from './auth/hq-sso.module';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/auth', createHqSsoModuleRouter());
 
 // Main App Routes
 app.get('/', (req, res) => {
