@@ -14,4 +14,13 @@ export class VacanciesService {
     `);
     return result.rowCount;
   }
+
+  static async getAgapLocations() {
+    const regionsResult = await pool.query('SELECT region FROM agap_schools WHERE region IS NOT NULL GROUP BY region ORDER BY region');
+    const divisionsResult = await pool.query('SELECT division FROM agap_schools WHERE division IS NOT NULL GROUP BY division ORDER BY division');
+    return {
+      regions: regionsResult.rows.map(r => r.region),
+      divisions: divisionsResult.rows.map(r => r.division)
+    };
+  }
 }

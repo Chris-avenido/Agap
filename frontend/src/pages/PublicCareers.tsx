@@ -21,8 +21,8 @@ export default function PublicCareers() {
   const [filterDivision, setFilterDivision] = useState('All Divisions');
   const [filterPosition, setFilterPosition] = useState('All Positions');
 
-  const availableRegions = useMemo(() => [...new Set(positions.map(p => p.location || 'Unknown'))].filter(Boolean), [positions]);
-  const availableDivisions = useMemo(() => [...new Set(positions.map(p => p.division || p.office))].filter(Boolean), [positions]);
+  const [availableRegions, setAvailableRegions] = useState<string[]>([]);
+  const [availableDivisions, setAvailableDivisions] = useState<string[]>([]);
   const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
 
   const filteredPositions = useMemo(() => positions.filter(job => {
@@ -30,7 +30,8 @@ export default function PublicCareers() {
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (job.division && job.division.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase()));
+      (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (job.location && job.location.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchRegion = filterRegion === 'All Regions' || (job.location || 'Unknown') === filterRegion;
     const matchDivision = filterDivision === 'All Divisions' || (job.division || job.office) === filterDivision;
@@ -49,6 +50,16 @@ export default function PublicCareers() {
   const currentJobs = filteredPositions.slice(indexOfFirstJob, indexOfLastJob);
 
   useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setAvailableRegions(data.data.regions);
+          setAvailableDivisions(data.data.divisions);
+        }
+      })
+      .catch(err => console.error('Error fetching locations:', err));
+
     fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
       .then(res => res.json())
       .then(data => {
@@ -57,13 +68,13 @@ export default function PublicCareers() {
             id: v.id,
             title: v.title,
             office: v.school || 'Department of Education',
-            division: v.region || '',
+            division: v.division || '',
             type: 'Permanent',
             posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
             deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
             sg: v.salary_grade,
             itemNo: v.item_no,
-            location: v.location || '',
+            location: v.region || '',
             description: 'Details available in the full job posting.',
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
