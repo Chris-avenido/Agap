@@ -2763,7 +2763,8 @@ export default function ApplicationModal({
                                 "Application submitted successfully!",
                                 "success",
                               ).then(() => {
-                                window.location.href = "/applicant-dashboard";
+                                const basePath = import.meta.env.VITE_BASE_PATH || '/';
+                                window.location.href = basePath.endsWith('/') ? basePath + "applicant-dashboard" : basePath + "/applicant-dashboard";
                               });
                             } else if (method === "POST") {
                               Swal.fire(
@@ -2771,7 +2772,8 @@ export default function ApplicationModal({
                                 `Profile created successfully! Your Applicant ID is ${resData.data.applicant_number}`,
                                 "success",
                               ).then(() => {
-                                window.location.href = "/applicant-dashboard";
+                                const basePath = import.meta.env.VITE_BASE_PATH || '/';
+                                window.location.href = basePath.endsWith('/') ? basePath + "applicant-dashboard" : basePath + "/applicant-dashboard";
                               });
                             } else {
                               Swal.fire(
