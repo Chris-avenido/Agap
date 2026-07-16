@@ -27,6 +27,7 @@ function signHqToken(
       iss: 'insighted-hq',
       aud: 'agap-applicants',
       sub: 'hq-user-1',
+      email: 'hq.user@example.com',
       type: 'hq_sso',
       iat: now,
       exp: now + 60,
@@ -114,6 +115,31 @@ describe('POST /api/auth/hq/exchange', () => {
     const response = await request(app)
       .post('/api/auth/hq/exchange')
       .send({ token: signHqToken({ aud: 'another-application' }) });
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects a token with the wrong issuer with HTTP 401', async () => {
+    const { app } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ iss: 'another-issuer' }) });
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects a token without the authenticated HQ email', async () => {
+    const { app } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ email: '' }) });
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects an HQ token whose lifetime exceeds 60 seconds', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { app } = createTestApp();
+    const response = await request(app)
+      .post('/api/auth/hq/exchange')
+      .send({ token: signHqToken({ iat: now, exp: now + 61 }) });
     expect(response.status).toBe(401);
   });
 

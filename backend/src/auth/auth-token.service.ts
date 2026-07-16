@@ -5,6 +5,7 @@ type JwtPayload = Record<string, unknown> & {
   iss?: unknown;
   aud?: unknown;
   sub?: unknown;
+  email?: unknown;
   type?: unknown;
   iat?: unknown;
   exp?: unknown;
@@ -15,6 +16,7 @@ export type HqTokenClaims = {
   iss: 'insighted-hq';
   aud: 'agap-applicants';
   sub: string;
+  email: string;
   type: 'hq_sso';
   iat: number;
   exp: number;
@@ -35,7 +37,7 @@ export type ApplicantAccessClaims = {
 };
 
 const APPLICANT_TOKEN_TTL_SECONDS = 3 * 60 * 60;
-const MAX_HQ_TOKEN_TTL_SECONDS = 5 * 60;
+const HQ_TOKEN_TTL_SECONDS = 60;
 
 function decodePart(value: string): Buffer {
   if (!value || !/^[A-Za-z0-9_-]+$/.test(value))
@@ -97,6 +99,8 @@ export class AuthTokenService {
       claims.type !== 'hq_sso' ||
       typeof claims.sub !== 'string' ||
       !claims.sub.trim() ||
+      typeof claims.email !== 'string' ||
+      !claims.email.trim() ||
       !isInteger(claims.iat) ||
       !isInteger(claims.exp) ||
       typeof claims.jti !== 'string' ||
@@ -104,7 +108,7 @@ export class AuthTokenService {
       claims.iat > now ||
       claims.exp <= now ||
       claims.exp <= claims.iat ||
-      claims.exp - claims.iat > MAX_HQ_TOKEN_TTL_SECONDS
+      claims.exp - claims.iat > HQ_TOKEN_TTL_SECONDS
     ) {
       throw new Error('Invalid HQ token');
     }
