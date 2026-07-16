@@ -20,9 +20,10 @@ export default function HqSsoCallback() {
         if (!response.ok) throw new Error('Token validation failed');
         return response.json();
       })
-      .then(({ data, landingRoute }) => {
+      .then(({ data }) => {
         saveAuthenticatedUser({ uid: data.uid, email: data.email, role: data.role });
-        window.location.replace(landingRoute);
+        const basePath = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+        window.location.replace(`${basePath}applicant-dashboard`);
       })
       .catch(() => {
         localStorage.removeItem('agap_token');
