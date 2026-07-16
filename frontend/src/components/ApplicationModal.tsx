@@ -2798,7 +2798,7 @@ export default function ApplicationModal({
                         console.error("Error:", error);
                         Swal.fire(
                           "Warning",
-                          "Data collected but backend is unreachable. Start the NestJS backend to fully save to DB.",
+                          "Data collected but backend is unreachable. Please ensure the backend server is running and accessible.",
                           "warning",
                         );
                         onClose();
