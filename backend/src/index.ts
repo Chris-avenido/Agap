@@ -8,12 +8,14 @@ import { pool } from './database';
 import applicantsRouter from './applicants/applicants.routes';
 import vacanciesRouter from './vacancies/vacancies.routes';
 import { setupVacanciesCron } from './vacancies/vacancies.cron';
+import { createHqSsoRouter, loadHqSsoConfig, PostgresHqSsoStore } from './auth/hq-sso';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/auth', createHqSsoRouter(new PostgresHqSsoStore(pool), loadHqSsoConfig(process.env)));
 
 // Main App Routes
 app.get('/', (req, res) => {
