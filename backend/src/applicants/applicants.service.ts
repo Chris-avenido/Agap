@@ -305,40 +305,7 @@ class ApplicantsServiceClass {
 
     const applicant = result.rows[0];
 
-    const isValidPositionId = data.positionId && 
-      data.positionId !== 'null' && 
-      data.positionId !== 'undefined' && 
-      String(data.positionId).trim() !== '';
 
-    if (isValidPositionId) {
-      const appId = require('crypto').randomUUID();
-
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}${mm}${dd}`;
-
-      const lastApp = await pool.query(`
-        SELECT application_number FROM applications 
-        WHERE application_number LIKE $1 
-        ORDER BY application_number DESC LIMIT 1
-      `, [`${dateStr}-%`]);
-
-      let nextAppNum = 1;
-      if (lastApp.rows.length > 0 && lastApp.rows[0].application_number) {
-        const match = lastApp.rows[0].application_number.split('-');
-        if (match.length > 1) {
-          nextAppNum = parseInt(match[1], 10) + 1;
-        }
-      }
-      const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
-
-      await pool.query(`
-        INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
-        VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
-      `, [appId, uniqueApplicationNumber, applicant.id.toString(), data.positionId || null]);
-    }
 
     return applicant;
   }
