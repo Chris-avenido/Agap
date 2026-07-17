@@ -5,6 +5,7 @@ import { ApplicantsService } from './applicants.service';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 import { uploadToAzure, downloadFromAzure, deleteFromAzure } from '../utils/azureStorage';
+import { compressPdf } from '../utils/pdfCompressor';
 
 router.post('/parse-resume', upload.single('resume'), async (req, res) => {
   const file = (req as any).file;
@@ -227,7 +228,12 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       
       const safeName = `${surname}_${docType}_${Date.now()}_${appNumber}.${ext}`;
       
-      const url = await uploadToAzure(file.buffer, safeName, file.mimetype);
+      let finalBuffer = file.buffer;
+      if (file.mimetype === 'application/pdf') {
+        finalBuffer = await compressPdf(file.buffer, 150);
+      }
+      
+      const url = await uploadToAzure(finalBuffer, safeName, file.mimetype);
       otherInfo.documents[docName] = url;
     });
 

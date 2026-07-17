@@ -238,7 +238,7 @@ export default function ApplicantJobList() {
   const handlePhotoUpload = async (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (file.size > 2 * 1024 * 1024) {
       Swal.fire('Error', 'Image size should be less than 2MB', 'error');
       return;
@@ -253,7 +253,7 @@ export default function ApplicantJobList() {
           Swal.showLoading();
         }
       });
-      
+
       const sessionStr = localStorage.getItem('session_data');
       if (!sessionStr) throw new Error('Not logged in');
       const session = JSON.parse(sessionStr);
@@ -270,21 +270,21 @@ export default function ApplicantJobList() {
       if (response.ok) {
         const result = await response.json();
         const uploadedUrl = result.documents.profile_photo;
-        
+
         // Also update the applicant's other_information with the new photoUrl
         const pResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`);
         if (pResponse.ok) {
-            const pData = await pResponse.json();
-            const applicant = pData.data;
-            const oi = typeof applicant.other_information === 'string' ? JSON.parse(applicant.other_information) : (applicant.other_information || {});
-            oi.photoUrl = uploadedUrl;
-            await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ other_information: oi })
-            });
+          const pData = await pResponse.json();
+          const applicant = pData.data;
+          const oi = typeof applicant.other_information === 'string' ? JSON.parse(applicant.other_information) : (applicant.other_information || {});
+          oi.photoUrl = uploadedUrl;
+          await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ other_information: oi })
+          });
         }
-        
+
         setPhotoUrl(uploadedUrl);
         Swal.fire('Success', 'Photo uploaded successfully!', 'success');
       } else {
@@ -310,7 +310,7 @@ export default function ApplicantJobList() {
     if (learningDevelopmentList?.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
     if (skillsList?.some((s: any) => s?.value?.trim() !== '') || distinctionsList?.some((d: any) => d?.value?.trim() !== '') || membershipsList?.some((m: any) => m?.value?.trim() !== '')) steps.push('Other Information');
     if (Object.keys(questionnaire).length > 0) steps.push('Legal Questionnaire');
-    
+
     const requiredDocs = [
       'Personal Data Sheet',
       'Work Experience Sheet',
@@ -321,11 +321,11 @@ export default function ApplicantJobList() {
     ];
     const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
     if (isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
-    
+
     if (uploadedDocumentUrls['Letter of Intent'] || documents['Letter of Intent']) {
       steps.push('Letter of Intent');
     }
-    
+
     return steps;
   }, [
     firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
@@ -437,10 +437,10 @@ export default function ApplicantJobList() {
     const docEntries = Object.entries(documents).filter(([_, file]) => file !== null);
     if (docEntries.length > 0) {
       const totalSize = docEntries.reduce((sum, [_, file]) => sum + (file as File).size, 0);
-      if (totalSize > 4 * 1024 * 1024) {
+      if (totalSize > 20 * 1024 * 1024) {
         Swal.fire(
           'Total File Size Too Large',
-          'The total size of the documents you are uploading exceeds the 4MB limit. Please upload them one by one or compress your files.',
+          'The total size of the documents you are uploading exceeds the 20MB limit. Please upload them one by one or compress your files.',
           'error'
         );
         return;
@@ -467,8 +467,8 @@ export default function ApplicantJobList() {
       // Upload Documents to Azure first
       if (docEntries.length > 0) {
         Swal.fire({
-          title: 'Uploading Documents...',
-          text: 'Please wait...',
+          title: 'Processing and Uploading Documents...',
+          text: 'Compressing PDFs. Please wait...',
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
@@ -716,7 +716,7 @@ export default function ApplicantJobList() {
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);
-          
+
           fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
             .then(res => res.json())
             .then(appData => {
@@ -844,13 +844,13 @@ export default function ApplicantJobList() {
                     'GRADUATE': 'graduate'
                   };
                   const fallbackLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate'];
-                  
+
                   // Extract level or use fallback
                   let matchedLevel = null;
                   if (ed.level) {
-                     matchedLevel = levelMap[ed.level.toUpperCase()] || ed.level.toLowerCase();
+                    matchedLevel = levelMap[ed.level.toUpperCase()] || ed.level.toLowerCase();
                   } else if (idx < fallbackLevels.length) {
-                     matchedLevel = fallbackLevels[idx];
+                    matchedLevel = fallbackLevels[idx];
                   }
 
                   if (matchedLevel) {
@@ -866,7 +866,7 @@ export default function ApplicantJobList() {
                   }
                 });
                 console.log("Parsed result:", newEd);
-                                setEducationalDates(newEd);
+                setEducationalDates(newEd);
                 setDebugRawEdu(edParsed);
               }
             } catch (e) {
@@ -919,28 +919,28 @@ export default function ApplicantJobList() {
             if (oi.weight) setWeight(oi.weight);
             if (oi.agencyEmployeeNo || oi.agency_employee_no) setAgencyEmployeeNo(oi.agencyEmployeeNo || oi.agency_employee_no);
             if (oi.citizenshipType || oi.citizenship_type) setCitizenshipType(oi.citizenshipType || oi.citizenship_type);
-                      // Handle skills, mapping from both legacy 'skills' and current 'special_skills'
-          const rawSkills = oi.special_skills || oi.skills;
-          if (rawSkills) {
-             const formattedSkills = Array.isArray(rawSkills) 
-               ? rawSkills.map((s: any) => typeof s === 'string' ? { value: s } : s)
-               : [{ value: String(rawSkills) }];
-             setSkillsList(formattedSkills);
-          }
+            // Handle skills, mapping from both legacy 'skills' and current 'special_skills'
+            const rawSkills = oi.special_skills || oi.skills;
+            if (rawSkills) {
+              const formattedSkills = Array.isArray(rawSkills)
+                ? rawSkills.map((s: any) => typeof s === 'string' ? { value: s } : s)
+                : [{ value: String(rawSkills) }];
+              setSkillsList(formattedSkills);
+            }
 
-          if (oi.distinctions) {
-             const formattedDist = Array.isArray(oi.distinctions)
-               ? oi.distinctions.map((d: any) => typeof d === 'string' ? { value: d } : d)
-               : [{ value: String(oi.distinctions) }];
-             setDistinctionsList(formattedDist);
-          }
+            if (oi.distinctions) {
+              const formattedDist = Array.isArray(oi.distinctions)
+                ? oi.distinctions.map((d: any) => typeof d === 'string' ? { value: d } : d)
+                : [{ value: String(oi.distinctions) }];
+              setDistinctionsList(formattedDist);
+            }
 
-          if (oi.memberships) {
-             const formattedMem = Array.isArray(oi.memberships)
-               ? oi.memberships.map((m: any) => typeof m === 'string' ? { value: m } : m)
-               : [{ value: String(oi.memberships) }];
-             setMembershipsList(formattedMem);
-          }
+            if (oi.memberships) {
+              const formattedMem = Array.isArray(oi.memberships)
+                ? oi.memberships.map((m: any) => typeof m === 'string' ? { value: m } : m)
+                : [{ value: String(oi.memberships) }];
+              setMembershipsList(formattedMem);
+            }
             if (oi.references) setReferencesList(oi.references);
             if (oi.governmentId) setGovernmentId(oi.governmentId);
             if (oi.children) setChildrenList(oi.children);
@@ -950,7 +950,7 @@ export default function ApplicantJobList() {
           if (p.questionnaire_responses) {
             const parsedQ = typeof p.questionnaire_responses === 'string' ? JSON.parse(p.questionnaire_responses) : p.questionnaire_responses;
             const normalizedQ: any = {};
-            
+
             // Extract references and gov ID if they exist inside questionnaire_responses
             const refs: any[] = [];
             const newGovId = { type: '', idNo: '', datePlace: '' };
@@ -959,25 +959,25 @@ export default function ApplicantJobList() {
 
             for (const k in parsedQ) {
               const val = parsedQ[k];
-              
+
               if (k.startsWith('ref')) {
-                  foundRefs = true;
-                  const match = k.match(/ref(\d+)_(name|address|tel)/);
-                  if (match) {
-                      const idx = parseInt(match[1]) - 1;
-                      const field = match[2] === 'tel' ? 'telephone' : match[2];
-                      while (refs.length <= idx) refs.push({ name: '', address: '', telephone: '' });
-                      refs[idx][field] = val || '';
-                  }
-                  continue;
+                foundRefs = true;
+                const match = k.match(/ref(\d+)_(name|address|tel)/);
+                if (match) {
+                  const idx = parseInt(match[1]) - 1;
+                  const field = match[2] === 'tel' ? 'telephone' : match[2];
+                  while (refs.length <= idx) refs.push({ name: '', address: '', telephone: '' });
+                  refs[idx][field] = val || '';
+                }
+                continue;
               }
-              
+
               if (k.startsWith('gov_id')) {
-                  foundGov = true;
-                  if (k === 'gov_id_type') newGovId.type = val || '';
-                  if (k === 'gov_id_no') newGovId.idNo = val || '';
-                  if (k === 'gov_id_issuance') newGovId.datePlace = val || '';
-                  continue;
+                foundGov = true;
+                if (k === 'gov_id_type') newGovId.type = val || '';
+                if (k === 'gov_id_no') newGovId.idNo = val || '';
+                if (k === 'gov_id_issuance') newGovId.datePlace = val || '';
+                continue;
               }
 
               let ans = val;
@@ -986,14 +986,14 @@ export default function ApplicantJobList() {
                 ans = val.answer;
                 details = val.details || '';
               }
-              
+
               if (ans === null || ans === undefined) {
-                  ans = '';
+                ans = '';
               }
-              
+
               let mapKey = k;
               if (mapKey.startsWith('q')) mapKey = mapKey.substring(1);
-              
+
               normalizedQ[mapKey] = {
                 answer: String(ans).toUpperCase() === 'YES' ? 'Yes' : (String(ans).toUpperCase() === 'NO' ? 'No' : ans),
                 details: details
@@ -1117,7 +1117,7 @@ export default function ApplicantJobList() {
 
             <div className="hidden lg:flex items-center gap-2 pr-6 py-3">
               {parseFloat(percentage) >= 90 ? (
-                <button 
+                <button
                   onClick={() => {
                     const session = JSON.parse(localStorage.getItem('session_data') || '{}');
                     if (session.id) {
@@ -1129,7 +1129,7 @@ export default function ApplicantJobList() {
                   PRINT PDS
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={() => {
                     Swal.fire({
                       title: 'Profile Incomplete',
@@ -1243,25 +1243,25 @@ export default function ApplicantJobList() {
 
                 {/* Job List */}
                 {viewMode === 'table' ? (
-                  <JobTableList 
-                    jobs={currentJobs} 
-                    tab={activeTab} 
-                    appliedJobIds={appliedJobIds} 
-                    savedJobIds={savedJobIds} 
-                    toggleSaveJob={toggleSaveJob} 
-                    handleApply={handleApply} 
+                  <JobTableList
+                    jobs={currentJobs}
+                    tab={activeTab}
+                    appliedJobIds={appliedJobIds}
+                    savedJobIds={savedJobIds}
+                    toggleSaveJob={toggleSaveJob}
+                    handleApply={handleApply}
                   />
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-gray-100">
                     {currentJobs.map((job) => (
-                      <JobCard 
+                      <JobCard
                         key={job.id}
-                        job={job} 
-                        tab={activeTab} 
-                        appliedJobIds={appliedJobIds} 
-                        savedJobIds={savedJobIds} 
-                        toggleSaveJob={toggleSaveJob} 
-                        handleApply={handleApply} 
+                        job={job}
+                        tab={activeTab}
+                        appliedJobIds={appliedJobIds}
+                        savedJobIds={savedJobIds}
+                        toggleSaveJob={toggleSaveJob}
+                        handleApply={handleApply}
                       />
                     ))}
                   </div>
@@ -1281,16 +1281,15 @@ export default function ApplicantJobList() {
                       >
                         Previous
                       </button>
-                      
+
                       {Array.from({ length: totalJobPages }, (_, i) => i + 1).map(pageNum => (
                         <button
                           key={pageNum}
                           onClick={() => setCurrentJobPage(pageNum)}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${
-                            currentJobPage === pageNum 
-                              ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]' 
-                              : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
-                          }`}
+                          className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${currentJobPage === pageNum
+                            ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
+                            : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -1327,25 +1326,25 @@ export default function ApplicantJobList() {
                     You haven't applied for any positions yet.
                   </div>
                 ) : viewMode === 'table' ? (
-                  <JobTableList 
-                    jobs={currentApps} 
-                    tab={activeTab} 
-                    appliedJobIds={appliedJobIds} 
-                    savedJobIds={savedJobIds} 
-                    toggleSaveJob={toggleSaveJob} 
-                    handleApply={handleApply} 
+                  <JobTableList
+                    jobs={currentApps}
+                    tab={activeTab}
+                    appliedJobIds={appliedJobIds}
+                    savedJobIds={savedJobIds}
+                    toggleSaveJob={toggleSaveJob}
+                    handleApply={handleApply}
                   />
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {currentApps.map((app) => (
-                      <JobCard 
+                      <JobCard
                         key={app.id}
-                        job={app} 
-                        tab={activeTab} 
-                        appliedJobIds={appliedJobIds} 
-                        savedJobIds={savedJobIds} 
-                        toggleSaveJob={toggleSaveJob} 
-                        handleApply={handleApply} 
+                        job={app}
+                        tab={activeTab}
+                        appliedJobIds={appliedJobIds}
+                        savedJobIds={savedJobIds}
+                        toggleSaveJob={toggleSaveJob}
+                        handleApply={handleApply}
                       />
                     ))}
                   </div>
@@ -1393,25 +1392,25 @@ export default function ApplicantJobList() {
                     You haven't saved any jobs yet.
                   </div>
                 ) : viewMode === 'table' ? (
-                  <JobTableList 
-                    jobs={positions.filter(job => savedJobIds.includes(job.id))} 
-                    tab={activeTab} 
-                    appliedJobIds={appliedJobIds} 
-                    savedJobIds={savedJobIds} 
-                    toggleSaveJob={toggleSaveJob} 
-                    handleApply={handleApply} 
+                  <JobTableList
+                    jobs={positions.filter(job => savedJobIds.includes(job.id))}
+                    tab={activeTab}
+                    appliedJobIds={appliedJobIds}
+                    savedJobIds={savedJobIds}
+                    toggleSaveJob={toggleSaveJob}
+                    handleApply={handleApply}
                   />
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {positions.filter(job => savedJobIds.includes(job.id)).map((job) => (
-                      <JobCard 
+                      <JobCard
                         key={job.id}
-                        job={job} 
-                        tab={activeTab} 
-                        appliedJobIds={appliedJobIds} 
-                        savedJobIds={savedJobIds} 
-                        toggleSaveJob={toggleSaveJob} 
-                        handleApply={handleApply} 
+                        job={job}
+                        tab={activeTab}
+                        appliedJobIds={appliedJobIds}
+                        savedJobIds={savedJobIds}
+                        toggleSaveJob={toggleSaveJob}
+                        handleApply={handleApply}
                       />
                     ))}
                   </div>
@@ -1424,7 +1423,7 @@ export default function ApplicantJobList() {
                 {/* Left Sidebar */}
                 <div className="w-full md:w-[280px] lg:w-[320px] flex flex-col bg-white shadow-sm shrink-0 h-fit border border-gray-100 rounded-sm overflow-hidden">
                   <div className="bg-[#1a73e8] p-5 flex items-center gap-4 border-b-4 border-red-500">
-                    <div 
+                    <div
                       onClick={() => photoInputRef.current?.click()}
                       className="w-[60px] h-[60px] bg-white rounded-full flex flex-col items-center justify-center font-extrabold text-[11px] leading-none text-center text-black shrink-0 shadow-sm cursor-pointer hover:bg-gray-100 overflow-hidden transition-colors"
                     >
@@ -1437,12 +1436,12 @@ export default function ApplicantJobList() {
                         </>
                       )}
                     </div>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
                       ref={photoInputRef}
-                      onChange={handlePhotoUpload} 
+                      onChange={handlePhotoUpload}
                     />
                     <div className="flex flex-col text-white">
                       <span className="font-bold text-[16px] uppercase tracking-wide">{firstName} {lastName}</span>
@@ -1500,12 +1499,17 @@ export default function ApplicantJobList() {
                     {uploadedDocumentUrls && uploadedDocumentUrls['Letter of Intent'] ? (
                       <div className="flex flex-col gap-2 w-full mt-2">
                         <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
-                          ✓ Uploaded
+                          &#10003; Uploaded
                         </span>
-                        <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                          Replace File
-                          <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
-                        </label>
+                        <div className="flex flex-col gap-2">
+                          <a href={uploadedDocumentUrls['Letter of Intent'].startsWith("http") ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(uploadedDocumentUrls['Letter of Intent'])}` : uploadedDocumentUrls['Letter of Intent']} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                            View File
+                          </a>
+                          <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                            Replace File
+                            <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
+                          </label>
+                        </div>
                       </div>
                     ) : (
                       <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
@@ -1529,15 +1533,15 @@ export default function ApplicantJobList() {
                           {parseFloat(percentage) >= 100 ? "Ready to Submit" : "Complete your Profile"}
                         </h2>
                         <p className="text-sm text-[#2e7d32] font-medium leading-snug">
-                          {parseFloat(percentage) >= 100 
-                            ? "Your profile is fully complete! You can now submit your application." 
+                          {parseFloat(percentage) >= 100
+                            ? "Your profile is fully complete! You can now submit your application."
                             : `Your profile is ${percentage}% complete. Fill in the missing information below to improve your chances.`}
                         </p>
                       </div>
                     </div>
 
                     {parseFloat(percentage) >= 100 ? (
-                      <button 
+                      <button
                         type="button"
                         onClick={() => {
                           const form = document.getElementById('form-Essential Documents') as HTMLFormElement;
@@ -1545,8 +1549,8 @@ export default function ApplicantJobList() {
                         }}
                         className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold text-[13px] py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 whitespace-nowrap uppercase tracking-wider shrink-0"
                       >
-                        Submit Application 
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        Submit Application
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                       </button>
                     ) : (
                       <div className="w-full sm:w-64 shrink-0">
@@ -1733,7 +1737,7 @@ export default function ApplicantJobList() {
                                 >
                                   <option value="">Select region</option>
                                   {regions.map((r: any, idx: number) => (
-                                        <option key={`${r.reg_code}-${idx}`} value={r.reg_code}>{r.name}</option>
+                                    <option key={`${r.reg_code}-${idx}`} value={r.reg_code}>{r.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1752,7 +1756,7 @@ export default function ApplicantJobList() {
                                 >
                                   <option value="">Select province</option>
                                   {resProvincesList.map((p: any, idx: number) => (
-                                        <option key={`${p.prov_code}-${idx}`} value={p.prov_code}>{p.name}</option>
+                                    <option key={`${p.prov_code}-${idx}`} value={p.prov_code}>{p.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -1770,7 +1774,7 @@ export default function ApplicantJobList() {
                                 >
                                   <option value="">Select city / municipality</option>
                                   {resCitiesList.map((c: any, idx: number) => (
-                                        <option key={`${c.mun_code}-${idx}`} value={c.mun_code}>{c.name}</option>
+                                    <option key={`${c.mun_code}-${idx}`} value={c.mun_code}>{c.name}</option>
                                   ))}
                                 </select>
                               </div>
@@ -2143,12 +2147,12 @@ export default function ApplicantJobList() {
                                 <div className="grid grid-cols-2 gap-3 relative">
                                   <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
-                                    onChange={(e: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
+                                    onChange={(dateStr: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: dateStr ? new Date(dateStr) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                   <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
-                                    onChange={(e: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
+                                    onChange={(dateStr: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: dateStr ? new Date(dateStr) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                 </div>
@@ -3086,18 +3090,15 @@ export default function ApplicantJobList() {
                           <p className="text-[13px] text-gray-500 italic">Please upload the required essential documents for your application. (Max file size: 5MB per document)</p>
                         </div>
 
-                        <div 
-                          className={`border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-500 ${
-                            highlightDocs ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'
-                          }`}
+                        <div
+                          className={`border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-500 ${highlightDocs ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'
+                            }`}
                           onClick={() => setHighlightDocs(false)}
                         >
-                          <div className={`border-b px-5 py-3.5 transition-colors duration-500 ${
-                            highlightDocs ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
-                          }`}>
-                            <h3 className={`font-bold text-[14px] uppercase tracking-wide ${
-                              highlightDocs ? 'text-red-700' : 'text-gray-700'
+                          <div className={`border-b px-5 py-3.5 transition-colors duration-500 ${highlightDocs ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
                             }`}>
+                            <h3 className={`font-bold text-[14px] uppercase tracking-wide ${highlightDocs ? 'text-red-700' : 'text-gray-700'
+                              }`}>
                               Essential Documents {highlightDocs && <span className="text-red-500 lowercase normal-case font-normal ml-2">(Action Required)</span>}
                             </h3>
                           </div>
@@ -3121,8 +3122,8 @@ export default function ApplicantJobList() {
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
                                       {isSubsequentApplication && isRequired ? (
-                                        <input 
-                                          type="checkbox" 
+                                        <input
+                                          type="checkbox"
                                           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                                           checked={documentsConfirmed[doc] || false}
                                           onChange={e => setDocumentsConfirmed(prev => ({ ...prev, [doc]: e.target.checked }))}
@@ -3146,18 +3147,18 @@ export default function ApplicantJobList() {
                                       </span>
                                     </div>
                                     {existingUrl && (
-                                      <a 
-                                        href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
+                                      <a
+                                        href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`}
+                                        target="_blank"
+                                        rel="noreferrer"
                                         download={doc + ".pdf"}
                                         className="text-[12px] text-blue-600 hover:underline mt-1 font-medium flex items-center gap-1 ml-6"
                                       >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download File
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> Download File
                                       </a>
                                     )}
                                   </div>
-                                  
+
                                   <div className="flex flex-col md:items-end gap-2">
                                     {existingUrl && !isEditing ? (
                                       <button
@@ -3171,6 +3172,7 @@ export default function ApplicantJobList() {
                                       <div className="flex items-center gap-2">
                                         <input
                                           type="file"
+                                          accept=".pdf"
                                           required={isRequired && !existingUrl && !documents[doc]}
                                           onChange={(e: any) => {
                                             if (e.target.files && e.target.files[0]) {

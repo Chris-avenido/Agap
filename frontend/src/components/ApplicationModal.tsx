@@ -472,10 +472,27 @@ export default function ApplicationModal({
                 </span>
               </div>
             </div>
-            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
-              Upload Now
-              <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
-            </label>
+            {getDocUrl("Letter of Intent") ? (
+              <div className="flex flex-col gap-2 w-full mt-2">
+                <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                  &#10003; Uploaded
+                </span>
+                <div className="flex flex-col gap-2">
+                  <a href={getDocUrl("Letter of Intent") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                    View File
+                  </a>
+                  <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                    Replace File
+                    <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
+                  </label>
+                </div>
+              </div>
+            ) : (
+              <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
+                Upload Now
+                <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
+              </label>
+            )}
           </div>
         </div>
 
@@ -2399,55 +2416,125 @@ export default function ApplicationModal({
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Personal Data Sheet <span className="text-red-500">*</span></span>
-                        {getDocUrl("Personal Data Sheet") && (
-                          <a href={getDocUrl("Personal Data Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_pds" accept=".pdf" required={!getDocUrl("Personal Data Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Personal Data Sheet") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Personal Data Sheet") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_pds" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_pds" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
                     
                     {/* Item 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Work Experience Sheet <span className="text-red-500">*</span></span>
-                        {getDocUrl("Work Experience Sheet") && (
-                          <a href={getDocUrl("Work Experience Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_work_exp" accept=".pdf" required={!getDocUrl("Work Experience Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Work Experience Sheet") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Work Experience Sheet") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_work_exp" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_work_exp" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 
                     {/* Item 3 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Certificate of Eligibility <span className="text-red-500">*</span></span>
-                        {getDocUrl("Certificate of Eligibility") && (
-                          <a href={getDocUrl("Certificate of Eligibility") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_eligibility" accept=".pdf" required={!getDocUrl("Certificate of Eligibility")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Certificate of Eligibility") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Certificate of Eligibility") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_eligibility" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_eligibility" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 
                     {/* Item 4 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Transcript of Records <span className="text-red-500">*</span></span>
-                        {getDocUrl("Transcript of Records") && (
-                          <a href={getDocUrl("Transcript of Records") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_tor" accept=".pdf" required={!getDocUrl("Transcript of Records")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Transcript of Records") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Transcript of Records") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_tor" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_tor" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 
                     {/* Item 5 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Updated PRC License/ID <span className="text-red-500">*</span></span>
-                        {getDocUrl("Updated PRC License/ID") && (
-                          <a href={getDocUrl("Updated PRC License/ID") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_prc" accept=".pdf" required={!getDocUrl("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Updated PRC License/ID") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Updated PRC License/ID") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_prc" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_prc" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 
                     
@@ -2455,32 +2542,74 @@ export default function ApplicationModal({
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Trainings <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
-                        {getDocUrl("Trainings") && (
-                          <a href={getDocUrl("Trainings") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_trainings" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Trainings") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Trainings") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_trainings" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_trainings" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 {/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Diploma (optional)</span>
-                        {getDocUrl("Diploma (optional)") && (
-                          <a href={getDocUrl("Diploma (optional)") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_diploma" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Diploma (optional)") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Diploma (optional)") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_diploma" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_diploma" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
 
                     {/* Item 7 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Resume <span className="text-red-500">*</span></span>
-                        {getDocUrl("Resume") && (
-                          <a href={getDocUrl("Resume") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
-                        )}
                       </div>
-                      <input type="file" name="doc_resume" accept=".pdf" required={!getDocUrl("Resume")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      {getDocUrl("Resume") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={getDocUrl("Resume") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_resume" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_resume" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
                     </div>
                   </div>
                 </div>
