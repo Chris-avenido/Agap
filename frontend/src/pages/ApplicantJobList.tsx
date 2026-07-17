@@ -14,6 +14,7 @@ import ApplicantHeader from '../components/ApplicantHeader';
 import { regions, provinces, city_mun, barangays } from 'phil-reg-prov-mun-brgy';
 
 import { JobCard, JobTableList } from '../components/JobCards';
+import ModernDatePicker from "../components/ModernDatePicker";
 
 export default function ApplicantJobList() {
   const navigate = useNavigate();
@@ -1560,7 +1561,7 @@ export default function ApplicantJobList() {
                   </div>
 
                   {/* Dynamic Content Box */}
-                  <div className="bg-white p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase [&_input[type='email']]:uppercase [&_textarea]:uppercase">
+                  <div className="bg-white p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase [&_textarea]:uppercase">
                     <h3 className="text-[18px] text-gray-500 uppercase tracking-widest mb-10 text-center font-light">{currentStep}</h3>
 
                     <div className={currentStep === 'Personal Information' ? 'block' : 'hidden'}>
@@ -1903,11 +1904,11 @@ export default function ApplicantJobList() {
                         </div>
 
                         <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
-                          <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Contact Nos. <span className="text-red-500">*</span></label>
+                          <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Contact Nos.</label>
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col justify-between h-full">
-                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                              <input type="text" value={telephoneNo} onChange={e => setTelephoneNo(e.target.value)} required placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No. <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
+                              <input type="text" value={telephoneNo} onChange={e => setTelephoneNo(e.target.value)} placeholder="Enter telephone no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                             </div>
                             <div className="flex flex-col justify-between h-full">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Mobile No.</span>
@@ -2139,16 +2140,12 @@ export default function ApplicantJobList() {
                               <div className="flex flex-col justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
                                 <div className="grid grid-cols-2 gap-3 relative">
-                                  <input
-                                    type="date"
-                                    required={level.required}
+                                  <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
-                                  <input
-                                    type="date"
-                                    required={level.required}
+                                  <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
@@ -2580,13 +2577,18 @@ export default function ApplicantJobList() {
                             </div>
                           ))}
 
-                          <button
-                            type="button"
-                            onClick={() => setVoluntaryWorkList([...voluntaryWorkList, { nameAddress: '', fromDate: null, toDate: null, hours: '', position: '' }])}
-                            className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
-                          >
-                            <Plus className="w-4 h-4" /> Add Voluntary Work
-                          </button>
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setVoluntaryWorkList([...voluntaryWorkList, { nameAddress: '', fromDate: null, toDate: null, hours: '', position: '' }])}
+                              className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
+                            >
+                              <Plus className="w-4 h-4" /> Add Voluntary Work
+                            </button>
+                            <button type="button" onClick={() => setVoluntaryWorkList([{ nameAddress: 'N/A', fromDate: null, toDate: null, hours: 'N/A', position: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                              N/A
+                            </button>
+                          </div>
                         </div>
 
                         {/* Next Button */}
@@ -2710,13 +2712,18 @@ export default function ApplicantJobList() {
                             </div>
                           ))}
 
-                          <button
-                            type="button"
-                            onClick={() => setLearningDevelopmentList([...learningDevelopmentList, { title: '', fromDate: null, toDate: null, hours: '', type: '', sponsor: '' }])}
-                            className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
-                          >
-                            <Plus className="w-4 h-4" /> Add Training Program
-                          </button>
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setLearningDevelopmentList([...learningDevelopmentList, { title: '', fromDate: null, toDate: null, hours: '', type: '', sponsor: '' }])}
+                              className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
+                            >
+                              <Plus className="w-4 h-4" /> Add Training Program
+                            </button>
+                            <button type="button" onClick={() => setLearningDevelopmentList([{ title: 'N/A', fromDate: null, toDate: null, hours: 'N/A', type: 'N/A', sponsor: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                              N/A
+                            </button>
+                          </div>
                         </div>
 
                         {/* Next Button */}
@@ -2776,6 +2783,9 @@ export default function ApplicantJobList() {
                             >
                               <Plus className="w-4 h-4" /> Add Skill / Hobby
                             </button>
+                            <button type="button" onClick={() => setSkillsList([{ value: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                              N/A
+                            </button>
                           </div>
 
                           {/* Distinctions */}
@@ -2815,6 +2825,9 @@ export default function ApplicantJobList() {
                             >
                               <Plus className="w-4 h-4" /> Add Distinction
                             </button>
+                            <button type="button" onClick={() => setDistinctionsList([{ value: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                              N/A
+                            </button>
                           </div>
 
                           {/* Memberships */}
@@ -2853,6 +2866,9 @@ export default function ApplicantJobList() {
                               className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-full"
                             >
                               <Plus className="w-4 h-4" /> Add Membership
+                            </button>
+                            <button type="button" onClick={() => setMembershipsList([{ value: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                              N/A
                             </button>
                           </div>
 
@@ -3007,7 +3023,10 @@ export default function ApplicantJobList() {
                           </div>
                           <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div className="flex flex-col justify-between h-full">
-                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Government Issued ID</span>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-[12px] text-gray-400 font-medium">Government Issued ID</span>
+                                <button type="button" onClick={() => setGovernmentId({ ...governmentId, type: 'N/A' })} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                              </div>
                               <input
                                 type="text"
                                 required
@@ -3018,7 +3037,10 @@ export default function ApplicantJobList() {
                               />
                             </div>
                             <div className="flex flex-col justify-between h-full">
-                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">ID/License/Passport No.</span>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-[12px] text-gray-400 font-medium">ID/License/Passport No.</span>
+                                <button type="button" onClick={() => setGovernmentId({ ...governmentId, idNo: 'N/A' })} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                              </div>
                               <input
                                 type="text"
                                 required
@@ -3029,7 +3051,10 @@ export default function ApplicantJobList() {
                               />
                             </div>
                             <div className="flex flex-col justify-between h-full">
-                              <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date/Place of Issuance</span>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-[12px] text-gray-400 font-medium">Date/Place of Issuance</span>
+                                <button type="button" onClick={() => setGovernmentId({ ...governmentId, datePlace: 'N/A' })} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                              </div>
                               <input
                                 type="text"
                                 required

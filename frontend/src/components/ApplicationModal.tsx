@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 // @ts-ignore
 import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
+import ModernDatePicker from "./ModernDatePicker";
 
 interface ApplicationModalProps {
   isOpen: boolean;
@@ -487,11 +488,10 @@ export default function ApplicationModal({
               </div>
               <div className="flex flex-col">
                 <h2 className="text-[14px] md:text-[15px] font-bold text-[#1b5e20]">
-                  Complete your Profile
+                  Ready to Submit
                 </h2>
                 <p className="text-xs md:text-sm text-[#2e7d32] font-medium leading-snug">
-                  Your profile is 100.00% complete. Fill in the missing
-                  information below to improve your chances.
+                  Your profile is fully complete! You can now save or submit your application.
                 </p>
               </div>
             </div>
@@ -597,12 +597,10 @@ export default function ApplicationModal({
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
                         Date of Birth <span className="text-red-500">*</span>
                       </span>
-                      <input
+                      <ModernDatePicker
                         required
                         placeholder="Select date of birth"
-                        className="w-full border border-gray-300 bg-white rounded p-2.5 text-[14px] outline-none cursor-pointer focus:border-blue-500 text-gray-700 "
-                        type="date"
-                        name="date_of_birth"
+                        className="w-full border border-gray-300 bg-white rounded p-2.5 text-[14px] outline-none cursor-pointer focus:border-blue-500 text-gray-700 " name="date_of_birth"
                         defaultValue={
                           userData?.date_of_birth
                             ? userData.date_of_birth.split("T")[0]
@@ -1343,7 +1341,7 @@ export default function ApplicationModal({
                         </div>
                         <div className="flex-1 flex flex-col justify-between h-full">
                           <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
-                          <input value={child.dob ? child.dob.split('T')[0] : ''} onChange={(e) => { const n = [...childrenList]; n[idx].dob = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="date" />
+                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(e) => { const n = [...childrenList]; n[idx].dob = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                         </div>
                         <button type="button" onClick={() => setChildrenList(childrenList.filter((_: any, i: number) => i !== idx))} className="h-[42px] px-4 border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded flex items-center justify-center transition-colors bg-white shadow-sm shrink-0">
                           <Trash2 className="w-4 h-4" />
@@ -1404,15 +1402,11 @@ export default function ApplicationModal({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          name="edu_0_period_from" defaultValue={eduBg[0]?.period_from || ""}
+                        <ModernDatePicker name="edu_0_period_from" defaultValue={eduBg[0]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
-                        <input
-                          type="date"
-                          name="edu_0_period_to" defaultValue={eduBg[0]?.period_to || ""}
+                        <ModernDatePicker name="edu_0_period_to" defaultValue={eduBg[0]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1479,15 +1473,11 @@ export default function ApplicationModal({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          name="edu_1_period_from" defaultValue={eduBg[1]?.period_from || ""}
+                        <ModernDatePicker name="edu_1_period_from" defaultValue={eduBg[1]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
-                        <input
-                          type="date"
-                          name="edu_1_period_to" defaultValue={eduBg[1]?.period_to || ""}
+                        <ModernDatePicker name="edu_1_period_to" defaultValue={eduBg[1]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1554,15 +1544,11 @@ export default function ApplicationModal({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          name="edu_2_period_from" defaultValue={eduBg[2]?.period_from || ""}
+                        <ModernDatePicker name="edu_2_period_from" defaultValue={eduBg[2]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
-                        <input
-                          type="date"
-                          name="edu_2_period_to" defaultValue={eduBg[2]?.period_to || ""}
+                        <ModernDatePicker name="edu_2_period_to" defaultValue={eduBg[2]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1629,15 +1615,11 @@ export default function ApplicationModal({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          name="edu_3_period_from" defaultValue={eduBg[3]?.period_from || ""}
+                        <ModernDatePicker name="edu_3_period_from" defaultValue={eduBg[3]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
-                        <input
-                          type="date"
-                          name="edu_3_period_to" defaultValue={eduBg[3]?.period_to || ""}
+                        <ModernDatePicker name="edu_3_period_to" defaultValue={eduBg[3]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1704,15 +1686,11 @@ export default function ApplicationModal({
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          name="edu_4_period_from" defaultValue={eduBg[4]?.period_from || ""}
+                        <ModernDatePicker name="edu_4_period_from" defaultValue={eduBg[4]?.period_from || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                         <span className="text-gray-400">-</span>
-                        <input
-                          type="date"
-                          name="edu_4_period_to" defaultValue={eduBg[4]?.period_to || ""}
+                        <ModernDatePicker name="edu_4_period_to" defaultValue={eduBg[4]?.period_to || ""}
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         />
                       </div>
@@ -1782,7 +1760,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Date of Examination / Conferment</span>
-                            <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].date = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].date = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
@@ -1798,7 +1776,7 @@ export default function ApplicationModal({
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Date of Validity (if applicable)</span>
-                            <input type="date" value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].licenseDate = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].licenseDate = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1839,11 +1817,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <input type="date" value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].fromDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].fromDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <input type="date" value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].toDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].toDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1867,7 +1845,10 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
-                            <input type="text" value={item.monthlySalary || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].monthlySalary = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter monthly salary" />
+                            <div className="relative w-full">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">?</span>
+                              <input type="number" step="0.01" value={item.monthlySalary || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].monthlySalary = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 pl-7 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="0.00" />
+                            </div>
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
@@ -1941,11 +1922,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <input type="date" value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].fromDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].fromDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <input type="date" value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].toDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].toDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
@@ -1965,9 +1946,14 @@ export default function ApplicationModal({
                     </div>
                   ))}
 
-                  <button type="button" onClick={() => setVoluntaryWorkList([...voluntaryWorkList, { nameAddress: '', fromDate: null, toDate: null, hours: '', position: '' }])} className="mt-2 text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
-                    <Plus className="w-4 h-4" /> Add Voluntary Work
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button type="button" onClick={() => setVoluntaryWorkList([...voluntaryWorkList, { nameAddress: '', fromDate: null, toDate: null, hours: '', position: '' }])} className="text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
+                      <Plus className="w-4 h-4" /> Add Voluntary Work
+                    </button>
+                    <button type="button" onClick={() => setVoluntaryWorkList([{ nameAddress: 'N/A', fromDate: null, toDate: null, hours: 'N/A', position: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                      N/A
+                    </button>
+                  </div>
                 </div>
 
                 <input type="hidden" name="voluntary_work" value={JSON.stringify(voluntaryWorkList)} />
@@ -2006,11 +1992,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (From)</span>
-                            <input type="date" value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].fromDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].fromDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (To)</span>
-                            <input type="date" value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].toDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].toDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
@@ -2034,9 +2020,14 @@ export default function ApplicationModal({
                     </div>
                   ))}
 
-                  <button type="button" onClick={() => setLearningDevelopmentList([...learningDevelopmentList, { title: '', fromDate: null, toDate: null, hours: '', type: '', sponsor: '' }])} className="mt-2 text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
-                    <Plus className="w-4 h-4" /> Add Training Program
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button type="button" onClick={() => setLearningDevelopmentList([...learningDevelopmentList, { title: '', fromDate: null, toDate: null, hours: '', type: '', sponsor: '' }])} className="text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
+                      <Plus className="w-4 h-4" /> Add Training Program
+                    </button>
+                    <button type="button" onClick={() => setLearningDevelopmentList([{ title: 'N/A', fromDate: null, toDate: null, hours: 'N/A', type: 'N/A', sponsor: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                      N/A
+                    </button>
+                  </div>
                 </div>
 
                 <input type="hidden" name="learning_and_development" value={JSON.stringify(learningDevelopmentList)} />
@@ -2060,6 +2051,9 @@ export default function ApplicationModal({
                     <button type="button" onClick={() => setSkillsList([...skillsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Skill / Hobby
                     </button>
+                    <button type="button" onClick={() => setSkillsList(['N/A'])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                      N/A
+                    </button>
                   </div>
 
                   {/* Column 2 */}
@@ -2071,6 +2065,9 @@ export default function ApplicationModal({
                     <button type="button" onClick={() => setDistinctionsList([...distinctionsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Distinction
                     </button>
+                    <button type="button" onClick={() => setDistinctionsList(['N/A'])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                      N/A
+                    </button>
                   </div>
 
                   {/* Column 3 */}
@@ -2081,6 +2078,9 @@ export default function ApplicationModal({
                     ))}
                     <button type="button" onClick={() => setMembershipsList([...membershipsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Membership
+                    </button>
+                    <button type="button" onClick={() => setMembershipsList(['N/A'])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 w-full py-2 rounded border border-gray-200 transition-colors mt-2">
+                      N/A
                     </button>
                   </div>
                 </div>
@@ -2156,7 +2156,7 @@ export default function ApplicationModal({
                           </div>
                           {qAnswers.q35b === "yes" && (
                             <div className="flex flex-col gap-2 mt-2">
-                              <input type="date" name="q35b_date" defaultValue={qRes?.q35b_date || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                              <ModernDatePicker name="q35b_date" defaultValue={qRes?.q35b_date || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                               <input type="text" name="q35b_status" defaultValue={qRes?.q35b_status || ''} placeholder="Status of Case/s" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                             </div>
                           )}
@@ -2354,15 +2354,24 @@ export default function ApplicationModal({
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div className="flex flex-col justify-between">
-                          <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Government Issued ID</span>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[13px] text-gray-400 font-medium">Government Issued ID</span>
+                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                          </div>
                           <input type="text" name="gov_id_type" defaultValue={qRes?.gov_id_type || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
-                          <span className="text-[13px] text-gray-400 mb-1.5 font-medium">ID/License/Passport No.</span>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[13px] text-gray-400 font-medium">ID/License/Passport No.</span>
+                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                          </div>
                           <input type="text" name="gov_id_no" defaultValue={qRes?.gov_id_no || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
-                          <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Date/Place of Issuance</span>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[13px] text-gray-400 font-medium">Date/Place of Issuance</span>
+                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                          </div>
                           <input type="text" name="gov_id_issuance" defaultValue={qRes?.gov_id_issuance || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                       </div>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { ChevronRight, ChevronLeft, UploadCloud, GraduationCap, ArrowLeft } from 'lucide-react';
+import ModernDatePicker from "../components/ModernDatePicker";
 
 export default function ApplicationPage() {
   const location = useLocation();
@@ -368,7 +369,7 @@ export default function ApplicationPage() {
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">DATE OF BIRTH</label>
-                    <input required name="date_of_birth" type="date" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
+                    <ModernDatePicker required name="date_of_birth" className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] transition-all" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">PLACE OF BIRTH</label>
@@ -541,10 +542,10 @@ export default function ApplicationPage() {
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_name`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_rating`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_date_exam`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`elig_${idx}_date_exam`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_place_exam`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`elig_${idx}_license_number`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1"><input name={`elig_${idx}_license_validity`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1"><ModernDatePicker name={`elig_${idx}_license_validity`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -576,8 +577,8 @@ export default function ApplicationPage() {
                     <tbody className="divide-y divide-gray-100">
                       {[1, 2, 3, 4].map(row => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`work_from_${row}`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`work_to_${row}`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`work_from_${row}`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`work_to_${row}`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`work_position_${row}`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`work_company_${row}`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`work_salary_${row}`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
@@ -621,8 +622,8 @@ export default function ApplicationPage() {
                       {[1, 2].map((row, idx) => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_organization`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_from`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_to`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`vol_${idx}_from`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`vol_${idx}_to`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`vol_${idx}_hours`} type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1"><input name={`vol_${idx}_position`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                         </tr>
@@ -654,8 +655,8 @@ export default function ApplicationPage() {
                       {[1, 2, 3].map((row, idx) => (
                         <tr key={row} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_title`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_from`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
-                          <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_to`} type="date" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`ld_${idx}_from`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
+                          <td className="px-2 py-1 border-r border-gray-100"><ModernDatePicker name={`ld_${idx}_to`} className="w-full p-2 bg-transparent outline-none focus:bg-white rounded text-gray-600" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_hours`} type="number" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1 border-r border-gray-100"><input name={`ld_${idx}_type`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>
                           <td className="px-2 py-1"><input name={`ld_${idx}_conducted`} type="text" className="w-full p-2 bg-transparent outline-none focus:bg-white rounded" /></td>

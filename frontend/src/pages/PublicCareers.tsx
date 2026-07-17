@@ -232,11 +232,11 @@ export default function PublicCareers() {
               </div>
 
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-extrabold text-white leading-[1.1] mb-6 max-w-4xl tracking-tight">
-                Build a meaningful career<br className="hidden sm:block" /> in <span className="text-[#facc15]">public service.</span>
+                Building the Future of Education Starts<br className="hidden sm:block" />with <span className="text-[#facc15]">the Right People.</span>
               </h1>
 
               <p className="text-gray-300 text-base md:text-lg max-w-2xl leading-relaxed font-light">
-                The Department of Education adheres to the existing general policy of no discrimination based on gender identity, sexual orientation, disabilities, religion and/or indigenous group membership in the implementation of its recruitment, selection and placement.
+                Join the Department of Education through a fair, transparent, and competency-based recruitment process founded on merit, fitness, accountability, and equal opportunity. Together, let's place the right people in the right roles to transform education and serve every Filipino learner.
               </p>
             </div>
           </div>

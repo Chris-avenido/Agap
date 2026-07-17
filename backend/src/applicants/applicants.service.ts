@@ -159,13 +159,17 @@ class ApplicantsServiceClass {
     const applicantRes = await pool.query('SELECT applicant_number FROM applicants WHERE id = $1', [applicantId]);
     const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
 
+    console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, positionId=${positionId}`);
+    
     const checkResult = await pool.query(
       'SELECT * FROM applications WHERE applicant_id = $1 AND vacancy_id = $2',
       [applicantId.toString(), positionId || null]
     );
+    console.log(`[DEBUG] applyJob checkResult length=${checkResult.rows.length}`);
     if (checkResult.rows.length > 0) return checkResult.rows[0];
 
     const appId = require('crypto').randomUUID();
+    console.log(`[DEBUG] applyJob generated appId=${appId}`);
 
     // Generate application_number in format YYYYMMDD-00001
     const today = new Date();
@@ -190,13 +194,21 @@ class ApplicantsServiceClass {
     }
     const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
-    const result = await pool.query(`
-      INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
-      VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
-      RETURNING *
-    `, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
+    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
+    
+    try {
+      const result = await pool.query(`
+        INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
+        VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
+        RETURNING *
+      `, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
 
-    return result.rows[0];
+      console.log(`[DEBUG] applyJob INSERT successful. Returning row:`, result.rows[0]);
+      return result.rows[0];
+    } catch (dbError) {
+      console.error(`[DEBUG] applyJob INSERT failed:`, dbError);
+      throw dbError;
+    }
   }
 
   async findApplications(applicantId: number) {

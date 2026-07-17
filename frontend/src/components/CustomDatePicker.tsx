@@ -1,4 +1,6 @@
-
+import React from 'react';
+// @ts-ignore
+import ModernDatePicker from './ModernDatePicker.jsx';
 
 interface CustomDatePickerProps {
   value: Date | null;
@@ -14,18 +16,18 @@ export default function CustomDatePicker({ value, onChange, placeholder = "Selec
     ? `${safeValue.getFullYear()}-${String(safeValue.getMonth() + 1).padStart(2, '0')}-${String(safeValue.getDate()).padStart(2, '0')}`
     : '';
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val) {
-      // Parse as local time to avoid timezone offset issues
-      const [year, month, day] = val.split('-').map(Number);
-      onChange(new Date(year, month - 1, day));
+  const handleChange = (dateStr: string) => {
+    if (!dateStr) {
+      // If user clears the date picker, but the prop requires a Date, 
+      // we might need to handle it. For now, pass a dummy Date or ignore if the UI doesn't allow clearing.
+      return;
     }
+    const [year, month, day] = dateStr.split('-').map(Number);
+    onChange(new Date(year, month - 1, day));
   };
 
   return (
-    <input
-      type="date"
+    <ModernDatePicker
       value={dateString}
       onChange={handleChange}
       placeholder={placeholder}

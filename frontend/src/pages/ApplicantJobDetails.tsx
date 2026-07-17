@@ -41,7 +41,7 @@ export default function ApplicantJobDetails() {
               description: 'Details available in the full job posting.'
             };
             setJob(foundJob);
-            
+
             fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
               .then(res => res.json())
               .then(appData => {
@@ -112,9 +112,9 @@ export default function ApplicantJobDetails() {
         >
           {/* Glow Effects */}
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#004b93] rounded-full mix-blend-screen filter blur-[120px] opacity-40 translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-          
+
           <div className="max-w-5xl mx-auto relative z-10 flex items-center">
-            <button 
+            <button
               onClick={() => navigate('/applicant-jobs')}
               className="flex items-center gap-2 text-white hover:text-white/80 transition-colors font-medium text-[15px]"
             >
@@ -134,20 +134,19 @@ export default function ApplicantJobDetails() {
                 </div>
                 <div className="text-[14px] text-gray-500 mb-2">{job.division || job.office}</div>
                 <div className="flex items-center gap-2 text-[14px] text-gray-500">
-                  Office of the Director 
+                  Office of the Director
                   <span className={`inline-block px-2.5 py-0.5 text-white text-[10px] font-bold rounded uppercase tracking-wider ${job.type.toLowerCase() === 'permanent' ? 'bg-[#81c784]' : 'bg-[#eab308]'}`}>
                     {job.type}
                   </span>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleApplyClick}
                 disabled={hasApplied}
-                className={`px-8 py-3.5 rounded-[8px] text-[15px] font-semibold transition-colors shrink-0 flex items-center justify-center gap-2 w-full md:w-[320px] shadow-md ${
-                  hasApplied
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-[#022851] hover:bg-[#011a36] text-white'
-                }`}
+                className={`px-8 py-3.5 rounded-[8px] text-[15px] font-semibold transition-colors shrink-0 flex items-center justify-center gap-2 w-full md:w-[320px] shadow-md ${hasApplied
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-[#022851] hover:bg-[#011a36] text-white'
+                  }`}
               >
                 {hasApplied ? (
                   'Already Applied'
@@ -174,22 +173,22 @@ export default function ApplicantJobDetails() {
                 <div className="w-6 h-6 rounded-full border border-[#5c6bc0] flex items-center justify-center">
                   <span className="text-[#5c6bc0] text-[12px] font-bold">₱</span>
                 </div>
-                Monthly Salary : PhP {job.sg === 4 ? '17,506.00' : job.sg === 9 ? '21,211.00' : job.sg === 18 ? '46,725.00' : job.sg === 19 ? '51,357.00' : job.sg === 24 ? '90,078.00' : 'Unknown'}
+                Monthly Salary : PHP {job.sg === 4 ? '17,506.00' : job.sg === 9 ? '21,211.00' : job.sg === 18 ? '46,725.00' : job.sg === 19 ? '51,357.00' : job.sg === 24 ? '90,078.00' : 'Unknown'}
               </div>
             </div>
 
             <h3 className="text-[18px] font-bold text-gray-700 mb-6">CSC Prescribed Qualification Standard</h3>
-            
+
             <div className="grid grid-cols-[120px_1fr] gap-y-5 text-[15px]">
               <div className="font-bold text-gray-700">Education:</div>
-              <div className="text-gray-500 font-light leading-snug">Completion of two (2) years studies in college (prior to 2018), OR<br/>Completion of Grade 12/Senior High School (starting 2016)</div>
-              
+              <div className="text-gray-500 font-light leading-snug">Completion of two (2) years studies in college (prior to 2018), OR<br />Completion of Grade 12/Senior High School (starting 2016)</div>
+
               <div className="font-bold text-gray-700">Training:</div>
               <div className="text-gray-500 font-light">None required</div>
-              
+
               <div className="font-bold text-gray-700">Experience:</div>
               <div className="text-gray-500 font-light">None required</div>
-              
+
               <div className="font-bold text-gray-700">Eligibility:</div>
               <div className="text-gray-500 font-light leading-snug">Career Service Sub Professional / First Level Eligibility</div>
             </div>

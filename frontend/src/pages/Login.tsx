@@ -176,7 +176,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--navy-2)] to-[var(--navy)] opacity-90"></div>
         <div className="relative z-10 flex flex-col items-center justify-center text-white p-12 text-center max-w-3xl">
           <div className="w-24 h-24 bg-[var(--card-glass-b)] backdrop-blur-sm rounded-2xl flex items-center justify-center mb-8 border border-[var(--card-border)] shadow-lg">
-             <Building2 className="w-12 h-12 text-[var(--hero-accent)]" />
+            <Building2 className="w-12 h-12 text-[var(--hero-accent)]" />
           </div>
           <h1 className="text-5xl font-extrabold tracking-tight mb-6 text-[var(--hero-title)]" style={{ fontFamily: 'var(--font-heading)' }}>
             Streamlining Public Service Recruitment

@@ -221,7 +221,11 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
 
       // Sanitize file name
       const ext = file.originalname.split('.').pop();
-      const safeName = `${applicantNumber}_${docName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${ext}`;
+      const surname = (applicant.surname || 'Applicant').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const docType = docName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
+      
+      const safeName = `${surname}_${docType}_${Date.now()}_${appNumber}.${ext}`;
       
       const url = await uploadToAzure(file.buffer, safeName, file.mimetype);
       otherInfo.documents[docName] = url;
@@ -332,33 +336,73 @@ router.get('/get-sas-url', async (req, res) => {
   }
 });
 
-router.get('/:id/print-pds', async (req, res, next) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) return next();
+import { execSync } from 'child_process';
+import libre from 'libreoffice-convert';
+import util from 'util';
+const convertToPdf = (fileBuf: any, ext: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    libre.convert(fileBuf, ext, undefined, (err, done) => {
+      if (err) reject(err);
+      else resolve(done);
+    });
+  });
+};
+
+router.post('/convert-pds-to-pdf', upload.single('file'), async (req, res) => {
   try {
-    const applicantId = id;
-    const applicant = await ApplicantsService.findOne(applicantId);
-    if (!applicant) {
-      return res.status(404).send('Applicant not found');
+    const file = (req as any).file;
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
+
+    const pdfBuf = await convertToPdf(file.buffer, '.pdf');
     
-    const path = require('path');
-    const fs = require('fs');
-    // Go up from dist/applicants/applicants.routes.js to frontend/src/assets
-    const templatePath = path.join(__dirname, '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx');
-    
-    if (!fs.existsSync(templatePath)) {
-       return res.status(500).send("Excel template not found at: " + templatePath);
-    }
-    
-    const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
-    const cleanLastName = (applicant.last_name || 'Name').replace(/[^a-zA-Z0-9]/g, '');
-    const fileName = `PDS_${cleanFirstName}_${cleanLastName}.xlsx`;
-    
-    res.download(templatePath, fileName);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=PDS.pdf');
+    res.send(pdfBuf);
   } catch (error: any) {
-    console.error("Error generating PDS:", error);
-    res.status(500).send(`Error generating Personal Data Sheet: ${error.message} - ${error.stack}`);
+    console.error("Error converting PDS to PDF:", error);
+    // Fallback: If libreoffice is not installed, return the XLSX file so it doesn't just crash in dev.
+    // In production, libreoffice would be installed.
+    const file = (req as any).file;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(file.buffer);
+  }
+});
+
+router.post('/convert-pds-v2', async (req, res) => {
+  try {
+    const { generatePDSBackend } = require('../utils/pdsGeneratorBackend');
+    const applicantData = req.body;
+    if (!applicantData) {
+      return res.status(400).json({ message: 'No applicant data provided' });
+    }
+
+    // Generate XLSX buffer using xlsx-populate
+    const { buffer, logs } = await generatePDSBackend(applicantData);
+    
+    // Write logs to validation report
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.join(__dirname, '../../../validation_report.md');
+    const reportContent = `# PDS Validation Report\n\n\`\`\`json\n${JSON.stringify(logs, null, 2)}\n\`\`\`\n`;
+    fs.writeFileSync(logPath, reportContent);
+
+    // Convert to PDF using libreoffice-convert
+    try {
+      const pdfBuf = await convertToPdf(buffer, '.pdf');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=PDS.pdf');
+      res.send(pdfBuf);
+    } catch (convertError) {
+      console.error("Libreoffice conversion failed, returning XLSX fallback", convertError);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=PDS.xlsx');
+      res.send(buffer);
+    }
+  } catch (error: any) {
+    console.error("Error generating PDS v2:", error);
+    res.status(500).json({ message: error.message || 'Error generating PDS' });
   }
 });
 
