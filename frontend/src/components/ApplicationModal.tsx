@@ -473,7 +473,7 @@ export default function ApplicationModal({
             </div>
             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
               Upload Now
-              <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf,.doc,.docx" />
+              <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
             </label>
           </div>
         </div>
@@ -515,7 +515,7 @@ export default function ApplicationModal({
           </div>
 
           {/* Dynamic Content Box */}
-          <div className="bg-white p-4 md:p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase [&_input[type='email']]:uppercase [&_textarea]:uppercase">
+          <div className="bg-white p-4 md:p-10 border border-gray-200 shadow-sm flex flex-col items-center rounded-sm [&_input[type='text']]:uppercase  [&_textarea]:uppercase">
             <h3 className="text-[16px] md:text-[18px] text-gray-500 uppercase tracking-widest mb-6 md:mb-10 text-center font-light">
               {tabs.find((t) => t.id === activeTab)?.label ||
                 "PERSONAL INFORMATION"}
@@ -1138,15 +1138,14 @@ export default function ApplicationModal({
                 </div>
                 <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8">
                   <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">
-                    Contact Nos. <span className="text-red-500">*</span>
+                    Contact Nos.
                   </label>
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">
-                        Telephone No. <span className="text-red-500">*</span>
+                        Telephone No. <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span>
                       </span>
                       <input name="telephone_no"
-                        required
                         placeholder="Enter telephone no."
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         type="text"
@@ -2403,7 +2402,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Personal Data Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_pds" accept=".pdf,.doc,.docx" required={!getDocUrl("Personal Data Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_pds" accept=".pdf" required={!getDocUrl("Personal Data Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
                     
                     {/* Item 2 */}
@@ -2414,7 +2413,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Work Experience Sheet") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_work_exp" accept=".pdf,.doc,.docx" required={!getDocUrl("Work Experience Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_work_exp" accept=".pdf" required={!getDocUrl("Work Experience Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 3 */}
@@ -2425,7 +2424,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Certificate of Eligibility") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_eligibility" accept=".pdf,.doc,.docx" required={!getDocUrl("Certificate of Eligibility")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_eligibility" accept=".pdf" required={!getDocUrl("Certificate of Eligibility")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 4 */}
@@ -2436,7 +2435,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Transcript of Records") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_tor" accept=".pdf,.doc,.docx" required={!getDocUrl("Transcript of Records")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_tor" accept=".pdf" required={!getDocUrl("Transcript of Records")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 5 */}
@@ -2447,7 +2446,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Updated PRC License/ID") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_prc" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required={!getDocUrl("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_prc" accept=".pdf" required={!getDocUrl("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 6 */}
@@ -2458,7 +2457,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Diploma (optional)") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_diploma" accept=".pdf,.doc,.docx" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_diploma" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
                     {/* Item 7 */}
@@ -2469,7 +2468,7 @@ export default function ApplicationModal({
                           <a href={getDocUrl("Resume") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
                         )}
                       </div>
-                      <input type="file" name="doc_resume" accept=".pdf,.doc,.docx" required={!getDocUrl("Resume")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      <input type="file" name="doc_resume" accept=".pdf" required={!getDocUrl("Resume")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
                   </div>
                 </div>

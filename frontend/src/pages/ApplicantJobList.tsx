@@ -1503,13 +1503,13 @@ export default function ApplicantJobList() {
                         </span>
                         <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
                           Replace File
-                          <input type="file" className="hidden" onChange={handleLetterOfIntentUpload} />
+                          <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
                         </label>
                       </div>
                     ) : (
                       <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
                         Upload Now
-                        <input type="file" className="hidden" onChange={handleLetterOfIntentUpload} />
+                        <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
                       </label>
                     )}
                   </div>
