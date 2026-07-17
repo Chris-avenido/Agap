@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 // @ts-ignore
 import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
+// @ts-ignore
 import ModernDatePicker from "./ModernDatePicker";
 
 interface ApplicationModalProps {
@@ -862,7 +863,7 @@ export default function ApplicationModal({
                           <select
                             name="res_region"
                             value={resRegion}
-                            onChange={(e) => {
+                            onChange={(e: any) => {
                               setResRegion(e.target.value);
                               setResProvince("");
                               setResCity("");
@@ -888,7 +889,7 @@ export default function ApplicationModal({
                           <select
                             name="res_province"
                             value={resProvince}
-                            onChange={(e) => {
+                            onChange={(e: any) => {
                               setResProvince(e.target.value);
                               setResCity("");
                             }}
@@ -914,7 +915,7 @@ export default function ApplicationModal({
                           <select
                             name="res_city"
                             value={resCity}
-                            onChange={(e) => {
+                            onChange={(e: any) => {
                               setResCity(e.target.value);
                               setResBarangay("");
                             }}
@@ -1038,7 +1039,7 @@ export default function ApplicationModal({
                             <select
                               name="perm_region"
                               value={permRegion}
-                              onChange={(e) => {
+                              onChange={(e: any) => {
                                 setPermRegion(e.target.value);
                                 setPermProvince("");
                                 setPermCity("");
@@ -1064,7 +1065,7 @@ export default function ApplicationModal({
                             <select
                               name="perm_province"
                               value={permProvince}
-                              onChange={(e) => {
+                              onChange={(e: any) => {
                                 setPermProvince(e.target.value);
                                 setPermCity("");
                               }}
@@ -1090,7 +1091,7 @@ export default function ApplicationModal({
                             <select
                               name="perm_city"
                               value={permCity}
-                              onChange={(e) => {
+                              onChange={(e: any) => {
                                 setPermCity(e.target.value);
                                 setPermBarangay("");
                               }}
@@ -1336,11 +1337,11 @@ export default function ApplicationModal({
                       <div key={idx} className="flex flex-col sm:flex-row gap-4 items-end">
                         <div className="flex-1 flex flex-col justify-between h-full">
                           <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of Child (Write full name)</span>
-                          <input value={child.name || ''} onChange={(e) => { const n = [...childrenList]; n[idx].name = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER CHILD'S FULL NAME" />
+                          <input value={child.name || ''} onChange={(e: any) => { const n = [...childrenList]; n[idx].name = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER CHILD'S FULL NAME" />
                         </div>
                         <div className="flex-1 flex flex-col justify-between h-full">
                           <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
-                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(e) => { const n = [...childrenList]; n[idx].dob = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(e: any) => { const n = [...childrenList]; n[idx].dob = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                         </div>
                         <button type="button" onClick={() => setChildrenList(childrenList.filter((_: any, i: number) => i !== idx))} className="h-[42px] px-4 border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded flex items-center justify-center transition-colors bg-white shadow-sm shrink-0">
                           <Trash2 className="w-4 h-4" />
@@ -1747,11 +1748,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="md:col-span-2 flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Career Service/RA 1080 (Board/Bar)/Under Special Laws/CES/CSEE</span>
-                            <input type="text" value={item.eligibility || ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].eligibility = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter eligibility" />
+                            <input type="text" value={item.eligibility || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].eligibility = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter eligibility" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Rating (if applicable)</span>
-                            <input type="text" value={item.rating || ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].rating = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter rating" />
+                            <input type="text" value={item.rating || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].rating = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter rating" />
                           </div>
                         </div>
 
@@ -1759,11 +1760,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Date of Examination / Conferment</span>
-                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].date = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].date = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
-                            <input type="text" value={item.place || ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].place = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter place" />
+                            <input type="text" value={item.place || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].place = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter place" />
                           </div>
                         </div>
 
@@ -1771,11 +1772,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Number (if applicable)</span>
-                            <input type="text" value={item.licenseNo || ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].licenseNo = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter license no" />
+                            <input type="text" value={item.licenseNo || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].licenseNo = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter license no" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Date of Validity (if applicable)</span>
-                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(e) => { const n = [...civilServiceList]; n[idx].licenseDate = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].licenseDate = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1816,11 +1817,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].fromDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].fromDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].toDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].toDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1828,7 +1829,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Position Title (Write in full/Do not abbreviate)</span>
-                            <input type="text" value={item.positionTitle || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].positionTitle = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter position title" />
+                            <input type="text" value={item.positionTitle || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].positionTitle = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter position title" />
                           </div>
                         </div>
 
@@ -1836,7 +1837,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Department/Agency/Office/Company</span>
-                            <input type="text" value={item.company || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].company = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter department/agency/office/company" />
+                            <input type="text" value={item.company || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].company = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter department/agency/office/company" />
                           </div>
                         </div>
 
@@ -1846,12 +1847,12 @@ export default function ApplicationModal({
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
                             <div className="relative w-full">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">?</span>
-                              <input type="number" step="0.01" value={item.monthlySalary || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].monthlySalary = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 pl-7 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="0.00" />
+                              <input type="number" step="0.01" value={item.monthlySalary || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].monthlySalary = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 pl-7 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="0.00" />
                             </div>
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
-                            <input type="text" value={item.salaryGrade || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].salaryGrade = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter salary/job/pay grade & step" />
+                            <input type="text" value={item.salaryGrade || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].salaryGrade = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter salary/job/pay grade & step" />
                           </div>
                         </div>
 
@@ -1859,7 +1860,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Status of Appointment</span>
-                            <input type="text" value={item.statusOfAppointment || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].statusOfAppointment = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter status of appointment" />
+                            <input type="text" value={item.statusOfAppointment || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].statusOfAppointment = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter status of appointment" />
                           </div>
                         </div>
 
@@ -1867,7 +1868,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Gov't Service (Y/N)</span>
-                            <select value={item.govtService || ''} onChange={(e) => { const n = [...workExperienceList]; n[idx].govtService = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white">
+                            <select value={item.govtService || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].govtService = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white">
                               <option value="">Select option</option>
                               <option value="Y">Yes</option>
                               <option value="N">No</option>
@@ -1913,7 +1914,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Name & Address of Organization (Write in full)</span>
-                            <input type="text" value={item.nameAddress || ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].nameAddress = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter name and address of organization" />
+                            <input type="text" value={item.nameAddress || ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].nameAddress = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter name and address of organization" />
                           </div>
                         </div>
 
@@ -1921,15 +1922,15 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].fromDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].fromDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].toDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].toDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
-                            <input type="text" value={item.hours || ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].hours = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter number of hours" />
+                            <input type="text" value={item.hours || ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].hours = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter number of hours" />
                           </div>
                         </div>
 
@@ -1937,7 +1938,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Position / Nature of Work</span>
-                            <input type="text" value={item.position || ''} onChange={(e) => { const n = [...voluntaryWorkList]; n[idx].position = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter position / nature of work" />
+                            <input type="text" value={item.position || ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].position = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter position / nature of work" />
                           </div>
                         </div>
 
@@ -1983,7 +1984,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Title of Learning and Development Interventions/Training Programs (Write in full)</span>
-                            <input type="text" value={item.title || ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].title = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter title of learning and development" />
+                            <input type="text" value={item.title || ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].title = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter title of learning and development" />
                           </div>
                         </div>
 
@@ -1991,19 +1992,19 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].fromDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].fromDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].toDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].toDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
-                            <input type="text" value={item.hours || ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].hours = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter number of hours" />
+                            <input type="text" value={item.hours || ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].hours = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter number of hours" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Type of LD</span>
-                            <input type="text" value={item.type || ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].type = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter type of LD" />
+                            <input type="text" value={item.type || ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].type = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter type of LD" />
                           </div>
                         </div>
 
@@ -2011,7 +2012,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Conducted/Sponsored By (Write in full)</span>
-                            <input type="text" value={item.sponsor || ''} onChange={(e) => { const n = [...learningDevelopmentList]; n[idx].sponsor = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter sponsor" />
+                            <input type="text" value={item.sponsor || ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].sponsor = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter sponsor" />
                           </div>
                         </div>
 
@@ -2045,7 +2046,7 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">SPECIAL SKILLS & HOBBIES</h4>
                     {skillsList.map((skill, idx) => (
-                      <input key={idx} type="text" value={skill} onChange={(e) => { const n = [...skillsList]; n[idx] = e.target.value; setSkillsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter skill / hobby" />
+                      <input key={idx} type="text" value={skill} onChange={(e: any) => { const n = [...skillsList]; n[idx] = e.target.value; setSkillsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter skill / hobby" />
                     ))}
                     <button type="button" onClick={() => setSkillsList([...skillsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Skill / Hobby
@@ -2059,7 +2060,7 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">NON-ACADEMIC DISTINCTIONS</h4>
                     {distinctionsList.map((dist, idx) => (
-                      <input key={idx} type="text" value={dist} onChange={(e) => { const n = [...distinctionsList]; n[idx] = e.target.value; setDistinctionsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter distinction" />
+                      <input key={idx} type="text" value={dist} onChange={(e: any) => { const n = [...distinctionsList]; n[idx] = e.target.value; setDistinctionsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter distinction" />
                     ))}
                     <button type="button" onClick={() => setDistinctionsList([...distinctionsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Distinction
@@ -2073,7 +2074,7 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">MEMBERSHIPS IN ASSOCIATIONS</h4>
                     {membershipsList.map((mem, idx) => (
-                      <input key={idx} type="text" value={mem} onChange={(e) => { const n = [...membershipsList]; n[idx] = e.target.value; setMembershipsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter membership" />
+                      <input key={idx} type="text" value={mem} onChange={(e: any) => { const n = [...membershipsList]; n[idx] = e.target.value; setMembershipsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter membership" />
                     ))}
                     <button type="button" onClick={() => setMembershipsList([...membershipsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Membership
@@ -2355,21 +2356,21 @@ export default function ApplicationModal({
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">Government Issued ID</span>
-                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_type" defaultValue={qRes?.gov_id_type || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">ID/License/Passport No.</span>
-                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_no" defaultValue={qRes?.gov_id_no || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">Date/Place of Issuance</span>
-                            <button type="button" onClick={(e) => { const input = e.currentTarget.parentElement.nextElementSibling; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_issuance" defaultValue={qRes?.gov_id_issuance || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>

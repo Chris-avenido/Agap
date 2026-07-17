@@ -14,6 +14,7 @@ import ApplicantHeader from '../components/ApplicantHeader';
 import { regions, provinces, city_mun, barangays } from 'phil-reg-prov-mun-brgy';
 
 import { JobCard, JobTableList } from '../components/JobCards';
+// @ts-ignore
 import ModernDatePicker from "../components/ModernDatePicker";
 
 export default function ApplicantJobList() {
@@ -1163,7 +1164,7 @@ export default function ApplicantJobList() {
                         type="text"
                         placeholder="Search position title, division, or location..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e: any) => setSearchQuery(e.target.value)}
                         className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 text-[15px] font-medium"
                       />
                     </div>
@@ -1181,7 +1182,7 @@ export default function ApplicantJobList() {
                       <MapPin className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
                       <select
                         value={filterRegion}
-                        onChange={(e) => setFilterRegion(e.target.value)}
+                        onChange={(e: any) => setFilterRegion(e.target.value)}
                         className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                       >
                         <option value="All Regions">All Regions</option>
@@ -1193,7 +1194,7 @@ export default function ApplicantJobList() {
                       <Building2 className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
                       <select
                         value={filterDivision}
-                        onChange={(e) => setFilterDivision(e.target.value)}
+                        onChange={(e: any) => setFilterDivision(e.target.value)}
                         className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                       >
                         <option value="All Divisions">All Divisions</option>
@@ -1205,7 +1206,7 @@ export default function ApplicantJobList() {
                       <Briefcase className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
                       <select
                         value={filterPosition}
-                        onChange={(e) => setFilterPosition(e.target.value)}
+                        onChange={(e: any) => setFilterPosition(e.target.value)}
                         className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                       >
                         <option value="All Positions">All Positions</option>
@@ -1220,7 +1221,7 @@ export default function ApplicantJobList() {
                     <span className="text-[13px] font-semibold text-gray-500">Show</span>
                     <select
                       value={jobsPerPage}
-                      onChange={(e) => setJobsPerPage(Number(e.target.value))}
+                      onChange={(e: any) => setJobsPerPage(Number(e.target.value))}
                       className="border border-gray-200 rounded px-2 py-1 text-[13px] font-medium text-gray-700 outline-none focus:border-[#0a6fa6]"
                     >
                       <option value={10}>10</option>
@@ -1723,7 +1724,7 @@ export default function ApplicantJobList() {
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"
                                   value={resRegion}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     setResRegion(e.target.value);
                                     setResProvince('');
                                     setResCity('');
@@ -1742,7 +1743,7 @@ export default function ApplicantJobList() {
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                   value={resProvince}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     setResProvince(e.target.value);
                                     setResCity('');
                                     setResBarangay('');
@@ -1761,7 +1762,7 @@ export default function ApplicantJobList() {
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                   value={resCity}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     setResCity(e.target.value);
                                     setResBarangay('');
                                   }}
@@ -1779,7 +1780,7 @@ export default function ApplicantJobList() {
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                   value={resBarangay}
-                                  onChange={(e) => setResBarangay(e.target.value)}
+                                  onChange={(e: any) => setResBarangay(e.target.value)}
                                   disabled={!resCity}
                                 >
                                   <option value="">Select barangay</option>
@@ -1800,7 +1801,7 @@ export default function ApplicantJobList() {
                                 type="checkbox"
                                 className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded"
                                 checked={sameAsResidential}
-                                onChange={(e) => setSameAsResidential(e.target.checked)}
+                                onChange={(e: any) => setSameAsResidential(e.target.checked)}
                               />
                               <span className="font-bold">Same as Residential Address?</span> <span className="italic text-gray-400">(check if permanent address is same with the above address)</span>
                             </label>
@@ -1832,7 +1833,7 @@ export default function ApplicantJobList() {
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"
                                       value={permRegion}
-                                      onChange={(e) => {
+                                      onChange={(e: any) => {
                                         setPermRegion(e.target.value);
                                         setPermProvince('');
                                         setPermCity('');
@@ -1851,7 +1852,7 @@ export default function ApplicantJobList() {
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                       value={permProvince}
-                                      onChange={(e) => {
+                                      onChange={(e: any) => {
                                         setPermProvince(e.target.value);
                                         setPermCity('');
                                         setPermBarangay('');
@@ -1870,7 +1871,7 @@ export default function ApplicantJobList() {
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                       value={permCity}
-                                      onChange={(e) => {
+                                      onChange={(e: any) => {
                                         setPermCity(e.target.value);
                                         setPermBarangay('');
                                       }}
@@ -1888,7 +1889,7 @@ export default function ApplicantJobList() {
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
                                       value={permBarangay}
-                                      onChange={(e) => setPermBarangay(e.target.value)}
+                                      onChange={(e: any) => setPermBarangay(e.target.value)}
                                       disabled={!permCity}
                                     >
                                       <option value="">Select barangay</option>
@@ -2048,7 +2049,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter child's full name"
                                     value={child.name}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newChildren = [...childrenList];
                                       newChildren[idx].name = e.target.value;
                                       setChildrenList(newChildren);
@@ -2142,12 +2143,12 @@ export default function ApplicantJobList() {
                                 <div className="grid grid-cols-2 gap-3 relative">
                                   <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.from ? new Date(educationalDates[level.id].from as any).toISOString().split('T')[0] : ''}
-                                    onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
+                                    onChange={(e: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), from: e.target.value ? new Date(e.target.value) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                   <ModernDatePicker required={level.required}
                                     value={educationalDates[level.id]?.to ? new Date(educationalDates[level.id].to as any).toISOString().split('T')[0] : ''}
-                                    onChange={(e) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
+                                    onChange={(e: any) => setEducationalDates(prev => ({ ...prev, [level.id]: { ...(prev[level.id] || {}), to: e.target.value ? new Date(e.target.value) : null } }))}
                                     className="w-full min-w-0 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
                                 </div>
@@ -2217,7 +2218,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter eligibility name"
                                     value={item.eligibility}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...civilServiceList];
                                       newList[idx].eligibility = e.target.value;
                                       setCivilServiceList(newList);
@@ -2231,7 +2232,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter rating"
                                     value={item.rating}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...civilServiceList];
                                       newList[idx].rating = e.target.value;
                                       setCivilServiceList(newList);
@@ -2258,7 +2259,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter place of examination"
                                     value={item.place}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...civilServiceList];
                                       newList[idx].place = e.target.value;
                                       setCivilServiceList(newList);
@@ -2273,7 +2274,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter license number"
                                     value={item.licenseNo}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...civilServiceList];
                                       newList[idx].licenseNo = e.target.value;
                                       setCivilServiceList(newList);
@@ -2373,7 +2374,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter position title"
                                     value={item.positionTitle}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].positionTitle = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2389,7 +2390,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter department/agency/office/company"
                                     value={item.company}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].company = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2403,7 +2404,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter monthly salary"
                                     value={item.monthlySalary}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].monthlySalary = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2417,7 +2418,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Format 00-0"
                                     value={item.salaryGrade}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].salaryGrade = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2432,7 +2433,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter status of appointment"
                                     value={item.statusOfAppointment}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].statusOfAppointment = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2445,7 +2446,7 @@ export default function ApplicantJobList() {
                                   <select
                                     required={idx === 0}
                                     value={item.govtService}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...workExperienceList];
                                       newList[idx].govtService = e.target.value;
                                       setWorkExperienceList(newList);
@@ -2513,7 +2514,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter name & address of organization"
                                     value={item.nameAddress}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...voluntaryWorkList];
                                       newList[idx].nameAddress = e.target.value;
                                       setVoluntaryWorkList(newList);
@@ -2551,7 +2552,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter number of hours"
                                     value={item.hours}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...voluntaryWorkList];
                                       newList[idx].hours = e.target.value;
                                       setVoluntaryWorkList(newList);
@@ -2565,7 +2566,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter position / nature of work"
                                     value={item.position}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...voluntaryWorkList];
                                       newList[idx].position = e.target.value;
                                       setVoluntaryWorkList(newList);
@@ -2634,7 +2635,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter title of learning and development interventions/training programs"
                                     value={item.title}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...learningDevelopmentList];
                                       newList[idx].title = e.target.value;
                                       setLearningDevelopmentList(newList);
@@ -2672,7 +2673,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter number of hours"
                                     value={item.hours}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...learningDevelopmentList];
                                       newList[idx].hours = e.target.value;
                                       setLearningDevelopmentList(newList);
@@ -2686,7 +2687,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Managerial/Supervisory/Technical/etc"
                                     value={item.type}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...learningDevelopmentList];
                                       newList[idx].type = e.target.value;
                                       setLearningDevelopmentList(newList);
@@ -2700,7 +2701,7 @@ export default function ApplicantJobList() {
                                     type="text"
                                     placeholder="Enter sponsor / conducted by"
                                     value={item.sponsor}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...learningDevelopmentList];
                                       newList[idx].sponsor = e.target.value;
                                       setLearningDevelopmentList(newList);
@@ -2757,7 +2758,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter skill or hobby"
                                     value={item.value}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...skillsList];
                                       newList[idx].value = e.target.value;
                                       setSkillsList(newList);
@@ -2799,7 +2800,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter distinction/recognition"
                                     value={item.value}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...distinctionsList];
                                       newList[idx].value = e.target.value;
                                       setDistinctionsList(newList);
@@ -2841,7 +2842,7 @@ export default function ApplicantJobList() {
                                     required={idx === 0}
                                     placeholder="Enter association/organization"
                                     value={item.value}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newList = [...membershipsList];
                                       newList[idx].value = e.target.value;
                                       setMembershipsList(newList);
@@ -2921,7 +2922,7 @@ export default function ApplicantJobList() {
                                       name={q.id}
                                       value="Yes"
                                       checked={questionnaire[q.id]?.answer === 'Yes'}
-                                      onChange={(e) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: e.target.value, details: questionnaire[q.id]?.details || '' } })}
+                                      onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: e.target.value, details: questionnaire[q.id]?.details || '' } })}
                                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                                       required
                                     />
@@ -2933,7 +2934,7 @@ export default function ApplicantJobList() {
                                       name={q.id}
                                       value="No"
                                       checked={questionnaire[q.id]?.answer === 'No'}
-                                      onChange={(e) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: e.target.value, details: '' } })}
+                                      onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: e.target.value, details: '' } })}
                                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                                       required
                                     />
@@ -2946,7 +2947,7 @@ export default function ApplicantJobList() {
                                     required
                                     placeholder="Please provide details"
                                     value={questionnaire[q.id]?.details || ''}
-                                    onChange={(e) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: 'Yes', details: e.target.value } })}
+                                    onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: 'Yes', details: e.target.value } })}
                                     className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 mt-1 h-[42px] w-full"
                                   />
                                 )}
@@ -2970,7 +2971,7 @@ export default function ApplicantJobList() {
                                     required
                                     placeholder="Enter full name"
                                     value={referencesList[idx]?.name || ''}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newRefs = [...referencesList];
                                       if (!newRefs[idx]) newRefs[idx] = { name: '', address: '', telephone: '' };
                                       newRefs[idx].name = e.target.value;
@@ -2986,7 +2987,7 @@ export default function ApplicantJobList() {
                                     required
                                     placeholder="Enter address"
                                     value={referencesList[idx]?.address || ''}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newRefs = [...referencesList];
                                       if (!newRefs[idx]) newRefs[idx] = { name: '', address: '', telephone: '' };
                                       newRefs[idx].address = e.target.value;
@@ -3002,7 +3003,7 @@ export default function ApplicantJobList() {
                                     required
                                     placeholder="Enter telephone no."
                                     value={referencesList[idx]?.telephone || ''}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newRefs = [...referencesList];
                                       if (!newRefs[idx]) newRefs[idx] = { name: '', address: '', telephone: '' };
                                       newRefs[idx].telephone = e.target.value;
@@ -3032,7 +3033,7 @@ export default function ApplicantJobList() {
                                 required
                                 placeholder="e.g. Passport, GSIS, SSS"
                                 value={governmentId.type}
-                                onChange={(e) => setGovernmentId({ ...governmentId, type: e.target.value })}
+                                onChange={(e: any) => setGovernmentId({ ...governmentId, type: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                               />
                             </div>
@@ -3046,7 +3047,7 @@ export default function ApplicantJobList() {
                                 required
                                 placeholder="Enter ID/License/Passport No."
                                 value={governmentId.idNo}
-                                onChange={(e) => setGovernmentId({ ...governmentId, idNo: e.target.value })}
+                                onChange={(e: any) => setGovernmentId({ ...governmentId, idNo: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                               />
                             </div>
@@ -3060,7 +3061,7 @@ export default function ApplicantJobList() {
                                 required
                                 placeholder="Enter date/place of issuance"
                                 value={governmentId.datePlace}
-                                onChange={(e) => setGovernmentId({ ...governmentId, datePlace: e.target.value })}
+                                onChange={(e: any) => setGovernmentId({ ...governmentId, datePlace: e.target.value })}
                                 className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                               />
                             </div>
@@ -3171,7 +3172,7 @@ export default function ApplicantJobList() {
                                         <input
                                           type="file"
                                           required={isRequired && !existingUrl && !documents[doc]}
-                                          onChange={(e) => {
+                                          onChange={(e: any) => {
                                             if (e.target.files && e.target.files[0]) {
                                               setDocuments({ ...documents, [doc]: e.target.files[0] });
                                             }
