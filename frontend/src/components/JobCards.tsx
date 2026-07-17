@@ -89,25 +89,20 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
       {/* Status Footer */}
       {tab === 'my-applications' && (
         <div className="flex flex-col gap-2 pt-4 border-t border-gray-100 mb-4">
-          <div className="flex items-center gap-1.5 w-full">
-            <span 
-              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-blue-50 text-blue-700 border border-blue-200 tracking-wider uppercase truncate text-center"
-              title={`STATUS: ${job.stage || job.realStatus || 'PENDING'}`}
-            >
-              STAT: {job.stage || job.realStatus || 'PENDING'}
-            </span>
-            <span 
-              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-purple-50 text-purple-700 border border-purple-200 tracking-wider uppercase truncate text-center"
-              title={`ASSESSMENT: ${job.assessmentStatus || 'N/A'}`}
-            >
-              ASSESS: {job.assessmentStatus || 'N/A'}
-            </span>
-            <span 
-              className="flex-1 min-w-0 px-1.5 py-1 text-[9px] font-extrabold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wider uppercase truncate text-center"
-              title={`APPOINTMENT: ${job.appointmentStatus || 'N/A'}`}
-            >
-              APPT: {job.appointmentStatus || 'N/A'}
-            </span>
+          <div className="flex flex-col gap-1.5 w-full mt-1">
+            <div className="flex items-stretch gap-1.5 w-full">
+              <div className="flex-1 min-w-0 px-2 py-1.5 text-[9.5px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 tracking-wide uppercase shadow-sm flex items-center justify-center text-center">
+                Application Status: {job.stage || job.realStatus || 'PENDING'}
+              </div>
+              <div className="flex-1 min-w-0 px-2 py-1.5 text-[9.5px] font-bold rounded-lg bg-purple-50 text-purple-700 border border-purple-200 tracking-wide uppercase shadow-sm flex items-center justify-center text-center">
+                Assessment Status: {job.assessmentStatus || 'N/A'}
+              </div>
+            </div>
+            <div className="flex items-center justify-center w-full">
+              <div className="px-4 py-1.5 text-[9.5px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wide uppercase shadow-sm flex items-center justify-center text-center">
+                Appointment Status: {job.appointmentStatus || 'N/A'}
+              </div>
+            </div>
           </div>
           {job.comparativeAssessmentScores && (() => {
             let scores: any = {};

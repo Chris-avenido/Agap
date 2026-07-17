@@ -206,7 +206,26 @@ export default function ApplicantDashboard() {
                       <div className="text-sm text-gray-500">{app.office}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.stage}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 w-[200px]">
+                        {['Received', 'Reviewing', 'Finalizing'].map((s, i) => {
+                          let currentIndex = 0;
+                          const stageLower = (app.stage || 'Pending').toLowerCase();
+                          if (stageLower === 'pending' || stageLower === 'received') currentIndex = 0;
+                          else if (stageLower === 'reviewing' || stageLower === 'initial evaluation') currentIndex = 1;
+                          else if (stageLower === 'interview' || stageLower === 'final interview' || stageLower === 'finalizing') currentIndex = 2;
+                          else currentIndex = 0;
+
+                          const isActive = i <= currentIndex;
+                          return (
+                            <div key={s} className="flex flex-col items-center gap-1 flex-1">
+                               <div className={`h-1.5 w-full rounded-full ${isActive ? 'bg-[#003366]' : 'bg-gray-200'}`}></div>
+                               <span className={`text-[9px] uppercase tracking-wider font-bold ${isActive ? 'text-[#003366]' : 'text-gray-400'}`}>{s}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         app.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'

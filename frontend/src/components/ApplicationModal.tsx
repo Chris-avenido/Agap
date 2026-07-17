@@ -2450,7 +2450,18 @@ export default function ApplicationModal({
                       <input type="file" name="doc_prc" accept=".pdf" required={!getDocUrl("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                     </div>
 
+                    
                     {/* Item 6 */}
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Trainings <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
+                        {getDocUrl("Trainings") && (
+                          <a href={getDocUrl("Trainings") as string} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 break-words">View Uploaded Document</a>
+                        )}
+                      </div>
+                      <input type="file" name="doc_trainings" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                    </div>
+{/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Diploma (optional)</span>
@@ -2701,6 +2712,7 @@ export default function ApplicationModal({
                               "doc_prc": "Updated PRC License/ID",
                               "doc_diploma": "Diploma (optional)",
                               "doc_resume": "Resume",
+                              "doc_trainings": "Trainings",
                               "profile_photo": "profile_photo"
                             };
                             const docNames: string[] = [];
