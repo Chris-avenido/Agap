@@ -30,8 +30,7 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
 
           {/* Item No & Type */}
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">IPC: {job.itemNo || 'N/A'}</span>
-            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">{job.type || 'Permanent'}</span>
+            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">Item No.: {job.itemNo || 'N/A'}</span>
           </div>
         </div>
 
@@ -45,11 +44,13 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
             </div>
           )}
           {/* Days Left Box */}
-          <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0">
-            <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
-            <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
-            <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br />LEFT</span>
-          </div>
+          {job.vacancyStatus?.toUpperCase() !== 'CLOSED' && (
+            <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0">
+              <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
+              <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
+              <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br />LEFT</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -104,35 +105,29 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
               </div>
             </div>
           </div>
-          {job.comparativeAssessmentScores && (() => {
+          {(() => {
             let scores: any = {};
-            try {
-              scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
-            } catch (e) {
-              scores = {};
+            if (job.comparativeAssessmentScores) {
+              try {
+                scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
+              } catch (e) {
+                scores = {};
+              }
             }
             return (
               <div className="flex flex-col gap-1 w-full mt-1.5">
-                {scores.bei !== undefined && (
-                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
-                    Behavioral Events Interview (BEI): {scores.bei}
-                  </span>
-                )}
-                {scores.wst !== undefined && (
-                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
-                    Work Sample Test (WST): {scores.wst}
-                  </span>
-                )}
-                {scores.we !== undefined && (
-                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase text-center truncate">
-                    Written Examination (WE): {scores.we}
-                  </span>
-                )}
-                {job.overallFit && (
-                  <span className="w-full px-2 py-1 text-[9px] font-extrabold rounded-md bg-rose-50 text-rose-700 border border-rose-200 tracking-wider uppercase text-center truncate">
-                    OVERALL FIT: {job.overallFit}
-                  </span>
-                )}
+                <span className={`w-full px-2 py-1 text-[9px] font-extrabold rounded-md border tracking-wider uppercase text-center truncate ${scores.bei !== undefined ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                  Behavioral Events Interview (BEI): {scores.bei !== undefined ? scores.bei : 'processing'}
+                </span>
+                <span className={`w-full px-2 py-1 text-[9px] font-extrabold rounded-md border tracking-wider uppercase text-center truncate ${scores.wst !== undefined ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                  Work Sample Test (WST): {scores.wst !== undefined ? scores.wst : 'processing'}
+                </span>
+                <span className={`w-full px-2 py-1 text-[9px] font-extrabold rounded-md border tracking-wider uppercase text-center truncate ${scores.we !== undefined ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                  Written Examination (WE): {scores.we !== undefined ? scores.we : 'processing'}
+                </span>
+                <span className={`w-full px-2 py-1 text-[9px] font-extrabold rounded-md border tracking-wider uppercase text-center truncate ${job.overallFit ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                  OVERALL FIT: {job.overallFit || 'processing'}
+                </span>
               </div>
             );
           })()}
@@ -187,8 +182,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                     <div className="flex flex-col gap-1">
                       <span className="font-bold text-[#2563eb]">{title}</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase">IPC: {job.itemNo || 'N/A'}</span>
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded uppercase">{job.type || 'Permanent'}</span>
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase">Item No.: {job.itemNo || 'N/A'}</span>
                       </div>
                     </div>
                   </td>
@@ -203,7 +197,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                     <div className="flex flex-col gap-1 text-sm text-gray-600">
                       <span className="font-medium">SG {job.sg || 'N/A'}</span>
                       <span className="text-xs">Posted: {job.posted || 'N/A'}</span>
-                      <span className="text-xs text-[#f59e0b] font-semibold">Deadline: {job.deadline || 'N/A'} ({job.daysLeft || 0} days left)</span>
+                      <span className="text-xs text-[#f59e0b] font-semibold">Deadline: {job.deadline || 'N/A'} {job.vacancyStatus?.toUpperCase() !== 'CLOSED' && `(${job.daysLeft || 0} days left)`}</span>
                     </div>
                   </td>
                   {tab === 'my-applications' && (
@@ -221,35 +215,29 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                         <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
                           VACANCY: {job.vacancyStatus || 'UNKNOWN'}
                         </span>
-                        {job.comparativeAssessmentScores && (() => {
+                        {(() => {
                           let scores: any = {};
-                          try {
-                            scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
-                          } catch (e) {
-                            scores = {};
+                          if (job.comparativeAssessmentScores) {
+                            try {
+                              scores = typeof job.comparativeAssessmentScores === 'string' ? JSON.parse(job.comparativeAssessmentScores) : job.comparativeAssessmentScores;
+                            } catch (e) {
+                              scores = {};
+                            }
                           }
                           return (
                             <>
-                              {scores.bei !== undefined && (
-                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
-                                  Behavioral Events Interview (BEI): {scores.bei}
-                                </span>
-                              )}
-                              {scores.wst !== undefined && (
-                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
-                                  Work Sample Test (WST): {scores.wst}
-                                </span>
-                              )}
-                              {scores.we !== undefined && (
-                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-amber-50 text-amber-700 uppercase tracking-wider">
-                                  Written Examination (WE): {scores.we}
-                                </span>
-                              )}
-                              {job.overallFit && (
-                                <span className="px-2 py-0.5 w-fit text-[10px] font-bold rounded bg-rose-50 text-rose-700 uppercase tracking-wider">
-                                  OVERALL FIT: {job.overallFit}
-                                </span>
-                              )}
+                              <span className={`px-2 py-0.5 w-fit text-[10px] font-bold rounded uppercase tracking-wider ${scores.bei !== undefined ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-500'}`}>
+                                Behavioral Events Interview (BEI): {scores.bei !== undefined ? scores.bei : 'processing'}
+                              </span>
+                              <span className={`px-2 py-0.5 w-fit text-[10px] font-bold rounded uppercase tracking-wider ${scores.wst !== undefined ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-500'}`}>
+                                Work Sample Test (WST): {scores.wst !== undefined ? scores.wst : 'processing'}
+                              </span>
+                              <span className={`px-2 py-0.5 w-fit text-[10px] font-bold rounded uppercase tracking-wider ${scores.we !== undefined ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-500'}`}>
+                                Written Examination (WE): {scores.we !== undefined ? scores.we : 'processing'}
+                              </span>
+                              <span className={`px-2 py-0.5 w-fit text-[10px] font-bold rounded uppercase tracking-wider ${job.overallFit ? 'bg-rose-50 text-rose-700' : 'bg-gray-50 text-gray-500'}`}>
+                                OVERALL FIT: {job.overallFit || 'processing'}
+                              </span>
                             </>
                           );
                         })()}

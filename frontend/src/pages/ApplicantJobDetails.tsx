@@ -135,9 +135,6 @@ export default function ApplicantJobDetails() {
                 <div className="text-[14px] text-gray-500 mb-2">{job.division || job.office}</div>
                 <div className="flex items-center gap-2 text-[14px] text-gray-500">
                   Office of the Director
-                  <span className={`inline-block px-2.5 py-0.5 text-white text-[10px] font-bold rounded uppercase tracking-wider ${job.type.toLowerCase() === 'permanent' ? 'bg-[#81c784]' : 'bg-[#eab308]'}`}>
-                    {job.type}
-                  </span>
                 </div>
               </div>
               <button

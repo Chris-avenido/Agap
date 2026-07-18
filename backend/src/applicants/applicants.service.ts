@@ -213,9 +213,11 @@ class ApplicantsServiceClass {
 
   async findApplications(applicantId: number) {
     const result = await pool.query(`
-      SELECT a.*, v.title as job_title, v.school as office, qe.overall_fit, v.status as vacancy_status
+      SELECT a.*, v.title as job_title, v.school as office, qe.overall_fit, v.status as vacancy_status,
+             v.posting_start, v.posting_end, v.item_no, p.salary_grade
       FROM applications a
       LEFT JOIN vacancies v ON a.vacancy_id::text = v.id::text
+      LEFT JOIN positions p ON v.position_id = p.id
       LEFT JOIN (
         SELECT application_id, MAX(overall_fit) as overall_fit
         FROM qual_evals
