@@ -2,7 +2,16 @@ import { pool } from '../database';
 
 export class VacanciesService {
   static async getOpenVacancies() {
-    const result = await pool.query('SELECT * FROM vacancies WHERE status = $1 ORDER BY posting_start DESC', ['open']);
+    const result = await pool.query(`
+      SELECT 
+        v.*,
+        p.salary_grade,
+        p.required_bachelor_degree
+      FROM vacancies v
+      LEFT JOIN positions p ON v.position_id = p.id
+      WHERE v.status = $1 
+      ORDER BY v.posting_start DESC
+    `, ['open']);
     return result.rows;
   }
 

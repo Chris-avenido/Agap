@@ -76,6 +76,7 @@ export default function PublicCareers() {
             itemNo: v.item_no,
             location: v.region || '',
             description: 'Details available in the full job posting.',
+            qualifications: v.required_bachelor_degree || 'Details available in the full job posting.',
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);
