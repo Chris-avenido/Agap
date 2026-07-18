@@ -216,7 +216,11 @@ class ApplicantsServiceClass {
       SELECT a.*, v.title as job_title, v.school as office, qe.overall_fit, v.status as vacancy_status
       FROM applications a
       LEFT JOIN vacancies v ON a.vacancy_id::text = v.id::text
-      LEFT JOIN qual_evals qe ON a.id = qe.application_id
+      LEFT JOIN (
+        SELECT application_id, MAX(overall_fit) as overall_fit
+        FROM qual_evals
+        GROUP BY application_id
+      ) qe ON a.id = qe.application_id
       WHERE a.applicant_id = $1
     `, [applicantId.toString()]);
     return result.rows.map(r => ({ ...r, position_id: r.vacancy_id }));

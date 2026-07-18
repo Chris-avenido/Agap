@@ -232,7 +232,13 @@ export default function ApplicantJobList() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadedDocumentUrls, setUploadedDocumentUrls] = useState<Record<string, string>>({});
   const [editingDocs, setEditingDocs] = useState<Record<string, boolean>>({});
-  const [documentsConfirmed, setDocumentsConfirmed] = useState<Record<string, boolean>>({});
+  const [documentsConfirmed, setDocumentsConfirmed] = useState<any>({});
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep, activeTab]);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = async (e: any) => {
@@ -2010,7 +2016,7 @@ export default function ApplicantJobList() {
                             </div>
                             <div className="flex flex-col justify-between h-full">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Mobile No.</span>
-                              <input type="text" value={mobileNo} onChange={e => setMobileNo(e.target.value)} required placeholder="Enter mobile no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
+                              <input type="text" value={mobileNo} onChange={e => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 11) setMobileNo(val); }} maxLength={11} required placeholder="Enter mobile no." className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" />
                             </div>
                           </div>
                         </div>
@@ -2170,12 +2176,9 @@ export default function ApplicantJobList() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (childrenList.length > 1) {
-                                        setChildrenList(childrenList.filter((_, i) => i !== idx));
-                                      }
+                                      setChildrenList(childrenList.filter((_, i) => i !== idx));
                                     }}
-                                    className={`p-2.5 rounded border transition-colors ${childrenList.length > 1 ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}
-                                    disabled={childrenList.length === 1}
+                                    className="p-2.5 rounded border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -2295,7 +2298,6 @@ export default function ApplicantJobList() {
                             <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
                               <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Eligibility #{idx + 1}</h3>
-                                {civilServiceList.length > 1 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2305,7 +2307,6 @@ export default function ApplicantJobList() {
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
-                                )}
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <div className="flex flex-col lg:col-span-2 justify-between h-full">
@@ -2395,13 +2396,18 @@ export default function ApplicantJobList() {
                             </div>
                           ))}
 
-                          <button
-                            type="button"
-                            onClick={() => setCivilServiceList([...civilServiceList, { eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }])}
-                            className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
-                          >
-                            <Plus className="w-4 h-4" /> Add Eligibility
-                          </button>
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setCivilServiceList([...civilServiceList, { eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }])}
+                              className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
+                            >
+                              <Plus className="w-4 h-4" /> Add Eligibility
+                            </button>
+                            <button type="button" onClick={() => setCivilServiceList([{ eligibility: 'N/A', rating: 'N/A', date: null, place: 'N/A', licenseNo: 'N/A', licenseDate: null }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                              N/A
+                            </button>
+                          </div>
                         </div>
 
                         {/* Next Button */}
@@ -2427,7 +2433,6 @@ export default function ApplicantJobList() {
                             <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
                               <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Work Experience #{idx + 1}</h3>
-                                {workExperienceList.length > 1 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2437,7 +2442,6 @@ export default function ApplicantJobList() {
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
-                                )}
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
                                 <div className="flex flex-col justify-between h-full">
@@ -2559,13 +2563,18 @@ export default function ApplicantJobList() {
                             </div>
                           ))}
 
-                          <button
-                            type="button"
-                            onClick={() => setWorkExperienceList([...workExperienceList, { fromDate: null, toDate: null, positionTitle: '', company: '', monthlySalary: '', salaryGrade: '', statusOfAppointment: '', govtService: '' }])}
-                            className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
-                          >
-                            <Plus className="w-4 h-4" /> Add Work Experience
-                          </button>
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setWorkExperienceList([...workExperienceList, { fromDate: null, toDate: null, positionTitle: '', company: '', monthlySalary: '', salaryGrade: '', statusOfAppointment: '', govtService: '' }])}
+                              className="text-[#3b82f6] font-medium text-[13px] hover:bg-blue-50 py-2.5 px-4 rounded border border-dashed border-blue-200 flex items-center justify-center gap-2 transition-colors w-fit"
+                            >
+                              <Plus className="w-4 h-4" /> Add Work Experience
+                            </button>
+                            <button type="button" onClick={() => setWorkExperienceList([{ fromDate: null, toDate: null, positionTitle: 'N/A', company: 'N/A', monthlySalary: 'N/A', salaryGrade: 'N/A', statusOfAppointment: 'N/A', govtService: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                              N/A
+                            </button>
+                          </div>
                         </div>
 
                         {/* Next Button */}
@@ -2591,7 +2600,6 @@ export default function ApplicantJobList() {
                             <div key={idx} className="border border-gray-200 rounded-lg overflow-visible bg-white shadow-sm relative">
                               <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center rounded-t-lg">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Voluntary Work #{idx + 1}</h3>
-                                {voluntaryWorkList.length > 1 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2601,7 +2609,6 @@ export default function ApplicantJobList() {
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
-                                )}
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                 <div className="flex flex-col lg:col-span-3 justify-between h-full">
@@ -2712,7 +2719,6 @@ export default function ApplicantJobList() {
                             <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm relative">
                               <div className="bg-gray-50 border-b border-gray-200 px-5 py-3.5 flex justify-between items-center">
                                 <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">Training #{idx + 1}</h3>
-                                {learningDevelopmentList.length > 1 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2722,7 +2728,6 @@ export default function ApplicantJobList() {
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
-                                )}
                               </div>
                               <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
                                 <div className="flex flex-col lg:col-span-4 justify-between h-full">
@@ -2862,7 +2867,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
-                                  {skillsList.length > 1 && (
                                     <button
                                       type="button"
                                       onClick={() => setSkillsList(skillsList.filter((_, i) => i !== idx))}
@@ -2870,7 +2874,6 @@ export default function ApplicantJobList() {
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
-                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2904,7 +2907,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
-                                  {distinctionsList.length > 1 && (
                                     <button
                                       type="button"
                                       onClick={() => setDistinctionsList(distinctionsList.filter((_, i) => i !== idx))}
@@ -2912,7 +2914,6 @@ export default function ApplicantJobList() {
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
-                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2946,7 +2947,6 @@ export default function ApplicantJobList() {
                                     }}
                                     className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                                   />
-                                  {membershipsList.length > 1 && (
                                     <button
                                       type="button"
                                       onClick={() => setMembershipsList(membershipsList.filter((_, i) => i !== idx))}
@@ -2954,7 +2954,6 @@ export default function ApplicantJobList() {
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
-                                  )}
                                 </div>
                               ))}
                             </div>

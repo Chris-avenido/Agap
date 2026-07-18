@@ -1181,6 +1181,8 @@ export default function ApplicationModal({
                         type="text"
                         name="mobile_no"
                         defaultValue={userData?.mobile_no || ""}
+                        maxLength={11}
+                        onInput={(e: any) => { e.target.value = e.target.value.replace(/\D/g, '') }}
                       />
                     </div>
                   </div>
@@ -1801,9 +1803,14 @@ export default function ApplicationModal({
                     </div>
                   ))}
 
-                  <button type="button" onClick={() => setCivilServiceList([...civilServiceList, { eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }])} className="mt-2 text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
-                    <Plus className="w-4 h-4" /> Add Eligibility
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button type="button" onClick={() => setCivilServiceList([...civilServiceList, { eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }])} className="text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
+                      <Plus className="w-4 h-4" /> Add Eligibility
+                    </button>
+                    <button type="button" onClick={() => setCivilServiceList([{ eligibility: 'N/A', rating: 'N/A', date: null, place: 'N/A', licenseNo: 'N/A', licenseDate: null }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                      N/A
+                    </button>
+                  </div>
                 </div>
 
                 <input type="hidden" name="civil_service_eligibility" value={JSON.stringify(civilServiceList)} />
@@ -1897,9 +1904,14 @@ export default function ApplicationModal({
                     </div>
                   ))}
 
-                  <button type="button" onClick={() => setWorkExperienceList([...workExperienceList, { fromDate: null, toDate: null, positionTitle: '', company: '', monthlySalary: '', salaryGrade: '', statusOfAppointment: '', govtService: '' }])} className="mt-2 text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
-                    <Plus className="w-4 h-4" /> Add Work Experience
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button type="button" onClick={() => setWorkExperienceList([...workExperienceList, { fromDate: null, toDate: null, positionTitle: '', company: '', monthlySalary: '', salaryGrade: '', statusOfAppointment: '', govtService: '' }])} className="text-blue-600 text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 w-fit px-5 py-2.5 rounded border border-dashed border-blue-300 transition-colors">
+                      <Plus className="w-4 h-4" /> Add Work Experience
+                    </button>
+                    <button type="button" onClick={() => setWorkExperienceList([{ fromDate: null, toDate: null, positionTitle: 'N/A', company: 'N/A', monthlySalary: 'N/A', salaryGrade: 'N/A', statusOfAppointment: 'N/A', govtService: 'N/A' }])} className="text-gray-500 text-[13px] font-medium flex items-center justify-center hover:bg-gray-100 px-5 py-2.5 rounded border border-gray-200 transition-colors">
+                      N/A
+                    </button>
+                  </div>
                 </div>
 
                 <input type="hidden" name="work_experience" value={JSON.stringify(workExperienceList)} />
@@ -2063,7 +2075,12 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">SPECIAL SKILLS & HOBBIES</h4>
                     {skillsList.map((skill, idx) => (
-                      <input key={idx} type="text" value={skill} onChange={(e: any) => { const n = [...skillsList]; n[idx] = e.target.value; setSkillsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter skill / hobby" />
+                      <div key={idx} className="flex items-center gap-2">
+                        <input type="text" value={skill} onChange={(e: any) => { const n = [...skillsList]; n[idx] = e.target.value; setSkillsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter skill / hobby" />
+                        <button type="button" onClick={() => setSkillsList(skillsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                     <button type="button" onClick={() => setSkillsList([...skillsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Skill / Hobby
@@ -2077,7 +2094,12 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">NON-ACADEMIC DISTINCTIONS</h4>
                     {distinctionsList.map((dist, idx) => (
-                      <input key={idx} type="text" value={dist} onChange={(e: any) => { const n = [...distinctionsList]; n[idx] = e.target.value; setDistinctionsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter distinction" />
+                      <div key={idx} className="flex items-center gap-2">
+                        <input type="text" value={dist} onChange={(e: any) => { const n = [...distinctionsList]; n[idx] = e.target.value; setDistinctionsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter distinction" />
+                        <button type="button" onClick={() => setDistinctionsList(distinctionsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                     <button type="button" onClick={() => setDistinctionsList([...distinctionsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Distinction
@@ -2091,7 +2113,12 @@ export default function ApplicationModal({
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">MEMBERSHIPS IN ASSOCIATIONS</h4>
                     {membershipsList.map((mem, idx) => (
-                      <input key={idx} type="text" value={mem} onChange={(e: any) => { const n = [...membershipsList]; n[idx] = e.target.value; setMembershipsList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter membership" />
+                      <div key={idx} className="flex items-center gap-2">
+                        <input type="text" value={mem} onChange={(e: any) => { const n = [...membershipsList]; n[idx] = e.target.value; setMembershipsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter membership" />
+                        <button type="button" onClick={() => setMembershipsList(membershipsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                     <button type="button" onClick={() => setMembershipsList([...membershipsList, ''])} className="text-blue-600 text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-blue-50 w-full py-2.5 rounded border border-dashed border-blue-300 transition-colors">
                       <Plus className="w-4 h-4" /> Add Membership
