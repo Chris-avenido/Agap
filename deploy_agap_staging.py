@@ -25,13 +25,16 @@ REMOTE_USER  = get_env_var("SSH_USER", "Administrator1")
 REMOTE_HOST  = get_env_var("SSH_HOST", "20.24.58.49")
 REMOTE_ROOT  = "/mnt/agap-staging"
 SSH_KEY_PATH = get_env_var("SSH_KEY_PATH", os.path.expanduser("~/.ssh/id_rsa")).replace("\\", "/")
+# Check if key file exists locally, otherwise omit -i from SSH commands
+SSH_KEY_OPT = f'-i "{SSH_KEY_PATH}"' if os.path.exists(SSH_KEY_PATH) else ""
 ARCHIVE_NAME = "agap-staging-deploy.tar.gz"
 ECOSYSTEM_CONFIG = "ecosystem.agap-staging.config.cjs"
 PM2_NAME     = "agap-staging-backend"
 
 def run_ssh(command: str, timeout=120):
     """Run commands over SSH with strict host key checking bypassed."""
-    ssh_cmd = f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i "{SSH_KEY_PATH}" {REMOTE_USER}@{REMOTE_HOST} "{command}"'
+    # Use BatchMode=yes for the non-interactive check to prevent hangs on password input
+    ssh_cmd = f'ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 {SSH_KEY_OPT} {REMOTE_USER}@{REMOTE_HOST} "{command}"'
     try:
         return subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -45,13 +48,13 @@ def main():
     
     start_time = time.time()
 
-    # Pre-check: Verify SSH Connection
-    print("\n[PRE-CHECK] Verifying SSH connection to remote host...")
+    # Pre-check: Verify SSH Connection (Optional Key check)
+    print("\n[PRE-CHECK] Checking SSH key authorization...")
     test_conn = run_ssh("echo connection_ok")
-    if "connection_ok" not in test_conn.stdout:
-        print("  [ERROR] Cannot connect to VM. Check your SSH key path or network connectivity.")
-        sys.exit(1)
-    print("  [OK] SSH Connection verified.")
+    if "connection_ok" in test_conn.stdout:
+        print("  [OK] SSH Key authorized. Password-less login active.")
+    else:
+        print("  [INFO] SSH key not found/authorized. You will be prompted for your VM password during upload.")
 
     # 1. Build local frontend
     print("\n[1/5] BUILDING frontend client...")
@@ -93,7 +96,8 @@ def main():
     try:
         # Prepare remote directory with sudo, then transfer
         run_ssh(f"sudo mkdir -p {REMOTE_ROOT} && sudo chown -R {REMOTE_USER}:{REMOTE_USER} {REMOTE_ROOT}")
-        subprocess.run(f'scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i "{SSH_KEY_PATH}" {ARCHIVE_NAME} {REMOTE_USER}@{REMOTE_HOST}:{REMOTE_ROOT}/', shell=True, check=True)
+        scp_cmd = f'scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 {SSH_KEY_OPT} {ARCHIVE_NAME} {REMOTE_USER}@{REMOTE_HOST}:{REMOTE_ROOT}/'
+        subprocess.run(scp_cmd, shell=True, check=True)
     except subprocess.CalledProcessError:
         print("  [ERROR] SCP upload failed!")
         sys.exit(1)
@@ -102,10 +106,13 @@ def main():
     print("\n[4/5] REMOTE extraction, building backend, and launching PM2...")
     remote_script = (
         f"cd {REMOTE_ROOT} && "
+        f"pm2 stop {PM2_NAME} 2>/dev/null || true && "
+        f"sudo rm -rf backend frontend && "
+        f"mkdir -p dist && sudo rm -rf dist/* && "
         f"tar -xzf {ARCHIVE_NAME} && "
         f"sudo chown -R {REMOTE_USER}:{REMOTE_USER} {REMOTE_ROOT} && "
-        # Move frontend static files to dist/
-        f"rm -rf dist && mv frontend/dist dist && "
+        # Move frontend static files inside dist/ instead of renaming directory (prevents Nginx locks)
+        f"mv frontend/dist/* dist/ && "
         f"rm -rf frontend && "
         # Install and build backend
         f"cd backend && "
@@ -123,7 +130,7 @@ def main():
         f"rm -f {ARCHIVE_NAME}"
     )
 
-    ssh_cmd = f'ssh -t -o StrictHostKeyChecking=no -i "{SSH_KEY_PATH}" -o ConnectTimeout=10 {REMOTE_USER}@{REMOTE_HOST} "{remote_script}"'
+    ssh_cmd = f'ssh -t -o StrictHostKeyChecking=no {SSH_KEY_OPT} -o ConnectTimeout=10 {REMOTE_USER}@{REMOTE_HOST} "{remote_script}"'
     try:
         subprocess.run(ssh_cmd, shell=True, check=True)
     except subprocess.CalledProcessError as e:
