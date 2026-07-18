@@ -122,8 +122,8 @@ export const generatePDSBackend = async (applicantData: any) => {
   write(sheetC1, 'L29', permAddr.province);
   write(sheetC1, 'I31', permAddr.zip);
 
-  write(sheetC1, 'I32', applicantData.telephone);
-  write(sheetC1, 'I33', applicantData.mobile);
+  write(sheetC1, 'I32', applicantData.telephone || applicantData.telephone_no);
+  write(sheetC1, 'I33', applicantData.mobile || applicantData.mobile_no);
   write(sheetC1, 'I34', applicantData.email || applicantData.email_address);
 
   // Family Background

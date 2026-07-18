@@ -390,18 +390,10 @@ router.post('/convert-pds-v2', async (req, res) => {
     // Log validation metrics to console instead of writing to disk (fixes EROFS on Vercel)
     console.log("PDS Validation Report:", JSON.stringify(logs, null, 2));
 
-    // Convert to PDF using libreoffice-convert
-    try {
-      const pdfBuf = await convertToPdf(buffer, '.pdf');
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename=PDS.pdf');
-      res.send(pdfBuf);
-    } catch (convertError) {
-      console.error("Libreoffice conversion failed, returning XLSX fallback", convertError);
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=PDS.xlsx');
-      res.send(buffer);
-    }
+    // Always return XLSX so user can edit missing data after download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=PDS.xlsx');
+    res.send(buffer);
   } catch (error: any) {
     console.error("Error generating PDS v2:", error);
     res.status(500).json({ message: error.message || 'Error generating PDS' });

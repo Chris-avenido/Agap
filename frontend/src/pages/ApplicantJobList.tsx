@@ -1172,6 +1172,7 @@ export default function ApplicantJobList() {
                         }
                         
                         const payload: any = {
+                          ...applicant,
                           surname: applicant.surname,
                           firstName: applicant.first_name,
                           middleName: applicant.middle_name,
