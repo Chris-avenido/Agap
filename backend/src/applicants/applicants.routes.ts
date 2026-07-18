@@ -387,12 +387,8 @@ router.post('/convert-pds-v2', async (req, res) => {
     // Generate XLSX buffer using xlsx-populate
     const { buffer, logs } = await generatePDSBackend(applicantData);
     
-    // Write logs to validation report
-    const fs = require('fs');
-    const path = require('path');
-    const logPath = path.join(__dirname, '../../../validation_report.md');
-    const reportContent = `# PDS Validation Report\n\n\`\`\`json\n${JSON.stringify(logs, null, 2)}\n\`\`\`\n`;
-    fs.writeFileSync(logPath, reportContent);
+    // Log validation metrics to console instead of writing to disk (fixes EROFS on Vercel)
+    console.log("PDS Validation Report:", JSON.stringify(logs, null, 2));
 
     // Convert to PDF using libreoffice-convert
     try {
