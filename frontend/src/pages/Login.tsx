@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import ApplicationModal from '../components/ApplicationModal';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
@@ -66,7 +66,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-2)]" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="min-h-screen flex bg-[var(--bg-2)] relative" style={{ fontFamily: 'var(--font-body)' }}>
+      {/* Back Button */}
+      <button 
+        onClick={() => navigate('/')} 
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium"
+      >
+        <ArrowLeft className="w-5 h-5" /> Back
+      </button>
+      
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div className="flex items-center gap-3">

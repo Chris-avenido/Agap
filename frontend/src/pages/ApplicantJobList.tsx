@@ -232,8 +232,7 @@ export default function ApplicantJobList() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadedDocumentUrls, setUploadedDocumentUrls] = useState<Record<string, string>>({});
   const [editingDocs, setEditingDocs] = useState<Record<string, boolean>>({});
-  const [documentsConfirmed, setDocumentsConfirmed] = useState<any>({});
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [documentsConfirmed, setDocumentsConfirmed] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
