@@ -1123,9 +1123,19 @@ export default function ApplicantJobList() {
             <div className="hidden lg:flex items-center gap-2 pr-6 py-3">
               {parseFloat(percentage) >= 90 ? (
                 <button
-                    onClick={async () => {
-                      try {
-                        const session = JSON.parse(localStorage.getItem('session_data') || '{}');
+                    onClick={() => {
+                      Swal.fire({
+                        title: 'Download PDS?',
+                        text: 'Do you want to download your Personal Data Sheet (PDS)?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, download it!'
+                      }).then(async (result) => {
+                        if (result.isConfirmed) {
+                          try {
+                            const session = JSON.parse(localStorage.getItem('session_data') || '{}');
                         if (!session.id) return;
                         
                         Swal.fire({
@@ -1222,6 +1232,8 @@ export default function ApplicantJobList() {
                         console.error(err);
                         Swal.fire('Error', 'Failed to generate PDS', 'error');
                       }
+                        }
+                      });
                     }}
                   className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
                 >
