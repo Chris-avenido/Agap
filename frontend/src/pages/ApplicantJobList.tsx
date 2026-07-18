@@ -1118,12 +1118,105 @@ export default function ApplicantJobList() {
             <div className="hidden lg:flex items-center gap-2 pr-6 py-3">
               {parseFloat(percentage) >= 90 ? (
                 <button
-                  onClick={() => {
-                    const session = JSON.parse(localStorage.getItem('session_data') || '{}');
-                    if (session.id) {
-                      window.open(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/print-pds`, '_blank');
-                    }
-                  }}
+                    onClick={async () => {
+                      try {
+                        const session = JSON.parse(localStorage.getItem('session_data') || '{}');
+                        if (!session.id) return;
+                        
+                        Swal.fire({
+                          title: 'Generating PDS...',
+                          text: 'Please wait while we generate your Personal Data Sheet.',
+                          allowOutsideClick: false,
+                          didOpen: () => Swal.showLoading()
+                        });
+                        
+                        const resDb = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`);
+                        const dataDb = await resDb.json();
+                          let applicant = Array.isArray(dataDb) ? dataDb[0] : dataDb;
+                          if (applicant && applicant.success && applicant.data) {
+                            applicant = Array.isArray(applicant.data) ? applicant.data[0] : applicant.data;
+                          }
+                        
+                        let oi = applicant.other_information || {};
+                        if (typeof oi === 'string') oi = JSON.parse(oi);
+                        let fb = applicant.family_background || {};
+                        if (typeof fb === 'string') fb = JSON.parse(fb);
+                        
+                        let edParsed = applicant.educational_background || [];
+                        if (typeof edParsed === 'string') edParsed = JSON.parse(edParsed);
+                        const newEd: any = {};
+                        if (Array.isArray(edParsed)) {
+                          edParsed.forEach((ed: any, idx: number) => {
+                            const levelMap: any = { 'ELEMENTARY': 'elementary', 'SECONDARY': 'secondary', 'VOCATIONAL': 'vocational', 'COLLEGE': 'college', 'GRADUATE': 'graduate' };
+                            const fallbackLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate'];
+                            let matchedLevel = '';
+                            if (ed.level && levelMap[ed.level.toUpperCase()]) matchedLevel = levelMap[ed.level.toUpperCase()];
+                            else if (idx < fallbackLevels.length) matchedLevel = fallbackLevels[idx];
+                            if (matchedLevel) {
+                              newEd[matchedLevel] = {
+                                school: ed.school || ed.school_name || '',
+                                degree: ed.degree || ed.degree_course || '',
+                                from: ed.from || ed.period_from || ed.attendance_from || '',
+                                to: ed.to || ed.period_to || ed.attendance_to || '',
+                                units: ed.units || ed.highest_level || '',
+                                year: ed.year || ed.year_graduated || '',
+                                honors: ed.honors || ed.honors_received || ''
+                              };
+                            }
+                          });
+                        }
+                        
+                        const payload: any = {
+                          surname: applicant.surname,
+                          firstName: applicant.first_name,
+                          middleName: applicant.middle_name,
+                          nameExtension: applicant.name_extension,
+                          dateOfBirth: applicant.date_of_birth,
+                          emailAddress: applicant.email_address,
+                          ...oi,
+                          ...fb,
+                          familyBackground: { children: fb.children || [] },
+                          educationalDates: newEd,
+                          civilServiceList: typeof applicant.civil_service_eligibility === 'string' ? JSON.parse(applicant.civil_service_eligibility) : applicant.civil_service_eligibility || [],
+                          workExperienceList: typeof applicant.work_experience === 'string' ? JSON.parse(applicant.work_experience) : applicant.work_experience || [],
+                          voluntaryWorkList: typeof applicant.voluntary_work === 'string' ? JSON.parse(applicant.voluntary_work) : applicant.voluntary_work || [],
+                          learningDevelopmentList: typeof applicant.training_programs === 'string' ? JSON.parse(applicant.training_programs) : applicant.training_programs || [],
+                        };
+                        
+                        if (oi.special_skills) payload.skillsList = oi.special_skills;
+                        if (oi.distinctions) payload.distinctionsList = oi.distinctions;
+                        if (oi.memberships) payload.membershipsList = oi.memberships;
+                        if (oi.references) payload.referencesList = oi.references;
+                        if (oi.government_id) payload.governmentId = oi.government_id;
+                        
+                        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/convert-pds-v2`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload)
+                        });
+                        
+                        if (!res.ok) throw new Error('Failed to generate PDS');
+                        
+                        const contentType = res.headers.get('Content-Type');
+                        const ext = contentType?.includes('pdf') ? 'pdf' : 'xlsx';
+                        
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
+                        const cleanLastName = (applicant.surname || 'Name').replace(/[^a-zA-Z0-9]/g, '');
+                        a.download = `PDS_${cleanFirstName}_${cleanLastName}.${ext}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        Swal.close();
+                      } catch (err) {
+                        console.error(err);
+                        Swal.fire('Error', 'Failed to generate PDS', 'error');
+                      }
+                    }}
                   className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
                 >
                   PRINT PDS

@@ -412,4 +412,34 @@ router.post('/convert-pds-v2', async (req, res) => {
   }
 });
 
+router.get('/:id/print-pds', async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return next();
+  try {
+    const applicantId = id;
+    const applicant = await ApplicantsService.findOne(applicantId);
+    if (!applicant) {
+      return res.status(404).send('Applicant not found');
+    }
+    
+    const path = require('path');
+    const fs = require('fs');
+    // Go up from dist/applicants/applicants.routes.js to frontend/src/assets
+    const templatePath = path.join(__dirname, '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx');
+    
+    if (!fs.existsSync(templatePath)) {
+       return res.status(500).send("Excel template not found at: " + templatePath);
+    }
+    
+    const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
+    const cleanLastName = (applicant.surname || applicant.last_name || 'Name').replace(/[^a-zA-Z0-9]/g, '');
+    const fileName = `PDS_${cleanFirstName}_${cleanLastName}.xlsx`;
+    
+    res.download(templatePath, fileName);
+  } catch (error: any) {
+    console.error("Error generating PDS:", error);
+    res.status(500).send(`Error generating Personal Data Sheet: ${error.message} - ${error.stack}`);
+  }
+});
+
 export default router;
