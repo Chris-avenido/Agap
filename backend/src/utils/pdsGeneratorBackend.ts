@@ -133,16 +133,16 @@ export const generatePDSBackend = async (applicantData: any) => {
   write(sheetC1, 'D38', family.spouse?.middle_name || family.spouse?.middleName || family.spouseMiddle);
   write(sheetC1, 'N37', family.spouse?.name_extension || family.spouse?.nameExtension || family.spouseExt);
   write(sheetC1, 'D39', family.spouse?.occupation || family.spouseOccupation);
-  write(sheetC1, 'D40', family.spouse?.employer || family.spouse?.employer_business || family.spouseEmployer);
+  write(sheetC1, 'D40', applicantData.spouse_employer_business || family.spouse?.employer_business_name || family.spouse?.employer || family.spouse?.employer_business || family.spouseEmployer);
   write(sheetC1, 'D41', family.spouse?.business_address || family.spouseBusAddress);
-  write(sheetC1, 'D42', family.spouse?.telephone || family.spouseTelephone);
+  write(sheetC1, 'D42', applicantData.spouse_telephone || family.spouse?.telephone_no || family.spouse?.telephone || family.spouseTelephone);
   
   write(sheetC1, 'D43', family.father?.surname || family.fatherSurname);
   write(sheetC1, 'D44', family.father?.first_name || family.father?.firstName || family.fatherFirst);
   write(sheetC1, 'D45', family.father?.middle_name || family.father?.middleName || family.fatherMiddle);
   write(sheetC1, 'N44', family.father?.name_extension || family.father?.nameExtension || family.fatherExt);
   
-  write(sheetC1, 'D47', family.mother?.maiden_surname || family.mother?.surname || family.motherSurname);
+  write(sheetC1, 'D47', applicantData.mother_maiden_surname || family.mother?.maiden_surname || family.mother?.surname || family.motherSurname);
   write(sheetC1, 'D48', family.mother?.first_name || family.mother?.firstName || family.motherFirst);
   write(sheetC1, 'D49', family.mother?.middle_name || family.mother?.middleName || family.motherMiddle);
 
@@ -180,7 +180,7 @@ export const generatePDSBackend = async (applicantData: any) => {
   };
 
   // Children
-  const children = (applicantData.other_information && applicantData.other_information.children) || applicantData.children || [];
+  const children = applicantData.children_details ? (typeof applicantData.children_details === 'string' ? JSON.parse(applicantData.children_details) : applicantData.children_details) : ((applicantData.other_information && applicantData.other_information.children) || applicantData.children || []);
   populateArray(sheetC1, children, {
     startRow: 37, endRow: 48, columns: { name: 'I', dateOfBirth: 'M' }
   });
@@ -209,26 +209,48 @@ export const generatePDSBackend = async (applicantData: any) => {
   populateArray(sheetC3, otherInfo.memberships || applicantData.membershipsList, { startRow: 42, endRow: 48, columns: { value: 'J' } });
 
   // --- SHEET C4 ---
-  populateArray(sheetC4, otherInfo.references || applicantData.referencesList, {
+  // Questionnaire Form Controls & Fallback Data
+  let q = applicantData.questionnaire_responses || applicantData.questionnaire || {};
+  if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = {}; } }
+
+  const fallbackReferences = [];
+  if (q.ref1_name) fallbackReferences.push({ name: q.ref1_name, address: q.ref1_address, telephone: q.ref1_tel });
+  if (q.ref2_name) fallbackReferences.push({ name: q.ref2_name, address: q.ref2_address, telephone: q.ref2_tel });
+  if (q.ref3_name) fallbackReferences.push({ name: q.ref3_name, address: q.ref3_address, telephone: q.ref3_tel });
+
+  const referencesToUse = (otherInfo.references && otherInfo.references.length > 0) 
+    ? otherInfo.references 
+    : (applicantData.referencesList && applicantData.referencesList.length > 0 ? applicantData.referencesList : fallbackReferences);
+
+  populateArray(sheetC4, referencesToUse, {
     startRow: 52, endRow: 54, columns: { name: 'A', address: 'F', telephone: 'G' }
   });
 
   // Government ID
-  const govId = otherInfo.governmentId || {};
+  const govId = Object.keys(otherInfo.governmentId || {}).length > 0 ? otherInfo.governmentId : {
+    type: q.gov_id_type,
+    idNo: q.gov_id_no,
+    datePlace: q.gov_id_issuance
+  };
   write(sheetC4, 'D61', govId.type || '');
   write(sheetC4, 'D62', govId.idNo || '');
   write(sheetC4, 'D64', govId.datePlace || '');
-
-  // Questionnaire Form Controls
-  const q = applicantData.questionnaire_responses || applicantData.questionnaire || {};
   
   const isYes = (val: any) => {
     if (val && typeof val === 'object') val = val.answer;
-    return val === true || val === 'Yes' || val === 'Y' || val === 'true' || val === 'YES';
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      return lower === 'yes' || lower === 'y' || lower === 'true';
+    }
+    return val === true;
   };
   const isNo = (val: any) => {
     if (val && typeof val === 'object') val = val.answer;
-    return val === false || val === 'No' || val === 'N' || val === 'false' || val === 'NO';
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      return lower === 'no' || lower === 'n' || lower === 'false';
+    }
+    return val === false;
   };
 
   await toggleFormControl(workbook, 13, isYes(q.q34a || q['34a']));
@@ -281,3 +303,44 @@ export const generatePDSBackend = async (applicantData: any) => {
   const outBuffer = await workbook.outputAsync();
   return { buffer: outBuffer, logs };
 };
+
+export const generateExperienceBackend = async (applicantData: any) => {
+  const templatePath = path.join(__dirname, '../../../frontend/src/assets/experience.xlsx');
+
+  if (!fs.existsSync(templatePath)) {
+    throw new Error("Excel template not found at: " + templatePath);
+  }
+
+  const workbook = await XlsxPopulate.fromFileAsync(templatePath);
+  const sheet = workbook.sheet(0);
+
+  const write = (sheet: any, cell: string, value: any) => {
+    if (value !== undefined && value !== null && value !== '') {
+      if (typeof value === 'object') {
+        sheet.cell(cell).value(JSON.stringify(value));
+      } else {
+        sheet.cell(cell).value(value);
+      }
+    }
+  };
+
+  const populateArray = (sheet: any, list: any[], config: any) => {
+    if (!list || !Array.isArray(list)) return;
+    let currentRow = config.startRow;
+    for (const item of list) {
+      if (currentRow > config.endRow) break;
+      for (const [key, col] of Object.entries(config.columns)) {
+        write(sheet, `${col}${currentRow}`, item[key]);
+      }
+      currentRow++;
+    }
+  };
+
+  populateArray(sheet, applicantData.work_experience || applicantData.workExperienceList, {
+    startRow: 8, endRow: 35, columns: { fromDate: 'A', toDate: 'C', positionTitle: 'D', company: 'G', statusOfAppointment: 'J', govtService: 'K' }
+  });
+
+  const outBuffer = await workbook.outputAsync();
+  return { buffer: outBuffer };
+};
+

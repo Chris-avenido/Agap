@@ -1262,7 +1262,69 @@ export default function ApplicantJobList() {
                   PRINT PDS
                 </button>
               )}
-              <button className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm">
+              <button 
+                onClick={() => {
+                  Swal.fire({
+                    title: 'Download Experience Sheet?',
+                    text: 'Do you want to download your Work Experience Sheet?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, download it!'
+                  }).then(async (result) => {
+                    if (result.isConfirmed) {
+                      try {
+                        const session = JSON.parse(localStorage.getItem('session_data') || '{}');
+                        if (!session.id) return;
+                        
+                        Swal.fire({
+                          title: 'Generating Experience Sheet...',
+                          text: 'Please wait while we generate your document.',
+                          allowOutsideClick: false,
+                          didOpen: () => Swal.showLoading()
+                        });
+                        
+                        const resDb = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`);
+                        const dataDb = await resDb.json();
+                        let applicant = Array.isArray(dataDb) ? dataDb[0] : dataDb;
+                        if (applicant && applicant.success && applicant.data) {
+                          applicant = Array.isArray(applicant.data) ? applicant.data[0] : applicant.data;
+                        }
+
+                        const payload = {
+                          workExperienceList: typeof applicant.work_experience === 'string' ? JSON.parse(applicant.work_experience) : applicant.work_experience || []
+                        };
+
+                        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/convert-experience`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload)
+                        });
+                        
+                        if (!res.ok) throw new Error('Failed to generate Experience Sheet');
+                        
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
+                        const cleanLastName = (applicant.surname || 'Name').replace(/[^a-zA-Z0-9]/g, '');
+                        a.download = `Work_Experience_${cleanFirstName}_${cleanLastName}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        Swal.close();
+                      } catch (err) {
+                        console.error(err);
+                        Swal.fire('Error', 'Failed to generate Experience Sheet', 'error');
+                      }
+                    }
+                  });
+                }}
+                className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
+              >
                 WORK EXPERIENCE SHEET
               </button>
             </div>

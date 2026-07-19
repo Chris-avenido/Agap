@@ -400,6 +400,25 @@ router.post('/convert-pds-v2', async (req, res) => {
   }
 });
 
+router.post('/convert-experience', async (req, res) => {
+  try {
+    const { generateExperienceBackend } = require('../utils/pdsGeneratorBackend');
+    const applicantData = req.body;
+    if (!applicantData) {
+      return res.status(400).json({ message: 'No applicant data provided' });
+    }
+
+    const { buffer } = await generateExperienceBackend(applicantData);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=experience.xlsx');
+    res.send(buffer);
+  } catch (error: any) {
+    console.error("Error generating Experience Sheet:", error);
+    res.status(500).json({ message: error.message || 'Error generating Experience Sheet' });
+  }
+});
+
 router.get('/:id/print-pds', async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return next();
