@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Swal from "sweetalert2";
 import {
   X,
@@ -29,10 +29,17 @@ export default function ApplicationModal({
   jobTitle,
   jobId,
 }: ApplicationModalProps) {
+  const isRegistrationFlow = jobTitle === "General Registration";
   const [activeTab, setActiveTab] = useState("C1");
   const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+    if (isRegistrationFlow) {
+      setUserData(null);
+      return;
+    }
+
     const sessionStr = localStorage.getItem("session_data");
     if (sessionStr) {
       const session = JSON.parse(sessionStr);
@@ -44,9 +51,59 @@ export default function ApplicationModal({
           }
         });
     }
-  }, []);
+  }, [isOpen, isRegistrationFlow]);
 
   const formRef = useRef<HTMLFormElement>(null);
+  const [formVersion, setFormVersion] = useState(0);
+  const [selectedDocumentNames, setSelectedDocumentNames] = useState<Record<string, string>>({});
+  const formProgressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleFormProgressRefresh = useCallback(() => {
+    if (formProgressTimerRef.current) {
+      clearTimeout(formProgressTimerRef.current);
+    }
+
+    formProgressTimerRef.current = setTimeout(() => {
+      setFormVersion((v) => v + 1);
+      formProgressTimerRef.current = null;
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (formProgressTimerRef.current) {
+        clearTimeout(formProgressTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("C1");
+      setSelectedDocumentNames({});
+      scheduleFormProgressRefresh();
+    }
+  }, [isOpen, scheduleFormProgressRefresh]);
+
+  useEffect(() => {
+    scheduleFormProgressRefresh();
+  }, [userData, scheduleFormProgressRefresh]);
+
+  const handleDocumentSelection = useCallback((documentLabel: string) => (e: any) => {
+    const file = e.target.files?.[0];
+
+    setSelectedDocumentNames((prev) => {
+      const next = { ...prev };
+      if (file) {
+        next[documentLabel] = file.name;
+      } else {
+        delete next[documentLabel];
+      }
+      return next;
+    });
+
+    scheduleFormProgressRefresh();
+  }, [scheduleFormProgressRefresh]);
 
   const [resRegion, setResRegion] = useState("");
   const [resProvince, setResProvince] = useState("");
@@ -137,25 +194,31 @@ export default function ApplicationModal({
     }
   };
 
-  const resProvincesList = resRegion
-    ? provinces.filter((p: any) => p.reg_code === resRegion)
-    : [];
-  const resCitiesList = resProvince
-    ? city_mun.filter((c: any) => c.prov_code === resProvince)
-    : [];
-  const resBarangaysList = resCity
-    ? barangays.filter((b: any) => b.mun_code === resCity)
-    : [];
+  const resProvincesList = useMemo(
+    () => (resRegion ? provinces.filter((p: any) => p.reg_code === resRegion) : []),
+    [resRegion],
+  );
+  const resCitiesList = useMemo(
+    () => (resProvince ? city_mun.filter((c: any) => c.prov_code === resProvince) : []),
+    [resProvince],
+  );
+  const resBarangaysList = useMemo(
+    () => (resCity ? barangays.filter((b: any) => b.mun_code === resCity) : []),
+    [resCity],
+  );
 
-  const permProvincesList = permRegion
-    ? provinces.filter((p: any) => p.reg_code === permRegion)
-    : [];
-  const permCitiesList = permProvince
-    ? city_mun.filter((c: any) => c.prov_code === permProvince)
-    : [];
-  const permBarangaysList = permCity
-    ? barangays.filter((b: any) => b.mun_code === permCity)
-    : [];
+  const permProvincesList = useMemo(
+    () => (permRegion ? provinces.filter((p: any) => p.reg_code === permRegion) : []),
+    [permRegion],
+  );
+  const permCitiesList = useMemo(
+    () => (permProvince ? city_mun.filter((c: any) => c.prov_code === permProvince) : []),
+    [permProvince],
+  );
+  const permBarangaysList = useMemo(
+    () => (permCity ? barangays.filter((b: any) => b.mun_code === permCity) : []),
+    [permCity],
+  );
 
   useEffect(() => {
     if (userData) {
@@ -332,14 +395,180 @@ export default function ApplicationModal({
       : userData.other_information
     : {};
 
+  const storedDocuments = isRegistrationFlow ? {} : otherInfo?.documents || {};
+
   const getDocUrl = (docName: string) => {
-    const url = otherInfo?.documents?.[docName];
+    const url = storedDocuments?.[docName];
     if (!url) return null;
     if (url.startsWith("http")) {
       return `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(url)}`;
     }
     return url;
   };
+
+  const getStoredDocFileName = (docName: string) => {
+    const url = storedDocuments?.[docName];
+    if (!url || typeof url !== "string") return "";
+
+    const rawFileName = url.split("?")[0].split("/").pop() || "";
+    try {
+      return decodeURIComponent(rawFileName);
+    } catch {
+      return rawFileName;
+    }
+  };
+
+  const requiredDocuments = useMemo(() => [
+    { label: 'Personal Data Sheet', inputName: 'doc_pds' },
+    { label: 'Work Experience Sheet', inputName: 'doc_work_exp' },
+    { label: 'Certificate of Eligibility', inputName: 'doc_eligibility' },
+    { label: 'Transcript of Records', inputName: 'doc_tor' },
+    { label: 'Updated PRC License/ID', inputName: 'doc_prc' },
+    { label: 'Resume', inputName: 'doc_resume' },
+    { label: 'Letter of Intent', inputName: 'doc_loi' }
+  ], []);
+
+  const completedSteps = useMemo(() => {
+    const _v = formVersion;
+    
+    const fd = formRef.current ? new FormData(formRef.current) : null;
+    const getVal = (name: string, fallback: any) => {
+      if (fd && fd.has(name)) return fd.get(name) as string;
+      return fallback;
+    };
+
+    const steps: string[] = [];
+    
+    // Personal Information
+    if (getVal('first_name', userData?.first_name)?.trim() && 
+        getVal('surname', userData?.surname)?.trim() && 
+        getVal('place_of_birth', userData?.place_of_birth)?.trim() && 
+        sex && 
+        getVal('civil_status', userData?.civil_status) && 
+        getVal('citizenship', userData?.citizenship)) {
+      steps.push('Personal Information');
+    }
+    
+    // Family Background
+    if (getVal('spouse_surname', familyBackground?.spouse?.surname)?.trim() || 
+        getVal('spouse_first', familyBackground?.spouse?.first_name)?.trim() || 
+        getVal('father_surname', familyBackground?.father?.surname)?.trim() || 
+        getVal('mother_surname', familyBackground?.mother?.surname)?.trim() ||
+        getVal('mother_first', familyBackground?.mother?.first_name)?.trim() ||
+        getVal('father_first', familyBackground?.father?.first_name)?.trim()) {
+      steps.push('Family Background');
+    }
+    
+    // Educational Background
+    const levels = ["elementary", "secondary", "vocational", "college", "graduate"];
+    const hasSchool = levels.some(lvl => {
+      const dbSchool = eduBg?.find((e:any) => e.level?.toLowerCase().startsWith(lvl))?.school;
+      return getVal(`edu_${lvl}_school`, dbSchool)?.trim();
+    });
+    if (hasSchool) steps.push('Educational Background');
+    
+    // Eligibility
+    if (civilServiceList?.length > 0 && civilServiceList.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
+    
+    // Work Experience
+    if (workExperienceList?.length > 0 && workExperienceList.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
+    
+    // Voluntary Work
+    if (voluntaryWorkList?.length > 0 && voluntaryWorkList.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
+    
+    // Learning & Development
+    if (learningDevelopmentList?.length > 0 && learningDevelopmentList.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
+    
+    // Other Information
+    if ((skillsList?.length > 0 && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : s.value?.trim() !== '')) || 
+        (distinctionsList?.length > 0 && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : d.value?.trim() !== '')) || 
+        (membershipsList?.length > 0 && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : m.value?.trim() !== ''))) steps.push('Other Information');
+        
+    // Legal Questionnaire
+    if (getVal('q34a', qRes?.q34a) || getVal('q35a', qRes?.q35a) || getVal('q36', qRes?.q36)) steps.push('Legal Questionnaire');
+
+    const hasSelectedFile = (inputName: string) => {
+      const file = fd?.get(inputName);
+      return file instanceof File && file.size > 0;
+    };
+    const hasAllDocs = requiredDocuments
+      .filter(doc => doc.label !== 'Letter of Intent')
+      .every(doc => storedDocuments[doc.label] || selectedDocumentNames[doc.label] || hasSelectedFile(doc.inputName));
+    if (hasAllDocs) steps.push('Essential Documents');
+
+    if (storedDocuments['Letter of Intent'] || selectedDocumentNames['Letter of Intent'] || hasSelectedFile('doc_loi')) {
+      steps.push('Letter of Intent');
+    }
+
+    return steps;
+  }, [
+    userData, familyBackground, eduBg, civilServiceList, workExperienceList, 
+    voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList, 
+    membershipsList, qRes, storedDocuments, sex, formVersion, selectedDocumentNames, requiredDocuments
+  ]);
+
+  const completionStats = useMemo(() => {
+    const _v = formVersion;
+    const form = formRef.current;
+    let completedFields = 0;
+    let totalFields = 0;
+
+    if (form) {
+      const controls = Array.from(
+        form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+          "input[required], select[required], textarea[required]"
+        )
+      );
+      const countedRadioGroups = new Set<string>();
+
+      controls.forEach((control) => {
+        if (control.disabled) return;
+        if (control instanceof HTMLInputElement && control.type === "file") return;
+        if (control instanceof HTMLInputElement && control.type === "hidden") return;
+
+        if (control instanceof HTMLInputElement && control.type === "radio") {
+          if (!control.name || countedRadioGroups.has(control.name)) return;
+          countedRadioGroups.add(control.name);
+          const radioGroup = Array.from(form.querySelectorAll<HTMLInputElement>("input[type='radio']"))
+            .filter((radio) => radio.name === control.name);
+          totalFields += 1;
+          if (radioGroup.some((radio) => radio.checked)) completedFields += 1;
+          return;
+        }
+
+        if (control instanceof HTMLInputElement && control.type === "checkbox") {
+          totalFields += 1;
+          if (control.checked) completedFields += 1;
+          return;
+        }
+
+        totalFields += 1;
+        if (String(control.value || "").trim()) completedFields += 1;
+      });
+    }
+
+    totalFields += 1;
+    if (sex) completedFields += 1;
+
+    const fd = form ? new FormData(form) : null;
+    const hasSelectedFile = (inputName: string) => {
+      const file = fd?.get(inputName);
+      return file instanceof File && file.size > 0;
+    };
+
+    const completedDocuments = requiredDocuments.filter(
+      (doc) => storedDocuments[doc.label] || selectedDocumentNames[doc.label] || hasSelectedFile(doc.inputName)
+    ).length;
+
+    return {
+      completed: completedFields + completedDocuments,
+      total: totalFields + requiredDocuments.length,
+    };
+  }, [formVersion, requiredDocuments, selectedDocumentNames, sex, storedDocuments]);
+
+  const percentage = completionStats.total > 0
+    ? ((completionStats.completed / completionStats.total) * 100).toFixed(2)
+    : "0.00";
 
   if (!isOpen) return null;
 
@@ -472,25 +701,31 @@ export default function ApplicationModal({
                 </span>
               </div>
             </div>
-            {getDocUrl("Letter of Intent") ? (
+            {(getDocUrl("Letter of Intent") || selectedDocumentNames["Letter of Intent"]) ? (
               <div className="flex flex-col gap-2 w-full mt-2">
                 <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
-                  &#10003; Uploaded
+                  {selectedDocumentNames["Letter of Intent"]
+                    ? `Selected: ${selectedDocumentNames["Letter of Intent"]}`
+                    : getStoredDocFileName("Letter of Intent")
+                      ? `Uploaded: ${getStoredDocFileName("Letter of Intent")}`
+                      : "Uploaded"}
                 </span>
                 <div className="flex flex-col gap-2">
-                  <a href={getDocUrl("Letter of Intent") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                    View File
-                  </a>
+                  {getDocUrl("Letter of Intent") && (
+                    <a href={getDocUrl("Letter of Intent") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                      View File
+                    </a>
+                  )}
                   <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
                     Replace File
-                    <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
+                    <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" onChange={handleDocumentSelection("Letter of Intent")} />
                   </label>
                 </div>
               </div>
             ) : (
               <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
                 Upload Now
-                <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" />
+                <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" onChange={handleDocumentSelection("Letter of Intent")} />
               </label>
             )}
           </div>
@@ -506,10 +741,12 @@ export default function ApplicationModal({
               </div>
               <div className="flex flex-col">
                 <h2 className="text-[14px] md:text-[15px] font-bold text-[#1b5e20]">
-                  Ready to Submit
+                  {parseFloat(percentage) >= 100 ? "Ready to Submit" : "Complete your Profile"}
                 </h2>
                 <p className="text-xs md:text-sm text-[#2e7d32] font-medium leading-snug">
-                  Your profile is fully complete! You can now save or submit your application.
+                  {parseFloat(percentage) >= 100 
+                    ? "Your profile is fully complete! You can now save or submit your application." 
+                    : "Please fill out all required fields and upload all necessary documents."}
                 </p>
               </div>
             </div>
@@ -520,13 +757,13 @@ export default function ApplicationModal({
                   Progress
                 </span>
                 <span className="text-[11px] font-extrabold text-[#1b5e20]">
-                  100.00%
+                  {percentage}%
                 </span>
               </div>
               <div className="w-full bg-[#bbf7d0] h-2.5 rounded-full overflow-hidden">
                 <div
                   className="bg-[#2e7d32] h-full transition-all duration-500 rounded-full"
-                  style={{ width: `100%` }}
+                  style={{ width: `${percentage}%` }}
                 ></div>
               </div>
             </div>
@@ -542,6 +779,7 @@ export default function ApplicationModal({
               key={userData ? "loaded" : "loading"}
               id="application-form"
               ref={formRef}
+              onChange={scheduleFormProgressRefresh}
               className="space-y-4 md:space-y-6 w-full"
             >
               {/* C1: Personal Information */}
@@ -1199,6 +1437,7 @@ export default function ApplicationModal({
                       <input
                         name="email"
                         required
+                        autoComplete="email"
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
                         type="email"
                         defaultValue={
@@ -1212,6 +1451,7 @@ export default function ApplicationModal({
                       </span>
                       <input name="alternate_email"
                         placeholder="Enter alternate email"
+                        autoComplete="email"
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         type="email"
                         defaultValue={otherInfo?.alternate_email || ""}
@@ -1232,6 +1472,7 @@ export default function ApplicationModal({
                         <input
                           name="password"
                           required
+                          autoComplete="new-password"
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full normal-case"
                           type="password"
                           placeholder="••••••••"
@@ -1244,6 +1485,7 @@ export default function ApplicationModal({
                         <input
                           name="confirm_password"
                           required
+                          autoComplete="new-password"
                           className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full normal-case"
                           type="password"
                           placeholder="••••••••"
@@ -1360,7 +1602,7 @@ export default function ApplicationModal({
                         </div>
                         <div className="flex-1 flex flex-col justify-between h-full">
                           <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
-                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(e: any) => { const n = [...childrenList]; n[idx].dob = e.target.value; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(val: any) => { const n = [...childrenList]; n[idx].dob = val; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                         </div>
                         <button type="button" onClick={() => setChildrenList(childrenList.filter((_: any, i: number) => i !== idx))} className="h-[42px] px-4 border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded flex items-center justify-center transition-colors bg-white shadow-sm shrink-0">
                           <Trash2 className="w-4 h-4" />
@@ -1779,7 +2021,7 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Date of Examination / Conferment</span>
-                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].date = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(val: any) => { const n = [...civilServiceList]; n[idx].date = val; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
@@ -1795,7 +2037,7 @@ export default function ApplicationModal({
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Date of Validity (if applicable)</span>
-                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].licenseDate = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...civilServiceList]; n[idx].licenseDate = val; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1841,11 +2083,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].fromDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...workExperienceList]; n[idx].fromDate = val; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].toDate = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...workExperienceList]; n[idx].toDate = val; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                         </div>
 
@@ -1951,11 +2193,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].fromDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...voluntaryWorkList]; n[idx].fromDate = val; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...voluntaryWorkList]; n[idx].toDate = e.target.value; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...voluntaryWorkList]; n[idx].toDate = val; setVoluntaryWorkList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
@@ -2021,11 +2263,11 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (From)</span>
-                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].fromDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.fromDate ? item.fromDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...learningDevelopmentList]; n[idx].fromDate = val; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Inclusive Date of Attendance (To)</span>
-                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(e: any) => { const n = [...learningDevelopmentList]; n[idx].toDate = e.target.value; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker value={item.toDate ? item.toDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...learningDevelopmentList]; n[idx].toDate = val; setLearningDevelopmentList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Number of Hours</span>
@@ -2998,3 +3240,10 @@ export default function ApplicationModal({
     </div>
   );
 }
+
+
+
+
+
+
+
