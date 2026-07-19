@@ -538,7 +538,7 @@ export default function ApplicationModal({
     if (form) {
       const controls = Array.from(
         form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-          "input[required], select[required], textarea[required]"
+          "input, select, textarea"
         )
       );
       const countedRadioGroups = new Set<string>();
@@ -547,6 +547,7 @@ export default function ApplicationModal({
         if (control.disabled) return;
         if (control instanceof HTMLInputElement && control.type === "file") return;
         if (control instanceof HTMLInputElement && control.type === "hidden") return;
+        if (control instanceof HTMLInputElement && (control.type === "button" || control.type === "submit")) return;
 
         if (control instanceof HTMLInputElement && control.type === "radio") {
           if (!control.name || countedRadioGroups.has(control.name)) return;
@@ -578,15 +579,29 @@ export default function ApplicationModal({
       return file instanceof File && file.size > 0;
     };
 
-    const completedDocuments = requiredDocuments.filter(
+    const allDocuments = [
+      ...requiredDocuments,
+      { label: 'Diploma (optional)', inputName: 'doc_diploma' },
+      { label: 'Trainings', inputName: 'doc_trainings' }
+    ];
+
+    let completedDocuments = allDocuments.filter(
       (doc) => storedDocuments[doc.label] || selectedDocumentNames[doc.label] || hasSelectedFile(doc.inputName)
     ).length;
 
+    let totalDocs = allDocuments.length;
+    
+    // Also include profile photo in progress
+    totalDocs += 1;
+    if (photoUrl) {
+      completedDocuments += 1;
+    }
+
     return {
       completed: completedFields + completedDocuments,
-      total: totalFields + requiredDocuments.length,
+      total: totalFields + totalDocs,
     };
-  }, [formVersion, requiredDocuments, selectedDocumentNames, sex, storedDocuments]);
+  }, [formVersion, requiredDocuments, selectedDocumentNames, sex, storedDocuments, photoUrl]);
 
   const percentage = completionStats.total > 0
     ? ((completionStats.completed / completionStats.total) * 100).toFixed(2)

@@ -152,15 +152,17 @@ export default function ApplicantDashboard() {
     }
 
     const docs = other.documents || {};
-    const requiredDocs = [
+    const allDocs = [
       'Personal Data Sheet',
       'Work Experience Sheet',
       'Certificate of Eligibility',
       'Transcript of Records',
       'Updated PRC License/ID',
-      'Resume'
+      'Resume',
+      'Diploma (optional)',
+      'Trainings'
     ];
-    const allDocumentsConfirmed = requiredDocs.every(doc => docs[doc]);
+    const allDocumentsConfirmed = allDocs.every(doc => docs[doc]);
 
     const isSubsequentApplication = applications.length > 0;
     
