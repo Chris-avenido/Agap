@@ -16,6 +16,7 @@ import { regions, provinces, city_mun, barangays } from 'phil-reg-prov-mun-brgy'
 import { JobCard, JobTableList } from '../components/JobCards';
 // @ts-ignore
 import ModernDatePicker from "../components/ModernDatePicker";
+import { calculateProfileProgress } from '../utils/profileProgress';
 
 export default function ApplicantJobList() {
   const navigate = useNavigate();
@@ -305,42 +306,21 @@ export default function ApplicantJobList() {
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
   const [governmentId, setGovernmentId] = useState({ type: '', idNo: '', datePlace: '' });
 
-  const completedSteps = useMemo(() => {
-    const steps: string[] = [];
-    if (firstName?.trim() && lastName?.trim() && placeOfBirth?.trim() && sex && civilStatus && citizenship) steps.push('Personal Information');
-    if (motherSurname?.trim() || motherFirst?.trim() || fatherSurname?.trim() || fatherFirst?.trim() || spouseSurname?.trim() || spouseFirst?.trim()) steps.push('Family Background');
-    if (Object.values(educationalDates).some(ed => ed?.school?.trim() !== '')) steps.push('Educational Background');
-    if (civilServiceList?.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
-    if (workExperienceList?.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
-    if (voluntaryWorkList?.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
-    if (learningDevelopmentList?.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
-    if (skillsList?.some((s: any) => s?.value?.trim() !== '') || distinctionsList?.some((d: any) => d?.value?.trim() !== '') || membershipsList?.some((m: any) => m?.value?.trim() !== '')) steps.push('Other Information');
-    if (Object.keys(questionnaire).length > 0) steps.push('Legal Questionnaire');
-
-    const requiredDocs = [
-      'Personal Data Sheet',
-      'Work Experience Sheet',
-      'Certificate of Eligibility',
-      'Transcript of Records',
-      'Updated PRC License/ID',
-      'Resume'
-    ];
-    const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
-    if (isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
-
-    if (uploadedDocumentUrls['Letter of Intent'] || documents['Letter of Intent']) {
-      steps.push('Letter of Intent');
-    }
-
-    return steps;
+  const { steps: completedSteps, percentage, totalSteps: progressTotalSteps } = useMemo(() => {
+    return calculateProfileProgress({
+      firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
+      motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
+      educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
+      skillsList, distinctionsList, membershipsList, questionnaire, documentsConfirmed,
+      isSubsequentApplication, uploadedDocumentUrls, documents
+    });
   }, [
     firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
     motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
     educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
-    skillsList, distinctionsList, membershipsList, questionnaire, isSubsequentApplication, documentsConfirmed
+    skillsList, distinctionsList, membershipsList, questionnaire, isSubsequentApplication, documentsConfirmed,
+    uploadedDocumentUrls, documents
   ]);
-
-  const percentage = ((completedSteps.length / totalSteps) * 100).toFixed(2);
 
   const handleLetterOfIntentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

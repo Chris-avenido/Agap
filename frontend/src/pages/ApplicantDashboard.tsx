@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Briefcase, CheckCircle2, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 
@@ -75,110 +76,10 @@ export default function ApplicantDashboard() {
      photoUrl = otherInfo.photoUrl;
   }
 
-  const calculateProgress = () => {
-    if (!profile) return "0.00";
-    
-    let completedSteps = 0;
-    
-    const parseJSON = (val: any, fallback: any) => {
-      if (!val) return fallback;
-      if (typeof val === 'string') {
-        try { return JSON.parse(val); } catch { return fallback; }
-      }
-      return val;
-    };
-
-    if (
-      profile.first_name?.trim() && 
-      profile.surname?.trim() && 
-      profile.place_of_birth?.trim() && 
-      profile.sex && 
-      profile.civil_status && 
-      profile.citizenship
-    ) {
-      completedSteps++;
-    }
-
-    const family = parseJSON(profile.family_background, {});
-    const education = parseJSON(profile.educational_background, {});
-    const eligibility = parseJSON(profile.civil_service_eligibility, []);
-    const work = parseJSON(profile.work_experience, []);
-    const voluntary = parseJSON(profile.voluntary_work, []);
-    const learning = parseJSON(profile.learning_development, []);
-    const other = parseJSON(profile.other_information, {});
-    const questionnaire = parseJSON(profile.questionnaire_responses, {});
-
-    if (
-      family.mother_surname?.trim() || family.mother_first_name?.trim() || 
-      family.father_surname?.trim() || family.father_first_name?.trim() || 
-      family.spouse_surname?.trim() || family.spouse_first_name?.trim()
-    ) {
-      completedSteps++;
-    }
-
-    if (Object.values(education).some((ed: any) => ed?.school?.trim() !== '')) {
-      completedSteps++;
-    }
-
-    if (Array.isArray(eligibility) && eligibility.some((cs: any) => cs?.eligibility?.trim() !== '')) {
-      completedSteps++;
-    }
-
-    if (Array.isArray(work) && work.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) {
-      completedSteps++;
-    }
-
-    if (Array.isArray(voluntary) && voluntary.some((vw: any) => vw?.nameAddress?.trim() !== '')) {
-      completedSteps++;
-    }
-
-    if (Array.isArray(learning) && learning.some((ld: any) => ld?.title?.trim() !== '')) {
-      completedSteps++;
-    }
-
-    const skills = other.skills || [];
-    const distinctions = other.distinctions || [];
-    const memberships = other.memberships || [];
-    if (
-      (Array.isArray(skills) && skills.some((s: any) => s?.value?.trim() !== '')) || 
-      (Array.isArray(distinctions) && distinctions.some((d: any) => d?.value?.trim() !== '')) || 
-      (Array.isArray(memberships) && memberships.some((m: any) => m?.value?.trim() !== ''))
-    ) {
-      completedSteps++;
-    }
-
-    if (Object.keys(questionnaire).length > 0) {
-      completedSteps++;
-    }
-
-    const docs = other.documents || {};
-    const allDocs = [
-      'Personal Data Sheet',
-      'Work Experience Sheet',
-      'Certificate of Eligibility',
-      'Transcript of Records',
-      'Updated PRC License/ID',
-      'Resume',
-      'Diploma (optional)',
-      'Trainings'
-    ];
-    const allDocumentsConfirmed = allDocs.every(doc => docs[doc]);
-
-    const isSubsequentApplication = applications.length > 0;
-    
-    if (isSubsequentApplication && allDocumentsConfirmed) {
-      completedSteps++;
-    }
-
-    if (docs['Letter of Intent']) {
-      completedSteps++;
-    }
-
-    const totalSteps = isSubsequentApplication ? 11 : 10;
-    return ((completedSteps / totalSteps) * 100).toFixed(2);
-  };
-
-  const progressPercentage = calculateProgress();
+  const { percentage: progressPercentage } = calculateProfileProgress({
+    ...parseProfileToState(profile),
+    isSubsequentApplication: applications.length > 0
+  });
 
   return (
     <div 
