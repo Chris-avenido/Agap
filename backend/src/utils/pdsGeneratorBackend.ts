@@ -213,7 +213,7 @@ export const generatePDSBackend = async (applicantData: any) => {
   let q = applicantData.questionnaire_responses || applicantData.questionnaire || {};
   if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = {}; } }
 
-  const fallbackReferences = [];
+  const fallbackReferences: any[] = [];
   if (q.ref1_name) fallbackReferences.push({ name: q.ref1_name, address: q.ref1_address, telephone: q.ref1_tel });
   if (q.ref2_name) fallbackReferences.push({ name: q.ref2_name, address: q.ref2_address, telephone: q.ref2_tel });
   if (q.ref3_name) fallbackReferences.push({ name: q.ref3_name, address: q.ref3_address, telephone: q.ref3_tel });
