@@ -56,6 +56,7 @@ export default function ApplicationModal({
   const formRef = useRef<HTMLFormElement>(null);
   const [formVersion, setFormVersion] = useState(0);
   const [selectedDocumentNames, setSelectedDocumentNames] = useState<Record<string, string>>({});
+  const [selectedDocumentUrls, setSelectedDocumentUrls] = useState<Record<string, string>>({});
   const formProgressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleFormProgressRefresh = useCallback(() => {
@@ -81,6 +82,7 @@ export default function ApplicationModal({
     if (isOpen) {
       setActiveTab("C1");
       setSelectedDocumentNames({});
+      setSelectedDocumentUrls({});
       scheduleFormProgressRefresh();
     }
   }, [isOpen, scheduleFormProgressRefresh]);
@@ -711,8 +713,8 @@ export default function ApplicationModal({
                       : "Uploaded"}
                 </span>
                 <div className="flex flex-col gap-2">
-                  {getDocUrl("Letter of Intent") && (
-                    <a href={getDocUrl("Letter of Intent") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
+                  {(selectedDocumentUrls["Letter of Intent"] || getDocUrl("Letter of Intent")) && (
+                    <a href={(selectedDocumentUrls["Letter of Intent"] || getDocUrl("Letter of Intent")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
                       View File
                     </a>
                   )}
@@ -1454,7 +1456,7 @@ export default function ApplicationModal({
                         autoComplete="email"
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
                         type="email"
-                        defaultValue={otherInfo?.alternate_email || ""}
+                        defaultValue={userData?.alternate_email || ""}
                       />
                     </div>
                   </div>
@@ -2692,7 +2694,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Personal Data Sheet") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Personal Data Sheet"] || getDocUrl("Personal Data Sheet")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2717,7 +2719,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Work Experience Sheet") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Work Experience Sheet"] || getDocUrl("Work Experience Sheet")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2742,7 +2744,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Certificate of Eligibility") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Certificate of Eligibility"] || getDocUrl("Certificate of Eligibility")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2767,7 +2769,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Transcript of Records") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Transcript of Records"] || getDocUrl("Transcript of Records")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2792,7 +2794,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Updated PRC License/ID") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Updated PRC License/ID"] || getDocUrl("Updated PRC License/ID")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2818,7 +2820,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Trainings") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Trainings"] || getDocUrl("Trainings")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2842,7 +2844,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Diploma (optional)") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Diploma (optional)"] || getDocUrl("Diploma (optional)")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2867,7 +2869,7 @@ export default function ApplicationModal({
                             &#10003; Uploaded
                           </span>
                           <div className="flex gap-2 w-full">
-                            <a href={getDocUrl("Resume") as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                            <a href={(selectedDocumentUrls["Resume"] || getDocUrl("Resume")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
@@ -2931,6 +2933,14 @@ export default function ApplicationModal({
                       const rawData = Object.fromEntries(formData.entries());
                       const data: any = { ...rawData };
 
+                      if (jobTitle === "General Registration" && !data.password) {
+                        Swal.fire("Error", "Password is required!", "error");
+                        return;
+                      }
+                      if (jobTitle === "General Registration" && !data.date_of_birth) {
+                        Swal.fire("Error", "Date of Birth is required!", "error");
+                        return;
+                      }
                       if (data.password && data.password !== data.confirm_password) {
                         Swal.fire("Error", "Passwords do not match!", "error");
                         return;

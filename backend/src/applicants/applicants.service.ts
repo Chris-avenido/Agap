@@ -256,6 +256,7 @@ class ApplicantsServiceClass {
   }
 
   async create(data: any) {
+    console.log("==== CREATE PAYLOAD ====\n", JSON.stringify(data, null, 2), "\n========================");
     const email = data.email_address || `no-email-${Date.now()}@test.com`;
 
     if (data.email_address) {
@@ -289,11 +290,17 @@ class ApplicantsServiceClass {
         sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
         sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
         educational_background, civil_service_eligibility, work_experience, voluntary_work,
-        learning_and_development, other_information, questionnaire_responses, family_background
+        learning_and_development, other_information, questionnaire_responses, family_background,
+        spouse_surname, spouse_first_name, spouse_middle_name, spouse_name_extension, spouse_occupation,
+        spouse_employer_business, spouse_business_address, spouse_telephone,
+        father_surname, father_first_name, father_middle_name, father_name_extension,
+        mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         , $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26, $27, $28
+        $21, $22, $23, $24, $25, $26, $27, $28,
+        $29, $30, $31, $32, $33, $34, $35, $36,
+        $37, $38, $39, $40, $41, $42, $43, $44, $45
       ) RETURNING *
     `, [
       newApplicantNumber,
@@ -323,7 +330,24 @@ class ApplicantsServiceClass {
       JSON.stringify(data.learning_and_development || []),
       JSON.stringify(data.other_information || {}),
       questionnaire_responses,
-      data.family_background ? JSON.stringify(data.family_background) : null
+      data.family_background ? JSON.stringify(data.family_background) : null,
+      data.family_background?.spouse?.surname || null,
+      data.family_background?.spouse?.first_name || null,
+      data.family_background?.spouse?.middle_name || null,
+      data.family_background?.spouse?.name_extension || null,
+      data.family_background?.spouse?.occupation || null,
+      data.family_background?.spouse?.employer_business_name || null,
+      data.family_background?.spouse?.business_address || null,
+      data.family_background?.spouse?.telephone_no || null,
+      data.family_background?.father?.surname || null,
+      data.family_background?.father?.first_name || null,
+      data.family_background?.father?.middle_name || null,
+      data.family_background?.father?.name_extension || null,
+      data.family_background?.mother?.maiden_surname || null,
+      data.family_background?.mother?.first_name || null,
+      data.family_background?.mother?.middle_name || null,
+      data.family_background?.children ? JSON.stringify(data.family_background.children) : null,
+      data.alternate_email || null
     ]);
 
     const applicant = result.rows[0];
@@ -365,7 +389,9 @@ class ApplicantsServiceClass {
     addField('surname', data.surname);
     addField('first_name', data.first_name);
     addField('middle_name', data.middle_name);
-    addField('date_of_birth', data.date_of_birth ? new Date(data.date_of_birth) : null);
+    if (data.date_of_birth !== undefined) {
+      addField('date_of_birth', data.date_of_birth ? new Date(data.date_of_birth) : null);
+    }
     addField('place_of_birth', data.place_of_birth);
     addField('sex', data.sex);
     addField('civil_status', data.civil_status);
@@ -379,9 +405,29 @@ class ApplicantsServiceClass {
     addField('permanent_address', data.permanent_address, true);
     addField('telephone_no', data.telephone_no);
     addField('mobile_no', data.mobile_no);
+    addField('alternate_email', data.alternate_email);
 
     addField('educational_background', data.educational_background, true);
     addField('family_background', data.family_background, true);
+    if (data.family_background) {
+      addField('spouse_surname', data.family_background.spouse?.surname);
+      addField('spouse_first_name', data.family_background.spouse?.first_name);
+      addField('spouse_middle_name', data.family_background.spouse?.middle_name);
+      addField('spouse_name_extension', data.family_background.spouse?.name_extension);
+      addField('spouse_occupation', data.family_background.spouse?.occupation);
+      addField('spouse_employer_business', data.family_background.spouse?.employer_business_name);
+      addField('spouse_business_address', data.family_background.spouse?.business_address);
+      addField('spouse_telephone', data.family_background.spouse?.telephone_no);
+      addField('father_surname', data.family_background.father?.surname);
+      addField('father_first_name', data.family_background.father?.first_name);
+      addField('father_middle_name', data.family_background.father?.middle_name);
+      addField('father_name_extension', data.family_background.father?.name_extension);
+      addField('mother_maiden_surname', data.family_background.mother?.maiden_surname);
+      addField('mother_first_name', data.family_background.mother?.first_name);
+      addField('mother_middle_name', data.family_background.mother?.middle_name);
+      addField('children_details', data.family_background.children, true);
+    }
+
     addField('civil_service_eligibility', data.civil_service_eligibility, true);
     addField('work_experience', data.work_experience, true);
     addField('voluntary_work', data.voluntary_work, true);

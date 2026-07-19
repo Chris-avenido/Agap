@@ -138,6 +138,7 @@ export default function ApplicantJobList() {
   const [telephoneNo, setTelephoneNo] = useState('');
   const [mobileNo, setMobileNo] = useState('');
   const [alternateEmail, setAlternateEmail] = useState('');
+  const [emailAddress, setEmailAddress] = useState('');
 
   const [spouseSurname, setSpouseSurname] = useState('');
   const [spouseFirst, setSpouseFirst] = useState('');
@@ -782,6 +783,8 @@ export default function ApplicantJobList() {
           }
           setTelephoneNo(p.telephone_no || '');
           setMobileNo(p.mobile_no || '');
+          setAlternateEmail(p.alternate_email || '');
+          setEmailAddress(p.email_address || '');
 
           if (p.residential_address) {
             const ra = typeof p.residential_address === 'string' ? JSON.parse(p.residential_address) : p.residential_address;
@@ -815,9 +818,9 @@ export default function ApplicantJobList() {
               setSpouseMiddle(fb.spouse.middle_name || '');
               setSpouseExt(fb.spouse.name_extension || '');
               setSpouseOccupation(fb.spouse.occupation || '');
-              setSpouseEmployer(fb.spouse.employer || '');
+              setSpouseEmployer(fb.spouse.employer_business_name || p.spouse_employer_business || '');
               setSpouseBusAddress(fb.spouse.business_address || '');
-              setSpouseTelephone(fb.spouse.telephone || '');
+              setSpouseTelephone(fb.spouse.telephone_no || p.spouse_telephone || '');
             }
             if (fb.father) {
               setFatherSurname(fb.father.surname || '');
@@ -826,9 +829,14 @@ export default function ApplicantJobList() {
               setFatherExt(fb.father.name_extension || '');
             }
             if (fb.mother) {
-              setMotherSurname(fb.mother.surname || '');
+              setMotherSurname(fb.mother.maiden_surname || p.mother_maiden_surname || '');
               setMotherFirst(fb.mother.first_name || '');
               setMotherMiddle(fb.mother.middle_name || '');
+            }
+            if (fb.children && Array.isArray(fb.children) && fb.children.length > 0) {
+              setChildrenList(fb.children);
+            } else if (p.children_details && Array.isArray(p.children_details) && p.children_details.length > 0) {
+              setChildrenList(p.children_details);
             }
           }
 
@@ -2038,7 +2046,7 @@ export default function ApplicantJobList() {
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex flex-col justify-between h-full">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Primary</span>
-                              <input type="email" required defaultValue="avenidochristop@gmail.com" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                              <input type="email" required value={emailAddress} onChange={e => setEmailAddress(e.target.value)} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                             </div>
                             <div className="flex flex-col justify-between h-full">
                               <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Alternate</span>

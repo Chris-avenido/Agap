@@ -12,15 +12,17 @@ const currentYear = new Date().getFullYear();
 const startYear = 1900;
 const YEARS = Array.from({ length: currentYear - startYear + 1 }, (_, i) => currentYear - i);
 
-const ModernDatePicker = ({ value, defaultValue, onChange, placeholder, maxDate, className, isMonthPicker, isYearPicker }) => {
+const ModernDatePicker = ({ name, value, defaultValue, onChange, placeholder, maxDate, className, isMonthPicker, isYearPicker }) => {
     const datePickerRef = React.useRef(null);
     const [internalValue, setInternalValue] = React.useState(value || defaultValue || '');
 
     React.useEffect(() => {
         if (value !== undefined) {
             setInternalValue(value);
+        } else if (defaultValue !== undefined && internalValue === '') {
+            setInternalValue(defaultValue);
         }
-    }, [value]);
+    }, [value, defaultValue]);
 
     let selectedDate = null;
     if (internalValue) {
@@ -157,6 +159,7 @@ const ModernDatePicker = ({ value, defaultValue, onChange, placeholder, maxDate,
                 </div>
             </DatePicker>
             <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+            {name && <input type="hidden" name={name} value={internalValue} />}
         </div>
     );
 };
