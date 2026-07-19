@@ -56,6 +56,7 @@ export default function ApplicationModal({
   const formRef = useRef<HTMLFormElement>(null);
   const [formVersion, setFormVersion] = useState(0);
   const [selectedDocumentNames, setSelectedDocumentNames] = useState<Record<string, string>>({});
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
   const [selectedDocumentUrls, setSelectedDocumentUrls] = useState<Record<string, string>>({});
   const formProgressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -82,6 +83,7 @@ export default function ApplicationModal({
     if (isOpen) {
       setActiveTab("C1");
       setSelectedDocumentNames({});
+      setSelectedFiles({});
       setSelectedDocumentUrls({});
       scheduleFormProgressRefresh();
     }
@@ -103,6 +105,24 @@ export default function ApplicationModal({
       }
       return next;
     });
+
+    setSelectedFiles((prev) => {
+      const next = { ...prev };
+      if (file) {
+        next[documentLabel] = file;
+      } else {
+        delete next[documentLabel];
+      }
+      return next;
+    });
+
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setSelectedDocumentUrls((prev) => ({
+        ...prev,
+        [documentLabel]: url,
+      }));
+    }
 
     scheduleFormProgressRefresh();
   }, [scheduleFormProgressRefresh]);
@@ -372,7 +392,7 @@ export default function ApplicationModal({
       if (oi.distinctions && Array.isArray(oi.distinctions) && oi.distinctions.length > 0) setDistinctionsList(oi.distinctions);
       if (oi.memberships && Array.isArray(oi.memberships) && oi.memberships.length > 0) setMembershipsList(oi.memberships);
     }
-    
+
     if (qRes) {
       setQAnswers({
         q34a: qRes.q34a || '',
@@ -432,7 +452,7 @@ export default function ApplicationModal({
 
   const completedSteps = useMemo(() => {
     const _v = formVersion;
-    
+
     const fd = formRef.current ? new FormData(formRef.current) : null;
     const getVal = (name: string, fallback: any) => {
       if (fd && fd.has(name)) return fd.get(name) as string;
@@ -440,52 +460,52 @@ export default function ApplicationModal({
     };
 
     const steps: string[] = [];
-    
+
     // Personal Information
-    if (getVal('first_name', userData?.first_name)?.trim() && 
-        getVal('surname', userData?.surname)?.trim() && 
-        getVal('place_of_birth', userData?.place_of_birth)?.trim() && 
-        sex && 
-        getVal('civil_status', userData?.civil_status) && 
-        getVal('citizenship', userData?.citizenship)) {
+    if (getVal('first_name', userData?.first_name)?.trim() &&
+      getVal('surname', userData?.surname)?.trim() &&
+      getVal('place_of_birth', userData?.place_of_birth)?.trim() &&
+      sex &&
+      getVal('civil_status', userData?.civil_status) &&
+      getVal('citizenship', userData?.citizenship)) {
       steps.push('Personal Information');
     }
-    
+
     // Family Background
-    if (getVal('spouse_surname', familyBackground?.spouse?.surname)?.trim() || 
-        getVal('spouse_first', familyBackground?.spouse?.first_name)?.trim() || 
-        getVal('father_surname', familyBackground?.father?.surname)?.trim() || 
-        getVal('mother_surname', familyBackground?.mother?.surname)?.trim() ||
-        getVal('mother_first', familyBackground?.mother?.first_name)?.trim() ||
-        getVal('father_first', familyBackground?.father?.first_name)?.trim()) {
+    if (getVal('spouse_surname', familyBackground?.spouse?.surname)?.trim() ||
+      getVal('spouse_first', familyBackground?.spouse?.first_name)?.trim() ||
+      getVal('father_surname', familyBackground?.father?.surname)?.trim() ||
+      getVal('mother_surname', familyBackground?.mother?.surname)?.trim() ||
+      getVal('mother_first', familyBackground?.mother?.first_name)?.trim() ||
+      getVal('father_first', familyBackground?.father?.first_name)?.trim()) {
       steps.push('Family Background');
     }
-    
+
     // Educational Background
     const levels = ["elementary", "secondary", "vocational", "college", "graduate"];
     const hasSchool = levels.some(lvl => {
-      const dbSchool = eduBg?.find((e:any) => e.level?.toLowerCase().startsWith(lvl))?.school;
+      const dbSchool = eduBg?.find((e: any) => e.level?.toLowerCase().startsWith(lvl))?.school;
       return getVal(`edu_${lvl}_school`, dbSchool)?.trim();
     });
     if (hasSchool) steps.push('Educational Background');
-    
+
     // Eligibility
     if (civilServiceList?.length > 0 && civilServiceList.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
-    
+
     // Work Experience
     if (workExperienceList?.length > 0 && workExperienceList.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
-    
+
     // Voluntary Work
     if (voluntaryWorkList?.length > 0 && voluntaryWorkList.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
-    
+
     // Learning & Development
     if (learningDevelopmentList?.length > 0 && learningDevelopmentList.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
-    
+
     // Other Information
-    if ((skillsList?.length > 0 && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : s.value?.trim() !== '')) || 
-        (distinctionsList?.length > 0 && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : d.value?.trim() !== '')) || 
-        (membershipsList?.length > 0 && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : m.value?.trim() !== ''))) steps.push('Other Information');
-        
+    if ((skillsList?.length > 0 && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : s.value?.trim() !== '')) ||
+      (distinctionsList?.length > 0 && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : d.value?.trim() !== '')) ||
+      (membershipsList?.length > 0 && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : m.value?.trim() !== ''))) steps.push('Other Information');
+
     // Legal Questionnaire
     if (getVal('q34a', qRes?.q34a) || getVal('q35a', qRes?.q35a) || getVal('q36', qRes?.q36)) steps.push('Legal Questionnaire');
 
@@ -504,8 +524,8 @@ export default function ApplicationModal({
 
     return steps;
   }, [
-    userData, familyBackground, eduBg, civilServiceList, workExperienceList, 
-    voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList, 
+    userData, familyBackground, eduBg, civilServiceList, workExperienceList,
+    voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList,
     membershipsList, qRes, storedDocuments, sex, formVersion, selectedDocumentNames, requiredDocuments
   ]);
 
@@ -704,8 +724,17 @@ export default function ApplicationModal({
               </div>
             </div>
             {(getDocUrl("Letter of Intent") || selectedDocumentNames["Letter of Intent"]) ? (
-              <div className="flex flex-col gap-2 w-full mt-2">
-                <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+              <div className="flex flex-col gap-2 w-full mt-2 overflow-hidden">
+                <span 
+                  className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 block truncate w-full"
+                  title={
+                    selectedDocumentNames["Letter of Intent"]
+                      ? `Selected: ${selectedDocumentNames["Letter of Intent"]}`
+                      : getStoredDocFileName("Letter of Intent")
+                        ? `Uploaded: ${getStoredDocFileName("Letter of Intent")}`
+                        : "Uploaded"
+                  }
+                >
                   {selectedDocumentNames["Letter of Intent"]
                     ? `Selected: ${selectedDocumentNames["Letter of Intent"]}`
                     : getStoredDocFileName("Letter of Intent")
@@ -746,8 +775,8 @@ export default function ApplicationModal({
                   {parseFloat(percentage) >= 100 ? "Ready to Submit" : "Complete your Profile"}
                 </h2>
                 <p className="text-xs md:text-sm text-[#2e7d32] font-medium leading-snug">
-                  {parseFloat(percentage) >= 100 
-                    ? "Your profile is fully complete! You can now save or submit your application." 
+                  {parseFloat(percentage) >= 100
+                    ? "Your profile is fully complete! You can now save or submit your application."
                     : "Please fill out all required fields and upload all necessary documents."}
                 </p>
               </div>
@@ -2400,8 +2429,8 @@ export default function ApplicationModal({
                             34. Are you related by consanguinity or affinity to the appointing or recommending authority, or to the chief of bureau or office or to the person who has immediate supervision over you in the Office, Bureau or Department where you will be appointed, within the third degree?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="yes" checked={qAnswers.q34a === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q34a: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="no" checked={qAnswers.q34a === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q34a: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="yes" checked={qAnswers.q34a === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34a: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="no" checked={qAnswers.q34a === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34a: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                         </div>
                         <div className="flex flex-col gap-3">
@@ -2409,8 +2438,8 @@ export default function ApplicationModal({
                             within the fourth degree (for Local Government Unit - Career Employees)?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="yes" checked={qAnswers.q34b === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q34b: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="no" checked={qAnswers.q34b === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q34b: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="yes" checked={qAnswers.q34b === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34b: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="no" checked={qAnswers.q34b === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34b: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {(qAnswers.q34a === "yes" || qAnswers.q34b === "yes") && (
                             <input type="text" name="q34b_details" defaultValue={qRes?.q34b_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2427,8 +2456,8 @@ export default function ApplicationModal({
                             35. a. Have you ever been found guilty of any administrative offense?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="yes" checked={qAnswers.q35a === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q35a: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="no" checked={qAnswers.q35a === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q35a: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="yes" checked={qAnswers.q35a === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q35a: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35a" value="no" checked={qAnswers.q35a === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q35a: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q35a === "yes" && (
                             <input type="text" name="q35a_details" defaultValue={qRes?.q35a_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2439,8 +2468,8 @@ export default function ApplicationModal({
                             b. Have you been criminally charged before any court?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="yes" checked={qAnswers.q35b === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q35b: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="no" checked={qAnswers.q35b === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q35b: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="yes" checked={qAnswers.q35b === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q35b: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q35b" value="no" checked={qAnswers.q35b === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q35b: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q35b === "yes" && (
                             <div className="flex flex-col gap-2 mt-2">
@@ -2459,8 +2488,8 @@ export default function ApplicationModal({
                           36. Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?
                         </p>
                         <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="yes" checked={qAnswers.q36 === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q36: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="no" checked={qAnswers.q36 === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q36: e.target.value}))} className="accent-blue-600" /> No</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="yes" checked={qAnswers.q36 === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q36: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q36" value="no" checked={qAnswers.q36 === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q36: e.target.value }))} className="accent-blue-600" /> No</label>
                         </div>
                         {qAnswers.q36 === "yes" && (
                           <input type="text" name="q36_details" defaultValue={qRes?.q36_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2475,8 +2504,8 @@ export default function ApplicationModal({
                           37. Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?
                         </p>
                         <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="yes" checked={qAnswers.q37 === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q37: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="no" checked={qAnswers.q37 === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q37: e.target.value}))} className="accent-blue-600" /> No</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="yes" checked={qAnswers.q37 === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q37: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q37" value="no" checked={qAnswers.q37 === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q37: e.target.value }))} className="accent-blue-600" /> No</label>
                         </div>
                         {qAnswers.q37 === "yes" && (
                           <input type="text" name="q37_details" defaultValue={qRes?.q37_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2492,8 +2521,8 @@ export default function ApplicationModal({
                             38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="yes" checked={qAnswers.q38a === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q38a: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="no" checked={qAnswers.q38a === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q38a: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="yes" checked={qAnswers.q38a === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q38a: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38a" value="no" checked={qAnswers.q38a === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q38a: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q38a === "yes" && (
                             <input type="text" name="q38a_details" defaultValue={qRes?.q38a_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2504,8 +2533,8 @@ export default function ApplicationModal({
                             b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="yes" checked={qAnswers.q38b === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q38b: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="no" checked={qAnswers.q38b === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q38b: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="yes" checked={qAnswers.q38b === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q38b: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q38b" value="no" checked={qAnswers.q38b === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q38b: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q38b === "yes" && (
                             <input type="text" name="q38b_details" defaultValue={qRes?.q38b_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2521,8 +2550,8 @@ export default function ApplicationModal({
                           39. Have you acquired the status of an immigrant or permanent resident of another country?
                         </p>
                         <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="yes" checked={qAnswers.q39 === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q39: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="no" checked={qAnswers.q39 === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q39: e.target.value}))} className="accent-blue-600" /> No</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="yes" checked={qAnswers.q39 === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q39: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                          <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q39" value="no" checked={qAnswers.q39 === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q39: e.target.value }))} className="accent-blue-600" /> No</label>
                         </div>
                         {qAnswers.q39 === "yes" && (
                           <input type="text" name="q39_details" defaultValue={qRes?.q39_details || ''} placeholder="If YES, give details (country)" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2539,8 +2568,8 @@ export default function ApplicationModal({
                             a. Are you a member of any indigenous group?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="yes" checked={qAnswers.q40a === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q40a: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="no" checked={qAnswers.q40a === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q40a: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="yes" checked={qAnswers.q40a === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40a: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40a" value="no" checked={qAnswers.q40a === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40a: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q40a === "yes" && (
                             <input type="text" name="q40a_details" defaultValue={qRes?.q40a_details || ''} placeholder="If YES, please specify" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2551,8 +2580,8 @@ export default function ApplicationModal({
                             b. Are you a person with disability?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="yes" checked={qAnswers.q40b === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q40b: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="no" checked={qAnswers.q40b === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q40b: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="yes" checked={qAnswers.q40b === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40b: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b" value="no" checked={qAnswers.q40b === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40b: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q40b === "yes" && (
                             <input type="text" name="q40b_details" defaultValue={qRes?.q40b_details || ''} placeholder="If YES, please specify ID No" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2563,8 +2592,8 @@ export default function ApplicationModal({
                             c. Are you a solo parent?
                           </p>
                           <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="yes" checked={qAnswers.q40c === "yes"} onChange={(e) => setQAnswers(prev => ({...prev, q40c: e.target.value}))} className="accent-blue-600" /> Yes</label>
-                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="no" checked={qAnswers.q40c === "no"} onChange={(e) => setQAnswers(prev => ({...prev, q40c: e.target.value}))} className="accent-blue-600" /> No</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="yes" checked={qAnswers.q40c === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40c: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40c" value="no" checked={qAnswers.q40c === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40c: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
                           {qAnswers.q40c === "yes" && (
                             <input type="text" name="q40c_details" defaultValue={qRes?.q40c_details || ''} placeholder="If YES, please specify ID No" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
@@ -2644,21 +2673,21 @@ export default function ApplicationModal({
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">Government Issued ID</span>
-                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_type" defaultValue={qRes?.gov_id_type || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">ID/License/Passport No.</span>
-                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_no" defaultValue={qRes?.gov_id_no || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">Date/Place of Issuance</span>
-                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if(input){ input.value = 'N/A'; input.dispatchEvent(new Event('change', {bubbles: true})); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
+                            <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
                           <input type="text" name="gov_id_issuance" defaultValue={qRes?.gov_id_issuance || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
@@ -2681,7 +2710,7 @@ export default function ApplicationModal({
                   <div className="bg-white border-b border-gray-200 px-6 py-5">
                     <h4 className="font-bold text-[14px] text-gray-700 uppercase tracking-wide">ESSENTIAL DOCUMENTS</h4>
                   </div>
-                  
+
                   <div className="flex flex-col text-[14px] text-gray-700">
                     {/* Item 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
@@ -2707,7 +2736,7 @@ export default function ApplicationModal({
                         <input type="file" name="doc_pds" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
-                    
+
                     {/* Item 2 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
@@ -2808,7 +2837,7 @@ export default function ApplicationModal({
                       )}
                     </div>
 
-                    
+
                     {/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
@@ -2833,7 +2862,7 @@ export default function ApplicationModal({
                         <input type="file" name="doc_trainings" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
-{/* Item 6 */}
+                    {/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Diploma (optional)</span>
@@ -3024,7 +3053,7 @@ export default function ApplicationModal({
                         memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"] as string) : [],
                       };
 
-                      
+
                       // --- Educational Background ---
                       const edBg = [];
                       for (let i = 0; i < 5; i++) {
@@ -3110,7 +3139,6 @@ export default function ApplicationModal({
 
                           // Upload documents
                           try {
-                            const uploadFormData = new FormData();
                             const docMapping: Record<string, string> = {
                               "doc_loi": "Letter of Intent",
                               "doc_pds": "Personal Data Sheet",
@@ -3123,25 +3151,43 @@ export default function ApplicationModal({
                               "doc_trainings": "Trainings",
                               "profile_photo": "profile_photo"
                             };
-                            const docNames: string[] = [];
-                            
-                            Object.keys(docMapping).forEach(key => {
-                              const file = formData.get(key) as File;
-                              if (file && file.size > 0) {
-                                uploadFormData.append("files", file);
-                                docNames.push(docMapping[key]);
-                              }
-                            });
 
-                            if (docNames.length > 0) {
-                              docNames.forEach(name => uploadFormData.append("documentNames", name));
-                              const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/documents`, {
-                                method: 'POST',
-                                body: uploadFormData
-                              });
+                            for (const key of Object.keys(docMapping)) {
+                              const docLabel = docMapping[key];
+                              let file = formData.get(key) as File;
+
+                              if (selectedFiles[docLabel] && selectedFiles[docLabel].size > 0) {
+                                file = selectedFiles[docLabel];
+                              } else if (!file || file.size === 0) {
+                                const inputs = document.querySelectorAll(`input[name="${key}"]`) as NodeListOf<HTMLInputElement>;
+                                for (let i = 0; i < inputs.length; i++) {
+                                  if (inputs[i].files && inputs[i].files!.length > 0) {
+                                    file = inputs[i].files![0];
+                                    break;
+                                  }
+                                }
+                              }
+
+                              if (file && file.size > 0) {
+                                const singleUploadFormData = new FormData();
+                                singleUploadFormData.append("files", file);
+                                singleUploadFormData.append("documentNames", docLabel);
+
+                                const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/documents`, {
+                                  method: 'POST',
+                                  body: singleUploadFormData
+                                });
+
+                                if (!uploadRes.ok) {
+                                  const errData = await uploadRes.json();
+                                  console.error(`Failed to upload ${docLabel}:`, errData);
+                                  Swal.fire("Warning", `Failed to upload ${docLabel}: ${errData.message || 'Unknown error'}`, "warning");
+                                }
+                              }
                             }
                           } catch (e) {
                             console.error("Document upload failed", e);
+                            Swal.fire("Error", "An unexpected error occurred while uploading documents.", "error");
                           }
 
                           // If they are applying for a job, hit apply-job
@@ -3188,6 +3234,7 @@ export default function ApplicationModal({
                           if (applySuccess) {
                             if (jobId && jobTitle !== "Profile Update") {
                               Swal.fire(
+
                                 "Success",
                                 "Application submitted successfully!",
                                 "success",
@@ -3239,8 +3286,8 @@ export default function ApplicationModal({
                   {jobTitle === "General Registration"
                     ? "REGISTER"
                     : jobTitle === "Profile Update"
-                    ? "SAVE PROFILE"
-                    : "SUBMIT APPLICATION"}
+                      ? "SAVE PROFILE"
+                      : "SUBMIT APPLICATION"}
                 </button>
               )}
             </div>
