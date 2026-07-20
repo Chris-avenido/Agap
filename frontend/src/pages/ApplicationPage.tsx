@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { ChevronRight, ChevronLeft, UploadCloud, GraduationCap, ArrowLeft } from 'lucide-react';
-// @ts-ignore
 import ModernDatePicker from "../components/ModernDatePicker";
 
 export default function ApplicationPage() {
