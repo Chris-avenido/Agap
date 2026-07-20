@@ -4,8 +4,14 @@ import { ApplicantsService } from './applicants.service';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const APPLICANT_SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 import { uploadToAzure, downloadFromAzure, deleteFromAzure } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
+import {
+  SsoAuthenticationError,
+  SsoConfigurationError,
+  verifyApplicantSsoToken,
+} from './applicants-sso.service';
 
 router.post('/parse-resume', upload.single('resume'), async (req, res) => {
   const file = (req as any).file;
@@ -35,38 +41,39 @@ router.post('/login', async (req, res) => {
   }
 });
 
-import jwt from 'jsonwebtoken';
-
 router.post('/sso-login', async (req, res) => {
-  const { sso_token } = req.body;
-  if (!sso_token) {
+  const ssoToken = typeof req.body?.sso_token === 'string' ? req.body.sso_token.trim() : '';
+  if (!ssoToken) {
     return res.status(400).json({ message: 'SSO token is missing' });
   }
 
   try {
-    const secret = process.env.STRIDE_INSIGHTED_SECRET_2026_KEY_PROD;
-    if (!secret) {
-      console.error("Missing STRIDE_INSIGHTED_SECRET_2026_KEY_PROD in backend .env");
-      return res.status(500).json({ message: 'Server configuration error' });
-    }
+    const claims = verifyApplicantSsoToken(ssoToken);
 
-    const decoded = jwt.verify(sso_token, secret) as any;
-    
-    // We assume the payload contains an email field based on the standard SSO setup.
-    const userEmail = decoded.email || decoded.email_address;
-    if (!userEmail) {
-      return res.status(400).json({ message: 'SSO token does not contain a valid email' });
-    }
-
-    const applicant = await ApplicantsService.findByEmail(userEmail);
+    const applicant = await ApplicantsService.findByEmail(claims.email);
     if (!applicant) {
       return res.status(404).json({ message: 'Applicant account not found. Please register first.' });
     }
 
-    res.json({ success: true, data: { id: applicant.id, applicant_number: applicant.applicant_number, email: applicant.email_address } });
+    res.json({
+      success: true,
+      data: {
+        id: applicant.id,
+        applicant_number: applicant.applicant_number,
+        email: applicant.email_address,
+        expiry: Date.now() + APPLICANT_SESSION_TTL_MS,
+      },
+    });
   } catch (error: any) {
-    console.error("SSO verification error:", error);
-    res.status(401).json({ message: 'Invalid or expired SSO token' });
+    if (error instanceof SsoConfigurationError) {
+      console.error('AGAP SSO configuration error:', error.message);
+      return res.status(500).json({ message: 'AGAP SSO is not configured' });
+    }
+    if (error instanceof SsoAuthenticationError) {
+      return res.status(401).json({ message: error.message });
+    }
+    console.error('AGAP SSO exchange error:', error);
+    return res.status(500).json({ message: 'Unable to complete HQ sign-in' });
   }
 });
 

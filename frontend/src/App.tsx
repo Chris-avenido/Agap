@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
+import Swal from 'sweetalert2';
 import Login from './pages/Login';
 import ApplicantDashboard from './pages/ApplicantDashboard';
 import PublicCareers from './pages/PublicCareers';
@@ -35,66 +43,65 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return status === 'authenticated' ? children : <Navigate to="/login" replace />;
 };
 
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import Swal from 'sweetalert2';
-
 const SSOInterceptor = ({ children }: { children: React.ReactNode }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [isProcessingSSO, setIsProcessingSSO] = useState(false);
+  const ssoToken = searchParams.get('sso_token');
+  const [isProcessingSSO, setIsProcessingSSO] = useState(Boolean(ssoToken));
 
   useEffect(() => {
-    const ssoToken = searchParams.get('sso_token');
-    if (ssoToken) {
-      setIsProcessingSSO(true);
-      
-      const processSSO = async () => {
-        try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/sso-login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sso_token: ssoToken })
-          });
-
-          if (response.ok) {
-            const resData = await response.json();
-            const now = new Date();
-            const item = {
-              id: resData.data.id,
-              applicant_number: resData.data.applicant_number,
-              email: resData.data.email,
-              expiry: now.getTime() + 3 * 60 * 60 * 1000,
-            };
-            localStorage.setItem('session_data', JSON.stringify(item));
-            
-            // Remove the token from the URL and redirect to dashboard
-            const newSearchParams = new URLSearchParams(searchParams);
-            newSearchParams.delete('sso_token');
-            const newSearch = newSearchParams.toString();
-            const newPath = location.pathname + (newSearch ? `?${newSearch}` : '');
-            
-            // Force replace the URL without token, then go to dashboard
-            window.history.replaceState(null, '', newPath);
-            navigate('/applicant-dashboard', { replace: true });
-          } else {
-            const errData = await response.json();
-            Swal.fire('SSO Error', errData.message || 'SSO authentication failed.', 'error');
-          }
-        } catch (error) {
-          console.error("SSO Processing Error:", error);
-          Swal.fire('Error', 'Unable to connect to the SSO service.', 'error');
-        } finally {
-          setIsProcessingSSO(false);
-        }
-      };
-
-      processSSO();
+    if (!ssoToken) {
+      setIsProcessingSSO(false);
+      return;
     }
-  }, [searchParams, navigate, location.pathname]);
+
+    const abortController = new AbortController();
+    setIsProcessingSSO(true);
+
+    const processSSO = async () => {
+      try {
+        const apiBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+        const response = await fetch(`${apiBaseUrl}/api/applicants/sso-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sso_token: ssoToken }),
+          signal: abortController.signal,
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload?.success || !payload?.data) {
+          throw new Error(payload?.message || 'SSO authentication failed.');
+        }
+
+        const session = {
+          id: payload.data.id,
+          applicant_number: payload.data.applicant_number,
+          email: payload.data.email,
+          expiry: Number.isFinite(payload.data.expiry)
+            ? payload.data.expiry
+            : Date.now() + 3 * 60 * 60 * 1000,
+        };
+
+        localStorage.setItem('session_data', JSON.stringify(session));
+        navigate('/applicant-dashboard', { replace: true });
+      } catch (error) {
+        if (abortController.signal.aborted) return;
+
+        console.error('SSO processing error:', error);
+        const message = error instanceof Error ? error.message : 'Unable to connect to the SSO service.';
+        await Swal.fire('SSO Error', message, 'error');
+        navigate('/login', { replace: true });
+      } finally {
+        if (!abortController.signal.aborted) setIsProcessingSSO(false);
+      }
+    };
+
+    void processSSO();
+    return () => abortController.abort();
+  }, [navigate, ssoToken]);
 
   if (isProcessingSSO) {
-    return <div className="min-h-screen flex items-center justify-center">Authenticating via SSO...</div>;
+    return <div className="min-h-screen flex items-center justify-center">Signing you in from InsightED HQ...</div>;
   }
 
   return <>{children}</>;

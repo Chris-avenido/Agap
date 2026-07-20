@@ -122,7 +122,10 @@ class ApplicantsServiceClass {
   }
 
   async findByEmail(email_address: string) {
-    const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+    const result = await pool.query(
+      'SELECT * FROM applicants WHERE LOWER(TRIM(email_address)) = LOWER(TRIM($1)) LIMIT 1',
+      [email_address],
+    );
     return result.rows[0];
   }
 

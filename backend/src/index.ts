@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' });
+import './config/env';
 import express from 'express';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
