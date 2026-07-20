@@ -43,8 +43,7 @@ export const calculateProfileProgress = (data: {
     'Work Experience Sheet',
     'Certificate of Eligibility',
     'Transcript of Records',
-    'Updated PRC License/ID',
-    'Resume'
+    'Updated PRC License/ID'
   ];
   const allDocumentsConfirmed = requiredDocs.every(doc => data.documentsConfirmed && data.documentsConfirmed[doc]);
   if (data.isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
