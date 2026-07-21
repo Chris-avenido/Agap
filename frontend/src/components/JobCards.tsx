@@ -2,75 +2,66 @@ import React from 'react';
 import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { Check } from 'lucide-react'; // Make sure to add Check if needed
+
 const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
   const navigate = useNavigate();
   const isApplied = appliedJobIds.includes(job.id || job.positionId);
   const isSaved = savedJobIds.includes(job.id || job.positionId);
   const title = job.title || job.position || 'Unknown Position';
 
+  const borderColor = isApplied || tab === 'my-applications' ? 'border-[#2563eb]' : 'border-[#fbbf24]'; // blue if applied, amber/yellow otherwise
+  const shadowClass = isApplied || tab === 'my-applications' 
+    ? 'shadow-[0_8px_25px_rgba(37,99,235,0.15)] hover:shadow-[0_12px_35px_rgba(37,99,235,0.25)]' 
+    : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]';
+
   return (
-    <div onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className="bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col hover:shadow-lg transition-shadow relative cursor-pointer">
+    <div onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className={`bg-white rounded-[20px] border-[1.5px] ${borderColor} ${shadowClass} p-6 flex flex-col transition-shadow relative cursor-pointer`}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex flex-col gap-1 w-full">
           {/* Title */}
-          <h3 className="text-xl font-bold text-[#2563eb] leading-tight line-clamp-2">
+          <h3 className="text-[18px] md:text-[20px] font-bold text-[#2563eb] leading-tight line-clamp-2">
             {title}
           </h3>
 
           {/* Region - Division */}
-          <p className="text-gray-600 font-medium text-sm">
-            {job.location || 'N/A'} - {job.division || 'N/A'}
+          <p className="text-gray-600 font-medium text-[13px] md:text-sm mt-1">
+            {job.location || 'N/A'} - {job.division || job.office || 'N/A'}
           </p>
 
-          <hr className="my-3 border-gray-100" />
+          <div className="w-full h-px bg-gray-100 my-4" />
 
           {/* SG & Vacancies */}
-          <div className="flex gap-3 px-1 py-0.5">
-            <div className="flex flex-1 items-center justify-center gap-2.5 px-3 py-2.5 bg-blue-50/80 text-blue-700 rounded-xl border border-blue-100/50 shadow-sm transition-colors hover:bg-blue-50">
-              <CircleDollarSign className="w-5 h-5 text-blue-500 shrink-0" />
+          <div className="flex gap-4">
+            <div className="flex flex-1 items-center justify-center gap-3 px-4 py-3 bg-[#f0f4f8] rounded-xl">
+              <CircleDollarSign className="w-6 h-6 text-blue-600 shrink-0" />
               <div className="flex flex-col items-start justify-center">
-                <span className="text-[9px] font-bold text-blue-500/80 uppercase tracking-wider leading-none mb-1">Salary Grade</span>
-                <span className="text-[15px] font-extrabold leading-none tracking-tight">{job.sg || 'N/A'}</span>
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide leading-none mb-1">SALARY GRADE</span>
+                <span className="text-[18px] font-extrabold text-gray-800 leading-none tracking-tight">{job.sg || 'N/A'}</span>
               </div>
             </div>
 
-            <div className="flex flex-1 items-center justify-center gap-2.5 px-3 py-2.5 bg-emerald-50/80 text-emerald-700 rounded-xl border border-emerald-100/50 shadow-sm transition-colors hover:bg-emerald-50">
-              <Users className="w-5 h-5 text-emerald-500 shrink-0" />
+            <div className="flex flex-1 items-center justify-center gap-3 px-4 py-3 bg-[#f0fdf4] rounded-xl">
+              <Users className="w-6 h-6 text-emerald-600 shrink-0" />
               <div className="flex flex-col items-start justify-center">
-                <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-wider leading-none mb-1">Vacancies</span>
-                <span className="text-[15px] font-extrabold leading-none tracking-tight">{job.vacancyCount || 0}</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide leading-none mb-1">VACANCIES</span>
+                <span className="text-[18px] font-extrabold text-gray-800 leading-none tracking-tight">{job.vacancyCount || 0}</span>
               </div>
             </div>
           </div>
 
-          <hr className="my-3 border-gray-100" />
-
           {/* Qualification Standards */}
           {(job.qsEducation || job.qsExperience || job.qsTraining || job.qsEligibility) && (
-            <div className="flex flex-col gap-1 mt-1 text-xs">
-              <span className="text-sm font-bold text-gray-700 tracking-wide mb-1">QS:</span>
-              {job.qsEducation && <div><strong className="text-gray-700">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
-              {job.qsExperience && <div><strong className="text-gray-700">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
-              {job.qsTraining && <div><strong className="text-gray-700">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
-              {job.qsEligibility && <div><strong className="text-gray-700">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
+            <div className="flex flex-col gap-1.5 mt-5 text-[13px]">
+              <span className="text-[14px] font-bold text-gray-900 tracking-wide mb-1">QS:</span>
+              {job.qsEducation && <div><strong className="text-gray-900 font-semibold">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
+              {job.qsExperience && <div><strong className="text-gray-900 font-semibold">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
+              {job.qsTraining && <div><strong className="text-gray-900 font-semibold">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
+              {job.qsEligibility && <div><strong className="text-gray-900 font-semibold">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
             </div>
           )}
-        </div>
-
-        <div className="flex items-center gap-4 shrink-0 ml-4">
-          {tab === 'my-applications' && (
-            <div className="flex flex-col gap-1 items-end">
-              <span className="text-[9px] font-bold text-gray-400 tracking-widest uppercase">Vacancy Status</span>
-              <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-amber-50 text-amber-700 border border-amber-200 tracking-wider uppercase whitespace-nowrap">
-                {job.vacancyStatus || 'UNKNOWN'}
-              </span>
-            </div>
-          )}
-
         </div>
       </div>
-
-
 
       {/* Status Footer */}
       {tab === 'my-applications' && (
@@ -120,17 +111,17 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
       )}
 
       {/* Buttons */}
-      <div className={`flex items-center gap-3 mt-auto ${tab !== 'my-applications' ? 'pt-4 border-t border-gray-100' : ''}`}>
+      <div className={`flex items-center gap-3 mt-auto ${tab !== 'my-applications' ? 'pt-5' : ''}`}>
         {(isApplied || tab === 'my-applications') ? (
-          <button disabled className="flex-1 bg-gray-400 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
-            APPLIED
+          <button disabled className="flex-1 bg-gray-200 text-gray-500 font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
+            <div className="bg-white rounded-full p-0.5"><Check className="w-3.5 h-3.5 text-gray-400" strokeWidth={4} /></div> APPLIED
           </button>
         ) : (
-          <button onClick={() => handleApply(job)} className="flex-1 bg-[#022851] hover:bg-[#011a36] text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
+          <button onClick={() => handleApply(job)} className="flex-1 bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
             <Briefcase className="w-4 h-4" /> APPLY NOW
           </button>
         )}
-        <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`flex-1 border font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+        <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`flex-1 border font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
           <Star className={`w-4 h-4 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
         </button>
       </div>
@@ -160,16 +151,17 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
               const isApplied = appliedJobIds.includes(job.id || job.positionId);
               const isSaved = savedJobIds.includes(job.id || job.positionId);
               const title = job.title || job.position || 'Unknown Position';
+              const borderColor = isApplied || tab === 'my-applications' ? 'border-l-[#2563eb]' : 'border-l-[#fbbf24]';
 
               return (
-                <tr key={job.id || job.positionId} onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
+                <tr key={job.id || job.positionId} onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className={`hover:bg-gray-50/50 transition-colors cursor-pointer border-l-4 ${borderColor} border-b border-gray-100`}>
                   <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-[#2563eb]">{title}</span>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="font-bold text-[15px] text-[#2563eb]">{title}</span>
+                      <div className="flex flex-wrap items-center gap-2">
                         {job.vacancyCount && (
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded uppercase border border-emerald-100">
-                            {job.vacancyCount} Vacanc{job.vacancyCount > 1 ? 'ies' : 'y'}
+                          <span className="px-2 py-0.5 bg-[#f0fdf4] text-emerald-600 text-[10px] font-bold rounded uppercase flex items-center gap-1">
+                            <Users className="w-3 h-3" /> {job.vacancyCount} Vacanc{job.vacancyCount > 1 ? 'ies' : 'y'}
                           </span>
                         )}
                       </div>
@@ -179,12 +171,12 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                     <div className="flex flex-col gap-1">
                       <span className="font-semibold text-gray-800 text-sm">{job.office || 'N/A'}</span>
                       {job.division && <span className="text-gray-500 text-xs">{job.division}</span>}
-                      {job.location && <span className="text-gray-500 text-xs flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {job.location}</span>}
+                      {job.location && <span className="text-gray-500 text-[11px] flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {job.location}</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1 text-sm text-gray-600">
-                      <span className="font-medium">SG {job.sg || 'N/A'}</span>
+                    <div className="flex flex-col gap-1 text-[13px] text-gray-600">
+                      <span className="font-bold flex items-center gap-1"><CircleDollarSign className="w-3.5 h-3.5 text-blue-500" /> SG {job.sg || 'N/A'}</span>
                       <span className="text-xs">Posted: {job.posted || 'N/A'}</span>
                       <span className="text-xs text-[#f59e0b] font-semibold">Deadline: {job.deadline || 'N/A'} {job.vacancyStatus?.toUpperCase() !== 'CLOSED' && `(${job.daysLeft || 0} days left)`}</span>
                     </div>
@@ -234,18 +226,18 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                     </td>
                   )}
                   <td className="px-6 py-4 text-right">
-                    <div className="flex flex-col gap-2 items-end">
+                    <div className="flex flex-col gap-2 items-end w-full">
                       {(isApplied || tab === 'my-applications') ? (
-                        <button disabled className="w-32 bg-gray-400 text-white font-bold py-1.5 px-3 rounded-lg text-xs cursor-not-allowed">
-                          APPLIED
+                        <button disabled className="w-32 bg-gray-200 text-gray-500 font-bold py-2 px-3 rounded-xl text-[11px] tracking-wide cursor-not-allowed flex justify-center items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-gray-400" strokeWidth={4} /> APPLIED
                         </button>
                       ) : (
-                        <button onClick={() => handleApply(job)} className="w-32 bg-[#022851] hover:bg-[#011a36] text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors">
-                          APPLY NOW
+                        <button onClick={() => handleApply(job)} className="w-32 bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-2 px-3 rounded-xl text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5">
+                          <Briefcase className="w-3 h-3" /> APPLY NOW
                         </button>
                       )}
-                      <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-32 border font-bold py-1.5 px-3 rounded-lg text-xs transition-colors ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
-                        {isSaved ? 'SAVED' : 'SAVE'}
+                      <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-32 border font-bold py-2 px-3 rounded-xl text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                        <Star className={`w-3.5 h-3.5 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
                       </button>
                     </div>
                   </td>

@@ -1096,25 +1096,25 @@ export default function ApplicantJobList() {
             <div className="flex items-center overflow-x-auto hide-scrollbar">
               <button
                 onClick={() => navigate('/applicant-dashboard')}
-                className="flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap text-gray-500 hover:text-[#003366] transition-colors border-r border-gray-100"
+                className="flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold text-gray-600 hover:text-gray-900 transition-colors shrink-0"
               >
                 <ArrowLeft className="w-[18px] h-[18px]" /> Back to Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('job-board')}
-                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap transition-colors ${activeTab === 'job-board' ? 'text-[#003366] border-b-[3px] border-[#003366]' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold whitespace-nowrap transition-colors ${activeTab === 'job-board' ? 'text-[#2563eb] border-b-[3px] border-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 <Briefcase className="w-[18px] h-[18px]" /> Job Board
               </button>
               <button
                 onClick={() => setActiveTab('my-applications')}
-                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap transition-colors ${activeTab === 'my-applications' ? 'text-[#003366] border-b-[3px] border-[#003366]' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold whitespace-nowrap transition-colors ${activeTab === 'my-applications' ? 'text-[#2563eb] border-b-[3px] border-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 <FileText className="w-[18px] h-[18px]" /> My Applications
               </button>
               <button
                 onClick={() => setActiveTab('my-saved-jobs')}
-                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[15px] font-bold whitespace-nowrap transition-colors ${activeTab === 'my-saved-jobs' ? 'text-[#003366] border-b-[3px] border-[#003366]' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold whitespace-nowrap transition-colors ${activeTab === 'my-saved-jobs' ? 'text-[#2563eb] border-b-[3px] border-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 <Bookmark className="w-[18px] h-[18px]" /> My Saved Jobs
               </button>
@@ -1235,7 +1235,7 @@ export default function ApplicantJobList() {
                         }
                       });
                     }}
-                  className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl text-[11px] transition-colors tracking-wide uppercase shadow-sm border border-gray-200"
                 >
                   PRINT PDS
                 </button>
@@ -1249,7 +1249,7 @@ export default function ApplicantJobList() {
                       confirmButtonColor: '#3085d6'
                     });
                   }}
-                  className="bg-gray-300 text-gray-500 font-bold py-2.5 px-4 rounded text-[11px] cursor-not-allowed tracking-wide uppercase shadow-sm"
+                  className="bg-gray-50 text-gray-400 font-bold py-2.5 px-4 rounded-xl text-[11px] cursor-not-allowed tracking-wide uppercase shadow-sm border border-gray-100"
                 >
                   PRINT PDS
                 </button>
@@ -1315,7 +1315,7 @@ export default function ApplicantJobList() {
                     }
                   });
                 }}
-                className="bg-[#64748b] hover:bg-[#475569] text-white font-bold py-2.5 px-4 rounded text-[11px] transition-colors tracking-wide uppercase shadow-sm"
+                className="bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-2.5 px-4 rounded-xl text-[11px] transition-colors tracking-wide uppercase shadow-sm"
               >
                 WORK EXPERIENCE SHEET
               </button>
@@ -1332,7 +1332,7 @@ export default function ApplicantJobList() {
                   {/* Search Row */}
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
-                      <Search className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <Search className="w-5 h-5 text-[#2563eb] shrink-0 mr-3" />
                       <input
                         type="text"
                         placeholder="Search position title, division, or location..."
@@ -1352,7 +1352,7 @@ export default function ApplicantJobList() {
                   {/* Filters Row */}
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
-                      <MapPin className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <MapPin className="w-5 h-5 text-rose-500 shrink-0 mr-3" />
                       <select
                         value={filterRegion}
                         onChange={(e: any) => setFilterRegion(e.target.value)}
@@ -1364,7 +1364,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
-                      <Building2 className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <Building2 className="w-5 h-5 text-violet-500 shrink-0 mr-3" />
                       <select
                         value={filterDivision}
                         onChange={(e: any) => setFilterDivision(e.target.value)}
@@ -1376,7 +1376,7 @@ export default function ApplicantJobList() {
                     </div>
 
                     <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
-                      <Briefcase className="w-5 h-5 text-gray-400 shrink-0 mr-3" />
+                      <Briefcase className="w-5 h-5 text-amber-500 shrink-0 mr-3" />
                       <select
                         value={filterPosition}
                         onChange={(e: any) => setFilterPosition(e.target.value)}

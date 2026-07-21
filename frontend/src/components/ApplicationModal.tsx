@@ -671,7 +671,7 @@ export default function ApplicationModal({
               </div>
               {(getDocUrl("Letter of Intent") || selectedDocumentNames["Letter of Intent"]) ? (
                 <div className="flex flex-col gap-2 w-full mt-2 overflow-hidden">
-                  <span 
+                  <span
                     className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 block truncate w-full"
                     title={
                       selectedDocumentNames["Letter of Intent"]
@@ -2837,7 +2837,7 @@ export default function ApplicationModal({
                     {/* Item 8 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Performance Rating <span className="text-gray-400 font-normal italic text-[10px]"><br/>covering one (1) year of complete performance cycle acquired in the current or latest position prior to the date of submission (Mandatory for positions with experience requirement)</span></span>
+                        <span className="font-medium text-gray-700">Performance Rating <span className="text-gray-400 font-normal italic text-[10px]"><br />covering one (1) year of complete performance cycle acquired in the current or latest position prior to the date of submission (Mandatory for positions with experience requirement)</span></span>
                       </div>
                       {getDocUrl("Performance Rating") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -2862,7 +2862,7 @@ export default function ApplicationModal({
                     {/* Item 9 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Training Certificates <span className="text-gray-400 font-normal italic text-[10px]"><br/>(optional but mandatory for positions with training requirement)</span></span>
+                        <span className="font-medium text-gray-700">Training Certificates <span className="text-gray-400 font-normal italic text-[10px]"><br />(optional but mandatory for positions with training requirement)</span></span>
                       </div>
                       {getDocUrl("Training Certificates") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -2937,7 +2937,7 @@ export default function ApplicationModal({
                     {/* Item 12 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]"><br/>(Optional)</span></span>
+                        <span className="font-medium text-gray-700">Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]"><br />(Optional)</span></span>
                       </div>
                       {getDocUrl("Outstanding Accomplishments") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -3194,7 +3194,7 @@ export default function ApplicationModal({
                               "doc_tor": "Transcript of Records",
                               "doc_prc": "Updated PRC License/ID",
                               "doc_diploma": "Diploma (optional)",
-                                                            "doc_resume": "Resume",
+                              "doc_resume": "Resume",
                               "doc_performance_rating": "Performance Rating",
                               "doc_training_certificates": "Training Certificates",
                               "doc_application_of_education": "Application of Education",
