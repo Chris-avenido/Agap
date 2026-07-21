@@ -248,7 +248,12 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       const docType = docName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
       const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
       
-      const safeName = `${surname}_${docType}_${Date.now()}_${appNumber}.${ext}`;
+      let safeName = `${surname}_${docType}_${Date.now()}_${appNumber}`;
+      if (docName === 'Letter of Intent' && req.body.jobClusterId) {
+        const jId = String(req.body.jobClusterId).replace(/[^a-zA-Z0-9-]/g, '_');
+        safeName += `_${jId}`;
+      }
+      safeName += `.${ext}`;
       
       let finalBuffer = file.buffer;
       if (file.mimetype === 'application/pdf') {

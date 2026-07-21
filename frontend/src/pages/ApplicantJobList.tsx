@@ -346,6 +346,9 @@ export default function ApplicantJobList() {
       const formData = new FormData();
       formData.append('files', file);
       formData.append('documentNames', 'Letter of Intent');
+      if (applyingJob) {
+        formData.append('jobClusterId', applyingJob.id.toString());
+      }
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
         method: 'POST',
@@ -466,6 +469,9 @@ export default function ApplicantJobList() {
           formData.append('files', file as File);
           formData.append('documentNames', name);
         });
+        if (applyingJob) {
+          formData.append('jobClusterId', applyingJob.id.toString());
+        }
 
         const docUploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
           method: 'POST',
