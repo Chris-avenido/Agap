@@ -44,10 +44,26 @@ export const downloadFromAzure = async (blobName: string) => {
   };
 };
 
+export const getBlobNameFromUrl = (blobUrlOrName: string, containerName: string): string => {
+  try {
+    const url = new URL(blobUrlOrName);
+    const path = decodeURIComponent(url.pathname);
+    const prefix = `/${containerName}/`;
+    if (path.startsWith(prefix)) {
+      return path.substring(prefix.length);
+    }
+    // Fallback if URL structure is different
+    return path.substring(1); // remove leading slash
+  } catch {
+    // Fallback if it's not a full URL
+    return decodeURIComponent(blobUrlOrName);
+  }
+};
+
 export const deleteFromAzure = async (blobUrlOrName: string) => {
   try {
     if (!blobServiceClient) return;
-    const blobName = decodeURIComponent(blobUrlOrName.split('/').pop() || '');
+    const blobName = getBlobNameFromUrl(blobUrlOrName, containerName);
     if (!blobName) return;
 
     const containerClient = blobServiceClient.getContainerClient(containerName);
@@ -62,7 +78,7 @@ export const deleteFromAzure = async (blobUrlOrName: string) => {
 export const getBlobSasUrl = async (blobUrlOrName: string) => {
   if (!blobServiceClient) throw new Error('Azure Storage Connection String is missing.');
   
-  const blobName = decodeURIComponent(blobUrlOrName.split('/').pop() || '');
+  const blobName = getBlobNameFromUrl(blobUrlOrName, containerName);
   if (!blobName) throw new Error('Invalid blob URL');
   
   const containerClient = blobServiceClient.getContainerClient(containerName);

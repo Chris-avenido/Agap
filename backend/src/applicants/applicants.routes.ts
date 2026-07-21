@@ -245,22 +245,26 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       // Sanitize file name
       const ext = file.originalname.split('.').pop();
       const surname = (applicant.surname || 'Applicant').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      const docType = docName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const docTypeSlug = docName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
       const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
       
-      let safeName = `${surname}_${docType}_${Date.now()}_${appNumber}`;
+      let safeName = `${surname}_${docTypeSlug}_${Date.now()}_${appNumber}`;
       if (docName === 'Letter of Intent' && req.body.jobClusterId) {
         const jId = String(req.body.jobClusterId).replace(/[^a-zA-Z0-9-]/g, '_');
         safeName += `_${jId}`;
       }
       safeName += `.${ext}`;
       
+      // Store documents per applicant and per document type
+      const folderPath = `applicant-${applicantId}/${docTypeSlug}`;
+      const fullBlobPath = `${folderPath}/${safeName}`;
+
       let finalBuffer = file.buffer;
       if (file.mimetype === 'application/pdf') {
         finalBuffer = await compressPdf(file.buffer, 150);
       }
       
-      const url = await uploadToAzure(finalBuffer, safeName, file.mimetype);
+      const url = await uploadToAzure(finalBuffer, fullBlobPath, file.mimetype);
       otherInfo.documents[docName] = url;
     });
 
@@ -308,8 +312,12 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
     const ext = file.originalname.split('.').pop();
     const applicantNumber = applicant.applicant_number || `ID-${applicantId}`;
     const safeName = `${applicantNumber}_ProfilePhoto_${Date.now()}.${ext}`;
+    
+    // Store profile photo per applicant
+    const folderPath = `applicant-${applicantId}/profile-photo`;
+    const fullBlobPath = `${folderPath}/${safeName}`;
 
-    const url = await uploadToAzure(file.buffer, safeName, file.mimetype);
+    const url = await uploadToAzure(file.buffer, fullBlobPath, file.mimetype);
     otherInfo.photoUrl = url;
 
     await ApplicantsService.update(applicantId, { other_information: otherInfo });
@@ -327,8 +335,12 @@ router.get('/proxy-blob', async (req, res) => {
     if (!url || typeof url !== 'string') {
       return res.status(400).send('URL is required');
     }
-
-    const blobName = decodeURIComponent(url.split('/').pop() || '');
+    
+    // Use getBlobNameFromUrl to properly handle folders in the URL
+    const { getBlobNameFromUrl } = require('../utils/azureStorage');
+    const containerName = process.env.AZURE_FOLDER_NAME as string;
+    const blobName = getBlobNameFromUrl(url, containerName);
+    
     if (!blobName) {
       return res.status(400).send('Invalid blob URL');
     }

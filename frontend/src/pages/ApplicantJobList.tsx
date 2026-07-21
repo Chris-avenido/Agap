@@ -375,8 +375,7 @@ export default function ApplicantJobList() {
         'Work Experience Sheet',
         'Certificate of Eligibility',
         'Transcript of Records',
-        'Updated PRC License/ID',
-        'Resume'
+        'Updated PRC License/ID'
       ];
       const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
       if (!allDocumentsConfirmed) {
