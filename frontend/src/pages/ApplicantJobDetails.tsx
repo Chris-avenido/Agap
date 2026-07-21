@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, GraduationCap, ArrowRight } from 'lucide-react';
+import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 
 // Hardcoded positions removed, fetching dynamically
@@ -10,6 +11,7 @@ export default function ApplicantJobDetails() {
   const navigate = useNavigate();
   const [job, setJob] = useState<any>(null);
   const [hasApplied, setHasApplied] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     // Check auth
@@ -60,12 +62,16 @@ export default function ApplicantJobDetails() {
         console.error('Error fetching vacancies:', err);
         navigate('/applicant-jobs');
       });
-  }, [id, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('session_data');
-    navigate('/');
-  };
+    fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`)
+      .then(res => res.json())
+      .then(profileData => {
+         if (profileData.success && profileData.data) {
+           setProfile(profileData.data);
+         }
+      })
+      .catch(err => console.error('Error fetching profile:', err));
+  }, [id, navigate]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -74,6 +80,12 @@ export default function ApplicantJobDetails() {
   };
 
   if (!job) return null;
+
+  let photoUrl = null;
+  if (profile?.other_information) {
+     const otherInfo = typeof profile.other_information === 'string' ? JSON.parse(profile.other_information) : profile.other_information;
+     photoUrl = otherInfo.photoUrl;
+  }
 
   return (
     <div
@@ -86,21 +98,11 @@ export default function ApplicantJobDetails() {
         `
       }}
     >
-      <header className="sticky top-0 bg-[#003366] text-white px-6 py-4 flex justify-between items-center z-30 shadow-md">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/applicant-dashboard')}>
-          <div className="w-10 h-10 bg-[#facc15] rounded-[10px] flex items-center justify-center shrink-0">
-            <GraduationCap className="w-6 h-6 text-[#003366]" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-xl leading-tight tracking-wide">AGAP Portal</span>
-            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
-          </div>
-        </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 text-white hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20">
-          <LogOut className="w-5 h-5" />
-          <span className="font-semibold text-sm">Logout</span>
-        </button>
-      </header>
+      <ApplicantHeader 
+        firstName={profile?.first_name || ''} 
+        lastName={profile?.surname || ''} 
+        photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null} 
+      />
 
       <main className="flex-1 w-full flex flex-col">
         {/* Details Hero Banner Section */}
