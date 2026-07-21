@@ -528,82 +528,8 @@ export default function ApplicationModal({
     membershipsList, qRes, storedDocuments, sex, formVersion, selectedDocumentNames, requiredDocuments
   ]);
 
-  const completionStats = useMemo(() => {
-    const _v = formVersion;
-    const form = formRef.current;
-    let completedFields = 0;
-    let totalFields = 0;
-
-    if (form) {
-      const controls = Array.from(
-        form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-          "input, select, textarea"
-        )
-      );
-      const countedRadioGroups = new Set<string>();
-
-      controls.forEach((control) => {
-        if (control.disabled) return;
-        if (control instanceof HTMLInputElement && control.type === "file") return;
-        if (control instanceof HTMLInputElement && control.type === "hidden") return;
-        if (control instanceof HTMLInputElement && (control.type === "button" || control.type === "submit")) return;
-
-        if (control instanceof HTMLInputElement && control.type === "radio") {
-          if (!control.name || countedRadioGroups.has(control.name)) return;
-          countedRadioGroups.add(control.name);
-          const radioGroup = Array.from(form.querySelectorAll<HTMLInputElement>("input[type='radio']"))
-            .filter((radio) => radio.name === control.name);
-          totalFields += 1;
-          if (radioGroup.some((radio) => radio.checked)) completedFields += 1;
-          return;
-        }
-
-        if (control instanceof HTMLInputElement && control.type === "checkbox") {
-          totalFields += 1;
-          if (control.checked) completedFields += 1;
-          return;
-        }
-
-        totalFields += 1;
-        if (String(control.value || "").trim()) completedFields += 1;
-      });
-    }
-
-    totalFields += 1;
-    if (sex) completedFields += 1;
-
-    const fd = form ? new FormData(form) : null;
-    const hasSelectedFile = (inputName: string) => {
-      const file = fd?.get(inputName);
-      return file instanceof File && file.size > 0;
-    };
-
-    const allDocuments = [
-      ...requiredDocuments,
-      { label: 'Diploma (optional)', inputName: 'doc_diploma' }
-    ];
-
-    let completedDocuments = allDocuments.filter(
-      (doc) => storedDocuments[doc.label] || selectedDocumentNames[doc.label] || hasSelectedFile(doc.inputName)
-    ).length;
-
-    let totalDocs = allDocuments.length;
-    
-    // Also include profile photo in progress
-    totalDocs += 1;
-    if (photoUrl) {
-      completedDocuments += 1;
-    }
-
-    return {
-      completed: completedFields + completedDocuments,
-      total: totalFields + totalDocs,
-    };
-  }, [formVersion, requiredDocuments, selectedDocumentNames, sex, storedDocuments, photoUrl]);
-
-  const percentage = completionStats.total > 0
-    ? ((completionStats.completed / completionStats.total) * 100).toFixed(2)
-    : "0.00";
+  const totalSteps = isRegistrationFlow ? 10 : 11;
+  const percentage = Math.min((completedSteps.length / totalSteps) * 100, 100).toFixed(2);
 
   if (!isOpen) return null;
 
