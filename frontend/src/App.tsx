@@ -55,49 +55,34 @@ const SSOInterceptor = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const abortController = new AbortController();
-    setIsProcessingSSO(true);
+    try {
+      // 1. Decode the JWT payload containing the user object
+      const base64Url = ssoToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const decodedPayload = JSON.parse(atob(base64));
 
-    const processSSO = async () => {
-      try {
-        const apiBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-        const response = await fetch(`${apiBaseUrl}/api/applicants/sso-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sso_token: ssoToken }),
-          signal: abortController.signal,
-        });
-        const payload = await response.json().catch(() => null);
+      // 2. Set the expected localStorage keys for the AGAP session
+      const session = {
+        id: decodedPayload.uid || decodedPayload.id || 1, // Safely extract user ID
+        applicant_number: decodedPayload.applicant_number || `ID-${decodedPayload.uid || 1}`,
+        email: decodedPayload.email || decodedPayload.sub,
+        expiry: decodedPayload.exp ? decodedPayload.exp * 1000 : Date.now() + 3 * 60 * 60 * 1000,
+      };
 
-        if (!response.ok || !payload?.success || !payload?.data) {
-          throw new Error(payload?.message || 'SSO authentication failed.');
-        }
+      localStorage.setItem('session_data', JSON.stringify(session));
 
-        const session = {
-          id: payload.data.id,
-          applicant_number: payload.data.applicant_number,
-          email: payload.data.email,
-          expiry: Number.isFinite(payload.data.expiry)
-            ? payload.data.expiry
-            : Date.now() + 3 * 60 * 60 * 1000,
-        };
-
-        localStorage.setItem('session_data', JSON.stringify(session));
-        navigate('/applicant-dashboard', { replace: true });
-      } catch (error) {
-        if (abortController.signal.aborted) return;
-
-        console.error('SSO processing error:', error);
-        const message = error instanceof Error ? error.message : 'Unable to connect to the SSO service.';
-        await Swal.fire('SSO Error', message, 'error');
-        navigate('/login', { replace: true });
-      } finally {
-        if (!abortController.signal.aborted) setIsProcessingSSO(false);
-      }
-    };
-
-    void processSSO();
-    return () => abortController.abort();
+      // 3. Clean the sso_token query parameter from the URL address bar
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // 4. Redirect the user to the logged-in home page
+      navigate('/applicant-dashboard', { replace: true });
+    } catch (error) {
+      console.error('SSO login parsing failed:', error);
+      Swal.fire('SSO Error', 'Unable to process HQ sign-in token.', 'error');
+      navigate('/login', { replace: true });
+    } finally {
+      setIsProcessingSSO(false);
+    }
   }, [navigate, ssoToken]);
 
   if (isProcessingSSO) {
