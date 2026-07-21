@@ -1,6 +1,6 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
-const MAX_SSO_TOKEN_TTL_SECONDS = 3 * 60 * 60;
+const MAX_SSO_TOKEN_TTL_SECONDS = 5 * 60;
 const EXPECTED_ROLE = 'Applicant';
 
 export class SsoConfigurationError extends Error {}
@@ -20,6 +20,16 @@ function getSharedSecret(): string {
   return secret;
 }
 
+function getAuthorizedHqEmail(): string {
+  const email = process.env.AGAP_SSO_EMAIL?.trim().toLowerCase();
+  if (!email) {
+    throw new SsoConfigurationError(
+      'AGAP_SSO_EMAIL is required to authorize the InsightED HQ applicant identity',
+    );
+  }
+  return email;
+}
+
 function isUnixTimestamp(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
 }
@@ -33,6 +43,8 @@ export function verifyApplicantSsoToken(
   try {
     decoded = jwt.verify(token, getSharedSecret(), {
       algorithms: ['HS256'],
+      issuer: 'insighted-hq',
+      audience: 'agap-applicants',
       clockTimestamp: now,
     });
   } catch (error) {
@@ -49,7 +61,11 @@ export function verifyApplicantSsoToken(
 
   if (
     !email ||
+    decoded.type !== 'hq_sso' ||
+    decoded.sub !== email ||
     decoded.role !== EXPECTED_ROLE ||
+    typeof decoded.jti !== 'string' ||
+    !decoded.jti ||
     !isUnixTimestamp(decoded.iat) ||
     !isUnixTimestamp(decoded.exp) ||
     decoded.iat > now + 30 ||
@@ -57,6 +73,12 @@ export function verifyApplicantSsoToken(
     decoded.exp - decoded.iat > MAX_SSO_TOKEN_TTL_SECONDS
   ) {
     throw new SsoAuthenticationError('Invalid HQ sign-in token payload');
+  }
+
+  if (email !== getAuthorizedHqEmail()) {
+    throw new SsoAuthenticationError(
+      'This HQ account is not authorized for AGAP Applicants access',
+    );
   }
 
   return {

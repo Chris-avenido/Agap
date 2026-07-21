@@ -50,9 +50,24 @@ router.post('/sso-login', async (req, res) => {
   try {
     const claims = verifyApplicantSsoToken(ssoToken);
 
-    const applicant = await ApplicantsService.findByEmail(claims.email);
+    let applicant = await ApplicantsService.findByEmail(claims.email);
     if (!applicant) {
-      return res.status(404).json({ message: 'Applicant account not found. Please register first.' });
+      // Wilfredo is an HQ administrative identity and does not have a legacy
+      // applicant row. Provision a dedicated passwordless applicant profile on
+      // the first verified HQ handoff so the dashboard never exposes another
+      // applicant's records.
+      try {
+        applicant = await ApplicantsService.create({
+          email_address: claims.email,
+          first_name: 'Wilfredo',
+          surname: 'Cabral',
+        });
+      } catch (error) {
+        // A simultaneous first sign-in may win the unique-email insert. Read
+        // the row again before treating the provisioning attempt as failed.
+        applicant = await ApplicantsService.findByEmail(claims.email);
+        if (!applicant) throw error;
+      }
     }
 
     res.json({
