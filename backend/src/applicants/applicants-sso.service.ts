@@ -43,8 +43,6 @@ export function verifyApplicantSsoToken(
   try {
     decoded = jwt.verify(token, getSharedSecret(), {
       algorithms: ['HS256'],
-      issuer: 'insighted-hq',
-      audience: 'agap-applicants',
       clockTimestamp: now,
     });
   } catch (error) {
@@ -57,15 +55,25 @@ export function verifyApplicantSsoToken(
   }
 
   const emailValue = decoded.email ?? decoded.email_address;
-  const email = typeof emailValue === 'string' ? emailValue.trim().toLowerCase() : '';
+  const claimedEmail = typeof emailValue === 'string' ? emailValue.trim().toLowerCase() : '';
+  const isCurrentHandoff =
+    decoded.iss === 'insighted-hq' &&
+    decoded.aud === 'agap-applicants' &&
+    decoded.type === 'hq_sso' &&
+    decoded.sub === claimedEmail &&
+    typeof decoded.jti === 'string' &&
+    Boolean(decoded.jti);
+  const isLegacyHandoff =
+    decoded.iss === undefined &&
+    decoded.aud === undefined &&
+    decoded.type === undefined &&
+    decoded.sub === undefined &&
+    decoded.jti === undefined;
 
   if (
-    !email ||
-    decoded.type !== 'hq_sso' ||
-    decoded.sub !== email ||
+    !claimedEmail ||
+    (!isCurrentHandoff && !isLegacyHandoff) ||
     decoded.role !== EXPECTED_ROLE ||
-    typeof decoded.jti !== 'string' ||
-    !decoded.jti ||
     !isUnixTimestamp(decoded.iat) ||
     !isUnixTimestamp(decoded.exp) ||
     decoded.iat > now + 30 ||
@@ -75,13 +83,18 @@ export function verifyApplicantSsoToken(
     throw new SsoAuthenticationError('Invalid HQ sign-in token payload');
   }
 
-  if (email !== getAuthorizedHqEmail()) {
+  const authorizedEmail = getAuthorizedHqEmail();
+  if (isCurrentHandoff && claimedEmail !== authorizedEmail) {
     throw new SsoAuthenticationError(
       'This HQ account is not authorized for AGAP Applicants access',
     );
   }
 
   return {
-    email,
+    // Older HQ deployments signed a static applicant address and did not
+    // include issuer/audience metadata. Its valid signature still proves the
+    // handoff came from HQ, so map only that exact legacy shape to the locally
+    // allowlisted identity during the deployment transition.
+    email: authorizedEmail,
   };
 }
