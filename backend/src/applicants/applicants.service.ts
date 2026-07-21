@@ -154,22 +154,23 @@ class ApplicantsServiceClass {
     return applicant;
   }
 
-  async applyJob(applicantId: number, jobTitle: string, positionId?: string) {
-    if (!positionId || positionId === 'null' || positionId === 'undefined' || String(positionId).trim() === '') {
-      throw new Error("Invalid position ID provided.");
+  async applyJob(applicantId: number, jobTitle: string, jobClusterId?: string) {
+    if (!jobClusterId || jobClusterId === 'null' || jobClusterId === 'undefined' || String(jobClusterId).trim() === '') {
+      throw new Error("Invalid job cluster ID provided.");
     }
     
     const applicantRes = await pool.query('SELECT applicant_number FROM applicants WHERE id = $1', [applicantId]);
     const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
 
-    console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, positionId=${positionId}`);
+    console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, jobClusterId=${jobClusterId}`);
     
     const checkResult = await pool.query(
-      'SELECT * FROM applications WHERE applicant_id = $1 AND vacancy_id = $2',
-      [applicantId.toString(), positionId || null]
+      'SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
+      [applicantId.toString(), jobClusterId]
     );
-    console.log(`[DEBUG] applyJob checkResult length=${checkResult.rows.length}`);
-    if (checkResult.rows.length > 0) return checkResult.rows[0];
+    if (checkResult.rows.length > 0) {
+      throw new Error("You have already applied for this job cluster.");
+    }
 
     const appId = require('crypto').randomUUID();
     console.log(`[DEBUG] applyJob generated appId=${appId}`);
@@ -197,14 +198,14 @@ class ApplicantsServiceClass {
     }
     const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
-    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
+    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null]);
     
     try {
       const result = await pool.query(`
-        INSERT INTO applications (id, application_number, applicant_id, vacancy_id, status, date_applied, created_at)
+        INSERT INTO applications (id, application_number, applicant_id, job_cluster_id, status, date_applied, created_at)
         VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
         RETURNING *
-      `, [appId, uniqueApplicationNumber, applicantId.toString(), positionId || null]);
+      `, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null]);
 
       console.log(`[DEBUG] applyJob INSERT successful. Returning row:`, result.rows[0]);
       return result.rows[0];
@@ -216,11 +217,15 @@ class ApplicantsServiceClass {
 
   async findApplications(applicantId: number) {
     const result = await pool.query(`
-      SELECT a.*, v.title as job_title, v.school as office, qe.overall_fit, v.status as vacancy_status,
-             v.posting_start, v.posting_end, v.item_no, p.salary_grade
+      SELECT a.*, p.title as job_title, c.region as office, qe.overall_fit,
+             (SELECT v.status FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as vacancy_status,
+             (SELECT MIN(v.posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_start,
+             (SELECT MAX(v.posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_end,
+             (SELECT v.item_no FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as item_no,
+             (SELECT v.salary_grade FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as salary_grade
       FROM applications a
-      LEFT JOIN vacancies v ON a.vacancy_id::text = v.id::text
-      LEFT JOIN positions p ON v.position_id = p.id
+      LEFT JOIN job_clusters c ON a.job_cluster_id::text = c.id::text
+      LEFT JOIN positions p ON c.position_id = p.id
       LEFT JOIN (
         SELECT application_id, MAX(overall_fit) as overall_fit
         FROM qual_evals
@@ -228,32 +233,31 @@ class ApplicantsServiceClass {
       ) qe ON a.id = qe.application_id
       WHERE a.applicant_id = $1
     `, [applicantId.toString()]);
-    return result.rows.map(r => ({ ...r, position_id: r.vacancy_id }));
+    return result.rows.map(r => ({ ...r, position_id: r.job_cluster_id }));
   }
 
-  async toggleSavedJob(applicantId: number, positionId: string) {
-    const checkResult = await pool.query('SELECT * FROM saved_jobs WHERE applicant_id = $1 AND position_id = $2', [applicantId, positionId]);
+  async toggleSavedJob(applicantId: number, jobClusterId: string) {
+    const checkResult = await pool.query('SELECT * FROM saved_clusters WHERE applicant_id = $1 AND job_cluster_id = $2', [applicantId, jobClusterId]);
     const existing = checkResult.rows[0];
 
     if (existing) {
       const newStatus = !existing.is_saved;
-      await pool.query('UPDATE saved_jobs SET is_saved = $1 WHERE id = $2', [newStatus, existing.id]);
+      await pool.query('UPDATE saved_clusters SET is_saved = $1 WHERE id = $2', [newStatus, existing.id]);
       return { status: newStatus ? 'added' : 'removed' };
     } else {
       await pool.query(`
-        INSERT INTO saved_jobs (applicant_id, position_id, is_saved)
+        INSERT INTO saved_clusters (applicant_id, job_cluster_id, is_saved)
         VALUES ($1, $2, true)
-      `, [applicantId, positionId]);
+      `, [applicantId, jobClusterId]);
       return { status: 'added' };
     }
   }
 
   async findSavedJobs(applicantId: number) {
     const result = await pool.query(`
-      SELECT s.*, v.title as position_title, v.school as office
-      FROM saved_jobs s
-      LEFT JOIN vacancies v ON s.position_id::text = v.id::text
-      WHERE s.applicant_id = $1 AND s.is_saved = true
+      SELECT job_cluster_id as position_id
+      FROM saved_clusters 
+      WHERE applicant_id = $1 AND is_saved = true
     `, [applicantId]);
     return result.rows;
   }

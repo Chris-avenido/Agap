@@ -4,15 +4,51 @@ export class VacanciesService {
   static async getOpenVacancies() {
     const result = await pool.query(`
       SELECT 
-        v.*,
-        p.salary_grade,
-        p.required_bachelor_degree
-      FROM vacancies v
-      LEFT JOIN positions p ON v.position_id = p.id
-      WHERE v.status = $1 
-      ORDER BY v.posting_start DESC
-    `, ['open']);
-    return result.rows;
+        c.id as "jobClusterId",
+        p.title as "positionTitle",
+        c.region as "region",
+        c.division as "division",
+        (SELECT salary_grade FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as "salaryGrade",
+        (SELECT COUNT(*) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))::int as "vacantItemCount",
+        (SELECT MIN(posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open') as "posting_start",
+        (SELECT MAX(posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open') as "posting_end",
+        p.required_bachelor_degree,
+        p.required_degree_keywords,
+        p.min_years_experience,
+        p.min_training_hours,
+        p.eligibility_required
+      FROM job_clusters c
+      JOIN positions p ON c.position_id = p.id
+      WHERE EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))
+      ORDER BY posting_start DESC
+    `);
+    
+    // Process response shape and check posting window
+    const now = new Date();
+    return result.rows.filter(row => {
+      const start = row.posting_start ? new Date(row.posting_start) : null;
+      const end = row.posting_end ? new Date(row.posting_end) : null;
+      if (start && start > now) return false;
+      if (end && end < now) return false;
+      return true;
+    }).map(row => ({
+      jobClusterId: row.jobClusterId,
+      positionTitle: row.positionTitle,
+      region: row.region,
+      division: row.division,
+      salaryGrade: row.salaryGrade,
+      vacantItemCount: row.vacantItemCount,
+      qualificationStandards: {
+        requiredBachelorDegree: row.required_bachelor_degree,
+        requiredDegreeKeywords: row.required_degree_keywords,
+        minYearsExperience: row.min_years_experience,
+        minTrainingHours: row.min_training_hours,
+        eligibilityRequired: row.eligibility_required
+      },
+      // Keep posting_start and end for frontend display if needed
+      posting_start: row.posting_start,
+      posting_end: row.posting_end
+    }));
   }
 
   static async markExpiredVacancies() {
