@@ -580,8 +580,7 @@ export default function ApplicationModal({
 
     const allDocuments = [
       ...requiredDocuments,
-      { label: 'Diploma (optional)', inputName: 'doc_diploma' },
-      { label: 'Trainings', inputName: 'doc_trainings' }
+      { label: 'Diploma (optional)', inputName: 'doc_diploma' }
     ];
 
     let completedDocuments = allDocuments.filter(
@@ -2855,30 +2854,6 @@ export default function ApplicationModal({
                     {/* Item 6 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Trainings <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
-                      </div>
-                      {getDocUrl("Trainings") ? (
-                        <div className="flex flex-col gap-2 w-full mt-2">
-                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
-                            &#10003; Uploaded
-                          </span>
-                          <div className="flex gap-2 w-full">
-                            <a href={(selectedDocumentUrls["Trainings"] || getDocUrl("Trainings")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
-                              View File
-                            </a>
-                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
-                              Replace File
-                              <input type="file" name="doc_trainings" accept=".pdf" className="hidden" />
-                            </label>
-                          </div>
-                        </div>
-                      ) : (
-                        <input type="file" name="doc_trainings" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
-                      )}
-                    </div>
-                    {/* Item 6 */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
-                      <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Diploma (optional)</span>
                       </div>
                       {getDocUrl("Diploma (optional)") ? (
@@ -2928,7 +2903,7 @@ export default function ApplicationModal({
                     {/* Item 8 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Performance Rating</span>
+                        <span className="font-medium text-gray-700">Performance Rating <span className="text-gray-400 font-normal italic text-[10px]"><br/>covering one (1) year of complete performance cycle acquired in the current or latest position prior to the date of submission (Mandatory for positions with experience requirement)</span></span>
                       </div>
                       {getDocUrl("Performance Rating") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -2953,7 +2928,7 @@ export default function ApplicationModal({
                     {/* Item 9 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Training Certificates</span>
+                        <span className="font-medium text-gray-700">Training Certificates <span className="text-gray-400 font-normal italic text-[10px]"><br/>(optional but mandatory for positions with training requirement)</span></span>
                       </div>
                       {getDocUrl("Training Certificates") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -3022,6 +2997,31 @@ export default function ApplicationModal({
                         </div>
                       ) : (
                         <input type="file" name="doc_application_of_learning" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
+                    </div>
+
+                    {/* Item 12 */}
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]"><br/>(Optional)</span></span>
+                      </div>
+                      {getDocUrl("Outstanding Accomplishments") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
+                            &#10003; Uploaded
+                          </span>
+                          <div className="flex gap-2 w-full">
+                            <a href={(selectedDocumentUrls["Outstanding Accomplishments"] || getDocUrl("Outstanding Accomplishments")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_outstanding_accomplishments" accept=".pdf" className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_outstanding_accomplishments" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
                   </div>
@@ -3265,7 +3265,7 @@ export default function ApplicationModal({
                               "doc_training_certificates": "Training Certificates",
                               "doc_application_of_education": "Application of Education",
                               "doc_application_of_learning": "Application of Learning and Development",
-                              "doc_trainings": "Trainings",
+                              "doc_outstanding_accomplishments": "Outstanding Accomplishments",
                               "profile_photo": "profile_photo"
                             };
 
