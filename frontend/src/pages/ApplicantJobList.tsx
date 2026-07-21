@@ -599,7 +599,7 @@ export default function ApplicantJobList() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               applicantId: session.id,
-              jobClusterId: applyingJob.id,
+              positionId: applyingJob.id,
               jobTitle: applyingJob.title
             })
           });

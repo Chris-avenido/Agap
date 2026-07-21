@@ -70,7 +70,7 @@ export default function ApplicantJobDetails() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleApplyClick = () => {
-    navigate('/applicant-jobs', { state: { applyJob: job } });
+    navigate('/applicant-jobs', { state: { applyingJob: job } });
   };
 
   if (!job) return null;
