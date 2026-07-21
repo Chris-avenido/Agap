@@ -15,6 +15,7 @@ import {
 import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
 // @ts-ignore
 import ModernDatePicker from "./ModernDatePicker";
+import { calculateProfileProgress, parseProfileToState } from "../utils/profileProgress";
 
 interface ApplicationModalProps {
   isOpen: boolean;
@@ -455,7 +456,7 @@ export default function ApplicationModal({
     return docs;
   }, [isRegistrationFlow]);
 
-  const completedSteps = useMemo(() => {
+  const { steps: completedSteps, percentage, totalSteps } = useMemo(() => {
     const _v = formVersion;
 
     const fd = formRef.current ? new FormData(formRef.current) : null;
@@ -464,78 +465,22 @@ export default function ApplicationModal({
       return fallback;
     };
 
-    const steps: string[] = [];
-
-    // Personal Information
-    if (getVal('first_name', userData?.first_name)?.trim() &&
-      getVal('surname', userData?.surname)?.trim() &&
-      getVal('place_of_birth', userData?.place_of_birth)?.trim() &&
-      sex &&
-      getVal('civil_status', userData?.civil_status) &&
-      getVal('citizenship', userData?.citizenship)) {
-      steps.push('Personal Information');
-    }
-
-    // Family Background
-    if (getVal('spouse_surname', familyBackground?.spouse?.surname)?.trim() ||
-      getVal('spouse_first', familyBackground?.spouse?.first_name)?.trim() ||
-      getVal('father_surname', familyBackground?.father?.surname)?.trim() ||
-      getVal('mother_surname', familyBackground?.mother?.surname)?.trim() ||
-      getVal('mother_first', familyBackground?.mother?.first_name)?.trim() ||
-      getVal('father_first', familyBackground?.father?.first_name)?.trim()) {
-      steps.push('Family Background');
-    }
-
-    // Educational Background
-    const levels = ["elementary", "secondary", "vocational", "college", "graduate"];
-    const hasSchool = levels.some(lvl => {
-      const dbSchool = eduBg?.find((e: any) => e.level?.toLowerCase().startsWith(lvl))?.school;
-      return getVal(`edu_${lvl}_school`, dbSchool)?.trim();
-    });
-    if (hasSchool) steps.push('Educational Background');
-
-    // Eligibility
-    if (civilServiceList?.length > 0 && civilServiceList.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
-
-    // Work Experience
-    if (workExperienceList?.length > 0 && workExperienceList.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
-
-    // Voluntary Work
-    if (voluntaryWorkList?.length > 0 && voluntaryWorkList.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
-
-    // Learning & Development
-    if (learningDevelopmentList?.length > 0 && learningDevelopmentList.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
-
-    // Other Information
-    if ((skillsList?.length > 0 && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : s.value?.trim() !== '')) ||
-      (distinctionsList?.length > 0 && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : d.value?.trim() !== '')) ||
-      (membershipsList?.length > 0 && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : m.value?.trim() !== ''))) steps.push('Other Information');
-
-    // Legal Questionnaire
-    if (getVal('q34a', qRes?.q34a) || getVal('q35a', qRes?.q35a) || getVal('q36', qRes?.q36)) steps.push('Legal Questionnaire');
-
     const hasSelectedFile = (inputName: string) => {
       const file = fd?.get(inputName);
       return file instanceof File && file.size > 0;
     };
-    const hasAllDocs = requiredDocuments
-      .filter(doc => doc.label !== 'Letter of Intent')
-      .every(doc => storedDocuments[doc.label] || selectedDocumentNames[doc.label] || hasSelectedFile(doc.inputName));
-    if (hasAllDocs) steps.push('Essential Documents');
 
-    if (storedDocuments['Letter of Intent'] || selectedDocumentNames['Letter of Intent'] || hasSelectedFile('doc_loi')) {
-      steps.push('Letter of Intent');
-    }
+    const parsedData = parseProfileToState(userData);
 
-    return steps;
+    const data = {
+      ...parsedData,
+      isSubsequentApplication: !isRegistrationFlow,
+    };
+
+    return calculateProfileProgress(data);
   }, [
-    userData, familyBackground, eduBg, civilServiceList, workExperienceList,
-    voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList,
-    membershipsList, qRes, storedDocuments, sex, formVersion, selectedDocumentNames, requiredDocuments
+    userData, isRegistrationFlow, formVersion
   ]);
-
-  const totalSteps = isRegistrationFlow ? 10 : 11;
-  const percentage = Math.min((completedSteps.length / totalSteps) * 100, 100).toFixed(2);
 
   if (!isOpen) return null;
 
