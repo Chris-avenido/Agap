@@ -15,13 +15,24 @@ export default function ApplicationPage() {
 
   const [activeTab, setActiveTab] = useState('C1');
   const [isParsing, setIsParsing] = useState(false);
+  const [jobDetails, setJobDetails] = useState<any>(null);
   const formRef = useRef<HTMLFormElement>(null);
-
-  // test
 
   useEffect(() => {
     if (!jobId && !jobTitle) {
       navigate('/');
+    } else if (jobId) {
+      fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            const cluster = data.data.find((v: any) => v.cluster_id === jobId || v.position_id === jobId);
+            if (cluster) {
+              setJobDetails(cluster);
+            }
+          }
+        })
+        .catch(err => console.error('Error fetching job details:', err));
     }
   }, [jobId, jobTitle, navigate]);
 
@@ -296,9 +307,28 @@ export default function ApplicationPage() {
           <div className="border-b border-gray-100 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
               <h1 className="text-3xl font-extrabold text-[#022851] tracking-tight mb-2">CS Form No. 212 Application</h1>
-              <p className="text-gray-500 font-medium">Applying for: <span className="text-[#022851] font-bold">{jobTitle}</span></p>
+              <p className="text-gray-500 font-medium text-lg">Applying for: <span className="text-[#022851] font-black uppercase">{jobTitle}</span></p>
+              
+              {jobDetails && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {jobDetails.region && <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-md uppercase border border-blue-100">Region: {jobDetails.region}</span>}
+                  {jobDetails.division && <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-md uppercase border border-blue-100">Division: {jobDetails.division}</span>}
+                  {jobDetails.salary_grade && <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-md uppercase border border-green-100">SG {jobDetails.salary_grade}</span>}
+                  {jobDetails.vacancy_count && <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-md uppercase border border-emerald-100">{jobDetails.vacancy_count} {jobDetails.vacancy_count > 1 ? 'Vacancies' : 'Vacancy'}</span>}
+                </div>
+              )}
             </div>
           </div>
+          
+          {jobDetails && (jobDetails.qs_education || jobDetails.qs_experience || jobDetails.qs_training || jobDetails.qs_eligibility) && (
+            <div className="p-5 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col gap-2 -mt-2">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">Qualification Standards (QS)</span>
+              {jobDetails.qs_education && <div className="text-sm"><strong className="text-gray-700">Education:</strong> <span className="text-gray-600">{jobDetails.qs_education}</span></div>}
+              {jobDetails.qs_experience && <div className="text-sm"><strong className="text-gray-700">Experience:</strong> <span className="text-gray-600">{jobDetails.qs_experience}</span></div>}
+              {jobDetails.qs_training && <div className="text-sm"><strong className="text-gray-700">Training:</strong> <span className="text-gray-600">{jobDetails.qs_training}</span></div>}
+              {jobDetails.qs_eligibility && <div className="text-sm"><strong className="text-gray-700">Eligibility:</strong> <span className="text-gray-600">{jobDetails.qs_eligibility}</span></div>}
+            </div>
+          )}
 
           {/* AI Resume Upload Zone */}
           <div className="p-6 border-2 border-dashed border-blue-200 rounded-2xl bg-blue-50/50 text-center hover:bg-blue-50 transition-colors relative group">

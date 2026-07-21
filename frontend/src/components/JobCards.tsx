@@ -10,28 +10,44 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
 
   return (
     <div onClick={(e) => { if ((e.target as any).closest("button")) return; const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); navigate(`/applicant-jobs/${vid}`); }} className="bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col hover:shadow-lg transition-shadow relative cursor-pointer">
-      {/* Top Section */}
       <div className="flex justify-between items-start mb-4">
-        <div className="flex flex-col gap-2">
-          {/* Top Tags */}
-          <div className="flex items-center gap-2">
-            {job.location && (
-              <span className="px-3 py-1 bg-gray-50 text-[#003366] text-[10px] font-bold rounded-full uppercase tracking-wider border border-gray-100">{job.location}</span>
-            )}
-            {job.division && (
-              <span className="px-3 py-1 bg-gray-50 text-[#003366] text-[10px] font-bold rounded-full uppercase tracking-wider border border-gray-100">{job.division}</span>
-            )}
-          </div>
-
+        <div className="flex flex-col gap-1 w-full">
           {/* Title */}
-          <h3 className="text-lg font-bold text-[#2563eb] leading-tight uppercase line-clamp-2 mt-1">
+          <h3 className="text-xl font-bold text-[#2563eb] leading-tight line-clamp-2">
             {title}
           </h3>
+          
+          {/* Region - Division */}
+          <p className="text-gray-600 font-medium text-sm">
+            {job.location || 'N/A'} - {job.division || 'N/A'}
+          </p>
 
-          {/* Item No & Type */}
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-[#3b82f6] text-[11px] font-bold bg-blue-50 px-2.5 py-1 rounded-md uppercase">Item No.: {job.itemNo || 'N/A'}</span>
+          <hr className="my-2 border-gray-300 border-t-2" />
+
+          {/* SG & Vacancies */}
+          <div className="flex justify-between items-center text-sm font-bold text-gray-700 uppercase tracking-wide px-2">
+            <div className="flex flex-col items-center">
+              <span>SG</span>
+              <span className="text-lg">{job.sg || 'N/A'}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span># of Vacancies</span>
+              <span className="text-lg">{job.vacancyCount || 0}</span>
+            </div>
           </div>
+
+          <hr className="my-2 border-gray-300 border-t-2" />
+          
+          {/* Qualification Standards */}
+          {(job.qsEducation || job.qsExperience || job.qsTraining || job.qsEligibility) && (
+             <div className="flex flex-col gap-1 mt-1 text-xs">
+                <span className="text-sm font-bold text-gray-700 tracking-wide mb-1">QS:</span>
+                {job.qsEducation && <div><strong className="text-gray-700">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
+                {job.qsExperience && <div><strong className="text-gray-700">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
+                {job.qsTraining && <div><strong className="text-gray-700">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
+                {job.qsEligibility && <div><strong className="text-gray-700">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
+             </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 shrink-0 ml-4">
@@ -43,49 +59,11 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
               </span>
             </div>
           )}
-          {/* Days Left Box */}
-          {job.vacancyStatus?.toUpperCase() !== 'CLOSED' && (
-            <div className="flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[20px] p-3 w-20 h-20 shadow-sm shrink-0">
-              <span className="text-[22px] font-black text-[#f59e0b] leading-none">{job.daysLeft || 0}</span>
-              <div className="w-8 h-1 bg-[#f59e0b] rounded-full my-1.5"></div>
-              <span className="text-[9px] font-bold text-[#d97706] uppercase tracking-widest text-center leading-tight">DAYS<br />LEFT</span>
-            </div>
-          )}
+
         </div>
       </div>
 
-      {/* Rows Section */}
-      <div className="flex flex-col gap-3 mb-6 mt-2">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <GraduationCap className="w-5 h-5 text-blue-600" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PLACE OF ASSIGNMENT / SALARY GRADE</span>
-            <span className="text-[14px] font-bold text-gray-800">{job.office || 'N/A'} • SG {job.sg || 'N/A'}</span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-            <CircleDollarSign className="w-5 h-5 text-green-600" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DATE POSTED</span>
-            <span className="text-[14px] font-bold text-gray-800">{job.posted || 'N/A'}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
-            <CalendarDays className="w-5 h-5 text-gray-500" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">DEADLINE OF APPLICATION</span>
-            <span className="text-[14px] font-bold text-gray-800">{job.deadline || 'N/A'}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Status Footer */}
       {tab === 'my-applications' && (
@@ -181,8 +159,12 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
                       <span className="font-bold text-[#2563eb]">{title}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded uppercase">Item No.: {job.itemNo || 'N/A'}</span>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {job.vacancyCount && (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded uppercase border border-emerald-100">
+                            {job.vacancyCount} Vacanc{job.vacancyCount > 1 ? 'ies' : 'y'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>

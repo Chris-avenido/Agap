@@ -599,7 +599,7 @@ export default function ApplicantJobList() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               applicantId: session.id,
-              positionId: applyingJob.id,
+              jobClusterId: applyingJob.id,
               jobTitle: applyingJob.title
             })
           });
@@ -687,17 +687,23 @@ export default function ApplicantJobList() {
       .then(data => {
         if (data.success && data.data) {
           const formatted = data.data.map((v: any) => ({
-            id: v.id,
+            id: v.jobClusterId,
+            jobClusterId: v.jobClusterId,
             positionId: v.position_id,
-            title: v.title,
-            office: v.school || 'Department of Education',
+            title: v.positionTitle,
+            office: v.division ? `${v.division}, ${v.region}` : 'Department of Education',
             division: v.division || '',
             type: 'Permanent', // Defaulting as DB doesn't have it
             posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
             deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
-            sg: v.salary_grade,
-            itemNo: v.item_no,
+            sg: v.salaryGrade,
+            itemNo: 'Multiple Items',
             location: v.region || '',
+            vacancyCount: v.vacantItemCount,
+            qsEducation: v.qualificationStandards?.requiredBachelorDegree,
+            qsExperience: v.qualificationStandards?.minYearsExperience,
+            qsTraining: v.qualificationStandards?.minTrainingHours,
+            qsEligibility: v.qualificationStandards?.eligibilityRequired,
             description: 'Details available in the full job posting.',
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
