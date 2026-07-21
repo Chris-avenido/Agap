@@ -24,10 +24,10 @@ export default function ApplicantJobDetails() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
-          const v = data.data.find((vac: any) => vac.id === id || String(vac.id) === String(id));
+          const v = data.data.find((vac: any) => String(vac.jobClusterId) === String(id) || String(vac.id) === String(id));
           if (v) {
             const foundJob = {
-              id: v.id,
+              id: v.jobClusterId || v.id,
               positionId: v.position_id,
               title: v.title,
               office: v.school || 'Department of Education',

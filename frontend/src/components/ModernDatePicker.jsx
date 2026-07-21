@@ -47,9 +47,7 @@ const ModernDatePicker = ({ name, value, defaultValue, onChange, placeholder, ma
             }
         }
 
-        if (value === undefined) {
-            setInternalValue(newValue);
-        }
+        setInternalValue(newValue);
 
         if (onChange) {
             onChange(newValue);

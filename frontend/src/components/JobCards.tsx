@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin } from 'lucide-react';
+import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleApply }: any) => {
@@ -16,37 +16,44 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
           <h3 className="text-xl font-bold text-[#2563eb] leading-tight line-clamp-2">
             {title}
           </h3>
-          
+
           {/* Region - Division */}
           <p className="text-gray-600 font-medium text-sm">
             {job.location || 'N/A'} - {job.division || 'N/A'}
           </p>
 
-          <hr className="my-2 border-gray-300 border-t-2" />
+          <hr className="my-3 border-gray-100" />
 
           {/* SG & Vacancies */}
-          <div className="flex justify-between items-center text-sm font-bold text-gray-700 uppercase tracking-wide px-2">
-            <div className="flex flex-col items-center">
-              <span>SG</span>
-              <span className="text-lg">{job.sg || 'N/A'}</span>
+          <div className="flex gap-3 px-1 py-0.5">
+            <div className="flex flex-1 items-center justify-center gap-2.5 px-3 py-2.5 bg-blue-50/80 text-blue-700 rounded-xl border border-blue-100/50 shadow-sm transition-colors hover:bg-blue-50">
+              <CircleDollarSign className="w-5 h-5 text-blue-500 shrink-0" />
+              <div className="flex flex-col items-start justify-center">
+                <span className="text-[9px] font-bold text-blue-500/80 uppercase tracking-wider leading-none mb-1">Salary Grade</span>
+                <span className="text-[15px] font-extrabold leading-none tracking-tight">{job.sg || 'N/A'}</span>
+              </div>
             </div>
-            <div className="flex flex-col items-center">
-              <span># of Vacancies</span>
-              <span className="text-lg">{job.vacancyCount || 0}</span>
+
+            <div className="flex flex-1 items-center justify-center gap-2.5 px-3 py-2.5 bg-emerald-50/80 text-emerald-700 rounded-xl border border-emerald-100/50 shadow-sm transition-colors hover:bg-emerald-50">
+              <Users className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div className="flex flex-col items-start justify-center">
+                <span className="text-[9px] font-bold text-emerald-500/80 uppercase tracking-wider leading-none mb-1">Vacancies</span>
+                <span className="text-[15px] font-extrabold leading-none tracking-tight">{job.vacancyCount || 0}</span>
+              </div>
             </div>
           </div>
 
-          <hr className="my-2 border-gray-300 border-t-2" />
-          
+          <hr className="my-3 border-gray-100" />
+
           {/* Qualification Standards */}
           {(job.qsEducation || job.qsExperience || job.qsTraining || job.qsEligibility) && (
-             <div className="flex flex-col gap-1 mt-1 text-xs">
-                <span className="text-sm font-bold text-gray-700 tracking-wide mb-1">QS:</span>
-                {job.qsEducation && <div><strong className="text-gray-700">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
-                {job.qsExperience && <div><strong className="text-gray-700">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
-                {job.qsTraining && <div><strong className="text-gray-700">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
-                {job.qsEligibility && <div><strong className="text-gray-700">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
-             </div>
+            <div className="flex flex-col gap-1 mt-1 text-xs">
+              <span className="text-sm font-bold text-gray-700 tracking-wide mb-1">QS:</span>
+              {job.qsEducation && <div><strong className="text-gray-700">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
+              {job.qsExperience && <div><strong className="text-gray-700">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
+              {job.qsTraining && <div><strong className="text-gray-700">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
+              {job.qsEligibility && <div><strong className="text-gray-700">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
+            </div>
           )}
         </div>
 
@@ -119,7 +126,7 @@ const JobCard = ({ job, tab, appliedJobIds, savedJobIds, toggleSaveJob, handleAp
             APPLIED
           </button>
         ) : (
-          <button onClick={() => handleApply(job)} className="flex-1 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
+          <button onClick={() => handleApply(job)} className="flex-1 bg-[#022851] hover:bg-[#011a36] text-white font-bold py-3 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
             <Briefcase className="w-4 h-4" /> APPLY NOW
           </button>
         )}
@@ -233,7 +240,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds, savedJobIds, toggleSaveJob, ha
                           APPLIED
                         </button>
                       ) : (
-                        <button onClick={() => handleApply(job)} className="w-32 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors">
+                        <button onClick={() => handleApply(job)} className="w-32 bg-[#022851] hover:bg-[#011a36] text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors">
                           APPLY NOW
                         </button>
                       )}
