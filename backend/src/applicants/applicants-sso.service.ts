@@ -38,11 +38,7 @@ export function verifyApplicantSsoToken(
   token: string,
   now = Math.floor(Date.now() / 1000),
 ): ApplicantSsoClaims {
-  const DEV_TOKEN = process.env.VITE_DEV_SSO_TOKEN;
-  if (DEV_TOKEN && token === DEV_TOKEN) {
-    console.warn("⚠️ [DEV] Accepting static development token bypass.");
-    return { email: process.env.AGAP_SSO_EMAIL?.trim().toLowerCase() || "wilfredo.cabral@deped.gov.ph" };
-  }
+
 
   let decoded: JwtPayload | string;
 
