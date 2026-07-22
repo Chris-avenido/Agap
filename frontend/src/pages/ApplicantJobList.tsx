@@ -1097,7 +1097,7 @@ export default function ApplicantJobList() {
                 onClick={() => navigate('/applicant-dashboard')}
                 className="flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold text-gray-600 hover:text-gray-900 transition-colors shrink-0"
               >
-                <ArrowLeft className="w-[18px] h-[18px]" /> Back to Dashboard
+                <ArrowLeft className="w-[18px] h-[18px]" />
               </button>
               <button
                 onClick={() => setActiveTab('job-board')}
@@ -1119,7 +1119,7 @@ export default function ApplicantJobList() {
               </button>
             </div>
 
-            <div className="hidden lg:flex items-center gap-2 pr-6 py-3">
+            <div className="flex flex-wrap items-center gap-2 px-6 lg:px-0 lg:pr-6 pb-4 lg:pb-0 lg:py-3 w-full lg:w-auto">
               {parseFloat(percentage) >= 90 ? (
                 <button
                     onClick={() => {
