@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, GraduationCap, ArrowRight } from 'lucide-react';
+import { ArrowLeft, LogOut, GraduationCap, ArrowRight, CircleDollarSign, Users, Briefcase } from 'lucide-react';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 
@@ -30,16 +30,20 @@ export default function ApplicantJobDetails() {
           if (v) {
             const foundJob = {
               id: v.jobClusterId || v.id,
+              jobClusterId: v.jobClusterId,
               positionId: v.position_id,
-              title: v.title,
-              office: v.school || 'Department of Education',
-              division: v.region || '',
+              title: v.positionTitle || v.title,
+              office: v.division ? `${v.division}, ${v.region}` : 'Department of Education',
+              division: v.division || '',
               type: 'Permanent',
               posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
               deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
-              sg: v.salary_grade,
-              itemNo: v.item_no,
-              location: v.location || '',
+              sg: v.salaryGrade || v.salary_grade,
+              itemNo: v.item_no || 'Multiple Items',
+              location: v.region || '',
+              vacancyCount: v.vacantItemCount || v.vacancy_count || 1,
+              qsEducation: v.qualificationStandards?.requiredBachelorDegree || v.education || v.required_bachelor_degree || 'Completion of two (2) years studies in college (prior to 2018), OR Completion of Grade 12/Senior High School (starting 2016)',
+              qsEligibility: v.qualificationStandards?.eligibilityRequired || v.eligibility || v.required_eligibility || 'Career Service Sub Professional / First Level Eligibility',
               description: 'Details available in the full job posting.'
             };
             setJob(foundJob);
@@ -127,69 +131,61 @@ export default function ApplicantJobDetails() {
         </div>
 
         <div className="max-w-5xl w-full mx-auto px-4 relative z-20 -mt-8 mb-24">
-          <div className="bg-white rounded-[4px] shadow-sm border border-gray-100 p-8 md:p-12 min-h-[500px]">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10 border-b border-gray-100 pb-8">
+          <div className="bg-white rounded-[20px] shadow-[0_8px_25px_rgba(251,191,36,0.15)] border-[1.5px] border-[#fbbf24] p-8 md:p-12 min-h-[500px]">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-gray-100 pb-8">
               <div>
-                <h1 className="text-[28px] font-normal text-[#00bcd4] mb-2">{job.title}</h1>
-                <div className="text-[14px] text-gray-500 mb-1">
-                  Item No. <span className="font-bold text-gray-700">{job.itemNo || 'N/A'}</span>
-                </div>
-                <div className="text-[14px] text-gray-500 mb-2">{job.division || job.office}</div>
-                <div className="flex items-center gap-2 text-[14px] text-gray-500">
-                  Office of the Director
+                <h1 className="text-[28px] font-bold text-[#2563eb] mb-2">{job.title}</h1>
+                <div className="text-[14px] text-gray-600 mb-2 font-medium">
+                  {job.location || 'N/A'} - {job.division || job.office || 'N/A'}
                 </div>
               </div>
               <button
                 onClick={handleApplyClick}
                 disabled={hasApplied}
-                className={`px-8 py-3.5 rounded-[8px] text-[15px] font-semibold transition-colors shrink-0 flex items-center justify-center gap-2 w-full md:w-[320px] shadow-md ${hasApplied
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : 'bg-[#022851] hover:bg-[#011a36] text-white'
+                className={`px-8 py-3.5 rounded-xl text-[14px] font-bold tracking-wide transition-colors shrink-0 flex items-center justify-center gap-2 shadow-sm ${hasApplied
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#0f172a] hover:bg-[#1e293b] text-white'
                   }`}
               >
                 {hasApplied ? (
-                  'Already Applied'
+                  'ALREADY APPLIED'
                 ) : (
                   <>
-                    Apply Now <ArrowRight className="w-[18px] h-[18px]" />
+                    <Briefcase className="w-4 h-4" /> APPLY NOW
                   </>
                 )}
               </button>
             </div>
 
-            <div className="text-[13px] text-gray-500 mb-10">
-              Posted on <span className="font-bold text-gray-700">{job.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-gray-700">{job.deadline || 'Jul 18, 2026'}</span>
+            <div className="text-[14px] text-gray-600 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+              Posted on <span className="font-bold text-gray-800">{job.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-red-500">{job.deadline || 'Jul 18, 2026'}</span>
             </div>
 
-            <div className="flex items-center gap-8 text-[14px] text-gray-600 mb-12">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full border border-[#5c6bc0] flex items-center justify-center">
-                  <span className="text-[#5c6bc0] text-[12px] font-bold">₱</span>
+            <div className="flex flex-col sm:flex-row gap-6 mb-12">
+              <div className="flex items-center gap-4 px-6 py-4 bg-[#f0f4f8] rounded-2xl flex-1">
+                <CircleDollarSign className="w-8 h-8 text-blue-600 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">SALARY GRADE</span>
+                  <span className="text-[20px] font-extrabold text-gray-800 leading-none">{job.sg || '4'}</span>
                 </div>
-                Salary Grade : {job.sg || '4'}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full border border-[#5c6bc0] flex items-center justify-center">
-                  <span className="text-[#5c6bc0] text-[12px] font-bold">₱</span>
+              <div className="flex items-center gap-4 px-6 py-4 bg-[#f0fdf4] rounded-2xl flex-1">
+                <Users className="w-8 h-8 text-emerald-600 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">VACANCIES</span>
+                  <span className="text-[20px] font-extrabold text-gray-800 leading-none">{job.vacancyCount || 0}</span>
                 </div>
-                Monthly Salary : PHP {job.sg === 4 ? '17,506.00' : job.sg === 9 ? '21,211.00' : job.sg === 18 ? '46,725.00' : job.sg === 19 ? '51,357.00' : job.sg === 24 ? '90,078.00' : 'Unknown'}
               </div>
             </div>
 
-            <h3 className="text-[18px] font-bold text-gray-700 mb-6">CSC Prescribed Qualification Standard</h3>
+            <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">QS:</h3>
 
-            <div className="grid grid-cols-[120px_1fr] gap-y-5 text-[15px]">
-              <div className="font-bold text-gray-700">Education:</div>
-              <div className="text-gray-500 font-light leading-snug">Completion of two (2) years studies in college (prior to 2018), OR<br />Completion of Grade 12/Senior High School (starting 2016)</div>
+            <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
+              <div className="font-bold text-gray-900 tracking-wide">Education:</div>
+              <div className="text-gray-600 font-medium leading-relaxed">{job.qsEducation}</div>
 
-              <div className="font-bold text-gray-700">Training:</div>
-              <div className="text-gray-500 font-light">None required</div>
-
-              <div className="font-bold text-gray-700">Experience:</div>
-              <div className="text-gray-500 font-light">None required</div>
-
-              <div className="font-bold text-gray-700">Eligibility:</div>
-              <div className="text-gray-500 font-light leading-snug">Career Service Sub Professional / First Level Eligibility</div>
+              <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
+              <div className="text-gray-600 font-medium leading-relaxed">{job.qsEligibility}</div>
             </div>
 
           </div>

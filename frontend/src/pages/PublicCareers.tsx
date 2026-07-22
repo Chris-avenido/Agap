@@ -432,15 +432,8 @@ export default function PublicCareers() {
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-gray-100 pb-8">
                 <div>
                   <h1 className="text-[28px] font-bold text-[#2563eb] mb-2">{viewedJob.title}</h1>
-                  <div className="text-[14px] text-gray-600 mb-1 font-medium">
-                    Item No. <span className="font-bold text-gray-800">{viewedJob.itemNo || 'N/A'}</span>
-                  </div>
-                  <div className="text-[14px] text-gray-600 mb-2 font-medium">{viewedJob.division || viewedJob.office}</div>
-                  <div className="flex items-center gap-2 text-[14px] text-gray-600 font-medium">
-                    Office of the Director
-                    <span className={`inline-block px-3 py-1 text-white text-[10px] font-extrabold rounded-full uppercase tracking-widest ${viewedJob.type.toLowerCase() === 'permanent' ? 'bg-[#2e7d32]' : 'bg-[#eab308]'}`}>
-                      {viewedJob.type}
-                    </span>
+                  <div className="text-[14px] text-gray-600 mb-2 font-medium">
+                    {viewedJob.location || 'N/A'} - {viewedJob.division || viewedJob.office || 'N/A'}
                   </div>
                 </div>
                 <button
@@ -472,17 +465,11 @@ export default function PublicCareers() {
                 </div>
               </div>
 
-              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">CSC Prescribed Qualification Standard</h3>
+              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">QS:</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
                 <div className="font-bold text-gray-900 tracking-wide">Education:</div>
                 <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEducation || 'Completion of two (2) years studies in college (prior to 2018), OR Completion of Grade 12/Senior High School (starting 2016)'}</div>
-
-                <div className="font-bold text-gray-900 tracking-wide">Training:</div>
-                <div className="text-gray-600 font-medium">{viewedJob.qsTraining || 'None required'}</div>
-
-                <div className="font-bold text-gray-900 tracking-wide">Experience:</div>
-                <div className="text-gray-600 font-medium">{viewedJob.qsExperience || 'None required'}</div>
 
                 <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
                 <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEligibility || 'Career Service Sub Professional / First Level Eligibility'}</div>
