@@ -145,6 +145,7 @@ export default function ApplicantJobList() {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [bloodType, setBloodType] = useState('');
+  const [religion, setReligion] = useState('');
   const [agencyEmployeeNo, setAgencyEmployeeNo] = useState('');
   const [citizenship, setCitizenship] = useState('');
   const [citizenshipType, setCitizenshipType] = useState('');
@@ -600,6 +601,7 @@ export default function ApplicantJobList() {
         civil_status: civilStatus,
         citizenship: citizenship,
         blood_type: bloodType,
+        religion: religion,
         date_of_birth: birthDate,
         residential_address: {
           house: resHouse,
@@ -852,6 +854,7 @@ export default function ApplicantJobList() {
           setCivilStatus(p.civil_status || '');
           setCitizenship(p.citizenship || '');
           setBloodType(p.blood_type || '');
+          setReligion(p.religion || '');
           if (p.date_of_birth) {
             const dateStr = p.date_of_birth.split("T")[0];
             if (dateStr) {
@@ -1928,6 +1931,11 @@ export default function ApplicantJobList() {
                             Agency Employee No.<br /><span className="text-[12px] text-gray-400 font-normal">(if any)</span>
                           </label>
                           <input type="text" placeholder="Enter agency employee number" value={agencyEmployeeNo} onChange={e => setAgencyEmployeeNo(e.target.value)} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]" />
+                        </div>
+
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+                          <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">Religion</label>
+                          <input type="text" placeholder="Enter religion" value={religion} onChange={e => setReligion(e.target.value)} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]" />
                         </div>
 
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">

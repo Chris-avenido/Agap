@@ -1241,6 +1241,18 @@ export default function ApplicationModal({
                 </div>
                 <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
                   <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">
+                    Religion
+                  </label>
+                  <input
+                    name="religion"
+                    placeholder="Enter religion"
+                    className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
+                    type="text"
+                    defaultValue={userData?.religion || ""}
+                  />
+                </div>
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+                  <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px]">
                     Citizenship <span className="text-red-500">*</span>
                   </label>
                   <div className="flex-1 flex flex-col sm:flex-row items-center gap-6">

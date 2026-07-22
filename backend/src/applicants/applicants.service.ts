@@ -492,6 +492,7 @@ class ApplicantsServiceClass {
     addField('civil_status', data.civil_status);
     addField('citizenship', data.citizenship);
     addField('blood_type', data.blood_type);
+    addField('religion', data.religion);
     addField('gsis_id_no', data.gsis_id_no);
     addField('pag_ibig_id_no', data.pag_ibig_id_no);
     addField('philhealth_no', data.philhealth_no);
