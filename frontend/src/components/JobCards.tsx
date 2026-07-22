@@ -146,8 +146,13 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
 
 const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob, handleApply, isPublic = false, onCardClick, onApplyClick }: any) => {
   const navigate = useNavigate();
+  const borderColor = tab === 'my-applications' ? 'border-[#2563eb]' : 'border-[#fbbf24]';
+  const shadowClass = tab === 'my-applications' 
+    ? 'shadow-[0_8px_25px_rgba(37,99,235,0.15)]' 
+    : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)]';
+
   return (
-    <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden w-full mt-6">
+    <div className={`w-full mt-6 bg-white rounded-[24px] border-[1.5px] ${borderColor} ${shadowClass} overflow-hidden`}>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
