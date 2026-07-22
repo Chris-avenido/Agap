@@ -342,9 +342,9 @@ export default function PublicCareers() {
                 No positions found matching your criteria.
               </div>
             ) : viewMode === 'table' ? (
-              <JobTableList 
-                jobs={currentJobs} 
-                tab="job-board" 
+              <JobTableList
+                jobs={currentJobs}
+                tab="job-board"
                 isPublic={true}
                 onCardClick={setViewedJob}
                 onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
@@ -352,10 +352,10 @@ export default function PublicCareers() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {currentJobs.map((job) => (
-                  <JobCard 
-                    key={job.id} 
-                    job={job} 
-                    tab="job-board" 
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    tab="job-board"
                     isPublic={true}
                     onCardClick={setViewedJob}
                     onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
@@ -493,52 +493,66 @@ export default function PublicCareers() {
 
             {/* Left Panel: Job Description */}
             <div className="w-full md:w-[45%] p-8 md:p-10 border-b md:border-b-0 md:border-r border-gray-100 overflow-y-auto">
-              <h2 className="text-[26px] font-bold text-[#022851] mb-1 leading-tight">{selectedJob.title}</h2>
-              <div className="text-[14px] text-gray-500 mb-1">
-                Item No. <span className="font-bold text-[#0a6fa6]">{selectedJob.itemNo || 'N/A'}</span>
-              </div>
-              <div className="text-[14px] text-gray-500 mb-1">{selectedJob.division || selectedJob.office}</div>
-              <div className="flex items-center gap-2 mb-6 text-[14px] text-gray-500">
-                Office of the Director
-                <span className="inline-block px-3 py-1 bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-extrabold rounded-full uppercase tracking-widest">
-                  {selectedJob.type}
-                </span>
+              <h2 className="text-[32px] font-bold text-[#3b82f6] tracking-tight leading-tight mb-4">{selectedJob.title}</h2>
+              <div className="text-[15px] text-gray-500 mb-8 border-b border-gray-100 pb-8">
+                {[selectedJob.location, selectedJob.division].filter(Boolean).join(' - ') || selectedJob.office || 'NCR - Division Office'}
               </div>
 
-              <div className="text-[13px] text-gray-500 mb-10 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                Posted on <span className="font-bold text-[#022851]">{selectedJob.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-red-500">{selectedJob.deadline || 'Jul 18, 2026'}</span>
+              <div className="text-[14px] text-gray-600 mb-10 bg-[#f8fafc] p-4 rounded-xl border border-gray-100 flex items-center">
+                Posted on <span className="font-bold text-gray-800 mx-1">{selectedJob.posted || 'Jul 05, 2026'}</span> and deadline is on <span className="font-bold text-red-500 ml-1">{selectedJob.deadline || 'Jul 31, 2026'}</span>
               </div>
 
-              <h3 className="text-[15px] font-extrabold text-[#022851] mb-6 uppercase tracking-wider border-b border-gray-100 pb-2">Job Description</h3>
-
-              <div className="flex flex-col gap-3 mb-10">
-                <div className="flex items-center gap-2 text-[14px] text-gray-600">
-                  <div className="w-6 h-6 rounded-full bg-[#facc15]/20 flex items-center justify-center">
-                    <CircleDollarSign className="w-3.5 h-3.5 text-[#eab308]" />
+              <div className="flex flex-col sm:flex-row gap-6 mb-12">
+                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0f4f8] rounded-2xl flex-1">
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                    <CircleDollarSign className="w-6 h-6 text-blue-600 shrink-0" />
                   </div>
-                  Salary Grade : <span className="font-bold text-gray-800">{selectedJob.sg || '4'}</span>
-
-                  <div className="w-6 h-6 rounded-full bg-[#facc15]/20 flex items-center justify-center ml-4">
-                    <CircleDollarSign className="w-3.5 h-3.5 text-[#eab308]" />
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">SALARY GRADE</span>
+                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{selectedJob.sg || '11'}</span>
                   </div>
-                  Monthly Salary : <span className="font-bold text-gray-800">PhP {selectedJob.sg === 4 ? '17,506.00' : selectedJob.sg === 9 ? '21,211.00' : selectedJob.sg === 18 ? '46,725.00' : selectedJob.sg === 19 ? '51,357.00' : selectedJob.sg === 24 ? '90,078.00' : 'Unknown'}</span>
+                </div>
+                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0fdf4] rounded-2xl flex-1">
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                    <Users className="w-6 h-6 text-emerald-600 shrink-0" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">VACANCIES</span>
+                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{selectedJob.vacancyCount || 1}</span>
+                  </div>
                 </div>
               </div>
 
-              <h3 className="text-[15px] font-extrabold text-[#022851] mb-5 border-b border-gray-100 pb-2">CSC Prescribed Qualification Standard</h3>
+              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">QS:</h3>
 
-              <div className="grid grid-cols-[110px_1fr] gap-y-4 text-[14px]">
-                <div className="font-bold text-gray-500">Education:</div>
-                <div className="text-gray-700 font-medium leading-snug">Completion of two (2) years studies in college (prior to 2018), OR Completion of Grade 12/Senior High School (starting 2016)</div>
+              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
+                {selectedJob.qsEducation && (
+                  <>
+                    <div className="font-bold text-gray-900 tracking-wide">Education:</div>
+                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsEducation}</div>
+                  </>
+                )}
+                
+                {selectedJob.qsTraining && (
+                  <>
+                    <div className="font-bold text-gray-900 tracking-wide">Training:</div>
+                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsTraining}</div>
+                  </>
+                )}
 
-                <div className="font-bold text-gray-500">Training:</div>
-                <div className="text-gray-700 font-medium">None required</div>
+                {selectedJob.qsExperience && (
+                  <>
+                    <div className="font-bold text-gray-900 tracking-wide">Experience:</div>
+                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsExperience}</div>
+                  </>
+                )}
 
-                <div className="font-bold text-gray-500">Experience:</div>
-                <div className="text-gray-700 font-medium">None required</div>
-
-                <div className="font-bold text-gray-500">Eligibility:</div>
-                <div className="text-gray-700 font-medium leading-snug">Career Service Sub Professional / First Level Eligibility</div>
+                {selectedJob.qsEligibility && (
+                  <>
+                    <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
+                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsEligibility}</div>
+                  </>
+                )}
               </div>
             </div>
 
