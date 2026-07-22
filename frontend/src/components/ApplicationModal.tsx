@@ -558,9 +558,9 @@ export default function ApplicationModal({
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
 
-              // We can determine 'completed' visually if it's before the active tab roughly
-              const currentIndex = tabs.findIndex((t) => t.id === activeTab);
-              const isCompleted = idx < currentIndex;
+              const isCompleted = tab.id === 'C10' 
+                ? (completedSteps.includes('Letter of Intent') || completedSteps.includes('Documents Confirmed'))
+                : completedSteps.includes(tab.label);
 
               return (
                 <button

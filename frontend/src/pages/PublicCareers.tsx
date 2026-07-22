@@ -77,6 +77,7 @@ export default function PublicCareers() {
             sg: v.salaryGrade || v.salary_grade,
             itemNo: v.item_no || 'Multiple Items',
             location: v.region || '',
+            school: v.school || '',
             vacancyCount: v.vacantItemCount || v.vacancy_count || 1,
             qsEducation: v.qualificationStandards?.requiredBachelorDegree || v.education || v.required_bachelor_degree || 'Details available in the full job posting.',
             qsExperience: v.qualificationStandards?.minYearsExperience || v.experience || v.required_experience,
@@ -204,7 +205,7 @@ export default function PublicCareers() {
           <div className="flex items-center">
             <div className="flex flex-col">
               <span className="text-[#022851] font-bold text-lg leading-tight tracking-tight">AGAP Portal</span>
-              <span className="text-[#022851]/70 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
+              <span className="text-[#022851]/70 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Appointments and Placements</span>
             </div>
           </div>
         </div>

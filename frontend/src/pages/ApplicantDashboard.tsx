@@ -13,11 +13,11 @@ export default function ApplicantDashboard() {
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'active' | 'past' | 'saved'>('active');
+  const [activeFilter, setActiveFilter] = useState<'active' | 'history' | 'saved'>('active');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const handleFilterChange = (filter: 'active' | 'past' | 'saved') => {
+  const handleFilterChange = (filter: 'active' | 'history' | 'saved') => {
     setActiveFilter(filter);
     setCurrentPage(1);
   };
@@ -40,9 +40,10 @@ export default function ApplicantDashboard() {
           setApplications(appsData.data.map((app: any) => ({
             id: app.id,
             position: app.job_title || 'Unknown Position',
-            office: app.office || 'Department of Education',
-            date: new Date(app.created_at).toLocaleDateString(),
-            stage: app.status || 'Pending',
+            division: app.division || app.office || 'Department of Education',
+            date: app.date_applied || app.created_at,
+            applicationStatus: app.status || 'Pending',
+            assessmentStatus: app.assessment_status || 'Pending Assessment',
             status: app.status === 'Hired' || app.status === 'Rejected' ? 'Past' : 'Active'
           })));
         }
@@ -65,12 +66,12 @@ export default function ApplicantDashboard() {
   }, [navigate]);
 
   const activeApps = applications.filter(app => app.status === 'Active');
-  const pastApps = applications.filter(app => app.status === 'Past');
+  const historyApps = applications;
   const savedPositionsCount = savedJobs.length;
 
   const getFilteredData = () => {
     if (activeFilter === 'active') return activeApps;
-    if (activeFilter === 'past') return pastApps;
+    if (activeFilter === 'history') return historyApps;
     if (activeFilter === 'saved') return savedJobs;
     return [];
   };
@@ -176,17 +177,17 @@ export default function ApplicantDashboard() {
           </button>
 
           <button 
-            onClick={() => handleFilterChange('past')}
-            className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'past' ? 'border-[#3b82f6] shadow-[0_8px_25px_rgba(59,130,246,0.2)] ring-1 ring-[#3b82f6]' : 'border-[#3b82f6]/20 shadow-[0_4px_15px_rgba(59,130,246,0.05)] hover:shadow-[0_8px_25px_rgba(59,130,246,0.15)] hover:border-[#3b82f6]/40'}`}
+            onClick={() => handleFilterChange('history')}
+            className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'history' ? 'border-[#3b82f6] shadow-[0_8px_25px_rgba(59,130,246,0.2)] ring-1 ring-[#3b82f6]' : 'border-[#3b82f6]/20 shadow-[0_4px_15px_rgba(59,130,246,0.05)] hover:shadow-[0_8px_25px_rgba(59,130,246,0.15)] hover:border-[#3b82f6]/40'}`}
           >
             <div className="flex items-center gap-5">
               <div className="w-[68px] h-[68px] bg-[#eff6ff] rounded-[20px] flex items-center justify-center shrink-0">
                 <History className="w-8 h-8 text-[#3b82f6]" />
               </div>
               <div>
-                <p className="text-[13px] text-gray-500 font-bold mb-1">Past Applications</p>
-                <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{pastApps.length}</p>
-                <p className="text-[12px] text-gray-400 font-medium">Applications you've completed</p>
+                <p className="text-[13px] text-gray-500 font-bold mb-1">Application History</p>
+                <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{historyApps.length}</p>
+                <p className="text-[12px] text-gray-400 font-medium">All your applications</p>
               </div>
             </div>
             <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
@@ -232,10 +233,10 @@ export default function ApplicantDashboard() {
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Position</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Division</th>
                   <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Date Applied</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Current Stage</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4"></th>
+                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Application Status</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Assessment Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -249,7 +250,7 @@ export default function ApplicantDashboard() {
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
                       {activeFilter === 'active' && "You don't have any active applications."}
-                      {activeFilter === 'past' && "You don't have any past applications."}
+                      {activeFilter === 'history' && "You don't have any applications yet."}
                       {activeFilter === 'saved' && "You haven't saved any positions yet."}
                     </td>
                   </tr>
@@ -259,86 +260,30 @@ export default function ApplicantDashboard() {
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-[#eff6ff] rounded-full flex items-center justify-center shrink-0">
-                            <svg className="w-6 h-6 text-[#3b82f6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
+                            <Briefcase className="w-6 h-6 text-[#3b82f6]" />
                           </div>
                           <div>
-                            <div className="text-[14px] font-bold text-[#022851] mb-1">{app.position}</div>
-                            <div className="text-[13px] text-gray-500 flex items-center gap-1.5 font-medium">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                              {app.office}
-                            </div>
+                            <div className="text-[14px] font-bold text-[#022851]">{app.position}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-[13px] text-gray-600 font-medium">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                          {app.date !== 'N/A' ? new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : app.date}
-                        </div>
+                        <div className="text-[13px] text-gray-500 font-medium">{app.division}</div>
                       </td>
-                      <td className="px-6 py-5 whitespace-nowrap min-w-[280px]">
-                        <div className="relative pt-2 pb-5 w-full">
-                          {/* Progress Line */}
-                          <div className="absolute top-4 left-6 right-6 h-[2px] bg-gray-200">
-                            {(() => {
-                              let currentIndex = 1;
-                              const stageLower = (app.stage || 'Pending').toLowerCase();
-                              if (stageLower === 'pending' || stageLower === 'received') currentIndex = 1;
-                              else if (stageLower === 'reviewing' || stageLower === 'initial evaluation') currentIndex = 1;
-                              else if (stageLower === 'interview' || stageLower === 'final interview' || stageLower === 'finalizing') currentIndex = 2;
-                              else if (stageLower === 'hired') currentIndex = 3;
-                              
-                              const progressWidth = currentIndex === 0 ? '0%' : currentIndex === 1 ? '50%' : '100%';
-                              return <div className="absolute top-0 left-0 h-full bg-[#1d4ed8] transition-all duration-500" style={{ width: progressWidth }}></div>;
-                            })()}
-                          </div>
-                          
-                          <div className="flex items-center justify-between relative z-10 w-full px-2">
-                            {['Received', 'Reviewing', 'Finalizing'].map((s, i) => {
-                              let currentIndex = 1;
-                              const stageLower = (app.stage || 'Pending').toLowerCase();
-                              if (stageLower === 'pending' || stageLower === 'received') currentIndex = 1;
-                              else if (stageLower === 'reviewing' || stageLower === 'initial evaluation') currentIndex = 1;
-                              else if (stageLower === 'interview' || stageLower === 'final interview' || stageLower === 'finalizing') currentIndex = 2;
-                              else if (stageLower === 'hired') currentIndex = 3;
-
-                              const isCompleted = i < currentIndex;
-                              const isCurrent = i === currentIndex;
-                              const isPending = i > currentIndex;
-
-                              return (
-                                <div key={s} className="flex flex-col items-center">
-                                  {isCompleted ? (
-                                    <div className="w-5 h-5 bg-[#1d4ed8] rounded-full flex items-center justify-center mb-2 shadow-[0_0_0_4px_white]">
-                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                    </div>
-                                  ) : isCurrent ? (
-                                    <div className="w-5 h-5 bg-white border-[3px] border-[#1d4ed8] rounded-full mb-2 shadow-[0_0_0_4px_white]"></div>
-                                  ) : (
-                                    <div className="w-5 h-5 bg-white border-[2.5px] border-gray-300 rounded-full mb-2 shadow-[0_0_0_4px_white]"></div>
-                                  )}
-                                  <span className={`text-[10px] font-extrabold uppercase tracking-wide absolute -bottom-1 ${isCompleted || isCurrent ? 'text-[#1d4ed8]' : 'text-gray-400'}`}>{s}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <div className="text-[13px] text-gray-600 font-medium">
+                          {app.date !== 'N/A' && app.date ? new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-md flex items-center gap-1.5 w-max ${
-                          app.status === 'Active' ? 'bg-[#f0fdf4] text-[#15803d]' : 
-                          app.status === 'Past' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${app.status === 'Active' ? 'bg-[#15803d]' : app.status === 'Past' ? 'bg-gray-400' : 'bg-blue-500'}`}></div>
-                          {app.status}
+                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
+                          {app.applicationStatus}
                         </span>
                       </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-right">
-                        <button className="text-[#3b82f6] hover:text-[#1d4ed8] font-bold text-[13px] flex items-center gap-1 focus:outline-none transition-colors ml-auto">
-                          View Details <ChevronRight className="w-4 h-4" />
-                        </button>
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-purple-50 text-purple-700 uppercase tracking-wide border border-purple-200">
+                          {app.assessmentStatus}
+                        </span>
                       </td>
                     </tr>
                   ))
