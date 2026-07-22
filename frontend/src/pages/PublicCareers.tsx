@@ -14,7 +14,6 @@ export default function PublicCareers() {
   const [viewMode, setViewMode] = useState('card');
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [viewedJob, setViewedJob] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +115,46 @@ export default function PublicCareers() {
     }
   }, [navigate]);
 
+  const toggleSaveJob = async (jobId: string | number) => {
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'You must be logged in to save jobs.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Log In',
+        cancelButtonText: 'Create an account',
+        confirmButtonColor: '#0a6fa6',
+        cancelButtonColor: '#f59e0b'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/login');
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          navigate('/apply');
+        }
+      });
+      return;
+    }
+    
+    const session = JSON.parse(sessionStr);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/save-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId })
+      });
+      if (response.ok) {
+        Swal.fire('Success', 'Job saved successfully! You can view it in your dashboard.', 'success');
+      } else {
+        Swal.fire('Error', 'Failed to save job.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving job:', err);
+      Swal.fire('Error', 'An error occurred while saving the job.', 'error');
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -175,7 +214,7 @@ export default function PublicCareers() {
     }
   };
 
-  const handleApplyClick = (jobId: number, jobTitle: string) => {
+  const handleApplyClick = (jobId: string, jobTitle: string) => {
     const job = positions.find(p => p.id === jobId);
     if (job) {
       setSelectedJob(job);
@@ -346,7 +385,7 @@ export default function PublicCareers() {
                 jobs={currentJobs}
                 tab="job-board"
                 isPublic={true}
-                onCardClick={setViewedJob}
+                toggleSaveJob={toggleSaveJob}
                 onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
               />
             ) : (
@@ -357,7 +396,7 @@ export default function PublicCareers() {
                     job={job}
                     tab="job-board"
                     isPublic={true}
-                    onCardClick={setViewedJob}
+                    toggleSaveJob={toggleSaveJob}
                     onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
                   />
                 ))}
@@ -404,17 +443,6 @@ export default function PublicCareers() {
             )}
           </div>
 
-      {viewedJob && (
-        <ApplicationModal
-          isOpen={!!viewedJob}
-          onClose={() => setViewedJob(null)}
-          jobTitle={viewedJob.title}
-          jobId={viewedJob.id}
-          viewMode="vacancy-details"
-          jobData={viewedJob}
-        />
-      )}
-
       {/* Apply Modal */}
       {showApplyModal && selectedJob && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#022851]/40 backdrop-blur-sm p-4 sm:p-6">
@@ -438,11 +466,10 @@ export default function PublicCareers() {
                 <button
                   onClick={() => {
                     setShowApplyModal(false);
-                    setViewedJob(selectedJob);
                   }}
-                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-[13px] transition-colors"
+                  className="bg-gray-100 text-gray-600 hover:bg-gray-200 px-4 py-2 rounded-lg font-bold text-[13px] transition-colors"
                 >
-                  View Vacancy Details
+                  Cancel
                 </button>
               </div>
 

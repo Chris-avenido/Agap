@@ -16,16 +16,7 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
     : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]';
 
   return (
-    <div onClick={(e) => { 
-      if ((e.target as any).closest("button")) return; 
-      if (isPublic && onCardClick) {
-        onCardClick(job);
-        return;
-      }
-      if (!isPublic && tab === 'job-board') return;
-      const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); 
-      navigate(`/applicant-jobs/${vid}`); 
-    }} className={`bg-white rounded-[20px] border-[1.5px] ${borderColor} ${shadowClass} p-6 flex flex-col transition-shadow relative ${(!isPublic && tab === 'job-board') ? '' : 'cursor-pointer'}`}>
+    <div className={`bg-white rounded-[20px] border-[1.5px] ${borderColor} ${shadowClass} p-6 flex flex-col transition-shadow relative`}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex flex-col gap-1 w-full">
           {/* Title */}
@@ -67,8 +58,8 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
             <div className="flex flex-col gap-1.5 mt-5 text-[13px]">
               <span className="text-[14px] font-bold text-gray-900 tracking-wide mb-1">Qualification Standards:</span>
               {job.qsEducation && <div><strong className="text-gray-900 font-semibold">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
-              {job.qsExperience && <div><strong className="text-gray-900 font-semibold">Experience:</strong> <span className="text-gray-600">{job.qsExperience}</span></div>}
-              {job.qsTraining && <div><strong className="text-gray-900 font-semibold">Training:</strong> <span className="text-gray-600">{job.qsTraining}</span></div>}
+              <div><strong className="text-gray-900 font-semibold">Minimum Years of Experience:</strong> <span className="text-gray-600">{job.qsExperienceMin !== null && job.qsExperienceMin !== undefined ? job.qsExperienceMin : '—'}</span></div>
+              <div><strong className="text-gray-900 font-semibold">Minimum Hours of Training:</strong> <span className="text-gray-600">{job.qsTrainingMin !== null && job.qsTrainingMin !== undefined ? job.qsTrainingMin : '—'}</span></div>
               {job.qsEligibility && <div><strong className="text-gray-900 font-semibold">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
             </div>
           )}
@@ -96,11 +87,6 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
       {/* Buttons */}
       {tab !== 'my-applications' && (
         <div className={`flex items-center gap-3 mt-auto pt-5`}>
-          {isPublic && onCardClick && (
-            <button onClick={(e) => { e.stopPropagation(); onCardClick(job); }} className="flex-1 bg-white border border-[#0f172a]/20 hover:bg-gray-50 text-[#0f172a] font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
-              VIEW DETAILS
-            </button>
-          )}
           {isApplied ? (
             <button disabled className="flex-1 bg-gray-200 text-gray-500 font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
               <div className="bg-white rounded-full p-0.5"><Check className="w-3.5 h-3.5 text-gray-400" strokeWidth={4} /></div> APPLIED
@@ -110,11 +96,9 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
               <Briefcase className="w-4 h-4" /> APPLY NOW
             </button>
           )}
-          {!isPublic && (
-            <button onClick={(e) => { e.stopPropagation(); toggleSaveJob(job.id || job.positionId); }} className={`flex-1 border font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
-              <Star className={`w-4 h-4 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
-            </button>
-          )}
+          <button onClick={(e) => { e.stopPropagation(); toggleSaveJob(job.id || job.positionId); }} className={`flex-1 border font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+            <Star className={`w-4 h-4 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
+          </button>
         </div>
       )}
     </div>
@@ -158,16 +142,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
               return (
                 <tr 
                   key={job.id || job.positionId} 
-                  onClick={(e) => { 
-                    if ((e.target as any).closest("button")) return; 
-                    if (isPublic && onCardClick) {
-                      onCardClick(job);
-                      return;
-                    }
-                    const vid = tab === 'my-applications' ? job.positionId : (job.id || job.positionId); 
-                    navigate(`/applicant-jobs/${vid}`); 
-                  }} 
-                  className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${(isApplied || tab === 'my-applications') ? 'bg-blue-50/20' : ''}`}
+                  className={`hover:bg-blue-50/50 transition-colors group ${(isApplied || tab === 'my-applications') ? 'bg-blue-50/20' : ''}`}
                 >
                   {/* Position Title Column */}
                   <td className="px-6 py-5 align-middle">
@@ -225,11 +200,9 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
                           <Briefcase className="w-3 h-3" /> APPLY NOW
                         </button>
                       )}
-                      {!isPublic && (
-                        <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-full border font-bold py-2 rounded-lg text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 shadow-sm ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
-                          <Star className={`w-3 h-3 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
-                        </button>
-                      )}
+                      <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-full border font-bold py-2 rounded-lg text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 shadow-sm ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+                        <Star className={`w-3 h-3 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
+                      </button>
                     </div>
                   </td>
                 </tr>

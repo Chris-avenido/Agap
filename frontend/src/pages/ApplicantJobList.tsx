@@ -1057,7 +1057,22 @@ export default function ApplicantJobList() {
     try {
       const sessionStr = localStorage.getItem('session_data');
       if (!sessionStr) {
-        navigate('/login');
+        Swal.fire({
+          title: 'Authentication Required',
+          text: 'You must be logged in to save jobs.',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Log In',
+          cancelButtonText: 'Create an account',
+          confirmButtonColor: '#0a6fa6',
+          cancelButtonColor: '#f59e0b'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            navigate('/login');
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            navigate('/apply');
+          }
+        });
         return;
       }
       const session = JSON.parse(sessionStr);

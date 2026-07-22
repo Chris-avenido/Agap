@@ -479,6 +479,7 @@ export default function ApplicationModal({
     const data = {
       ...parsedData,
       isSubsequentApplication: !isRegistrationFlow,
+      context: (jobTitle === "Profile Update" ? "my-profile" : "apply-now") as "my-profile" | "apply-now"
     };
 
     return calculateProfileProgress(data);
@@ -623,9 +624,9 @@ export default function ApplicationModal({
             {tabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-
+              const isMyProfile = jobTitle === "Profile Update";
               const isCompleted = tab.id === 'C10' 
-                ? (completedSteps.includes('Letter of Intent') || completedSteps.includes('Documents Confirmed'))
+                ? (isMyProfile || completedSteps.includes('Letter of Intent') || completedSteps.includes('Documents Confirmed'))
                 : completedSteps.includes(tab.label);
 
               return (

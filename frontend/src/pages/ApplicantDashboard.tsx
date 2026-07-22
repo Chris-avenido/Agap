@@ -88,7 +88,8 @@ export default function ApplicantDashboard() {
 
   const { percentage: progressPercentage } = calculateProfileProgress({
     ...parseProfileToState(profile),
-    isSubsequentApplication: applications.length > 0
+    isSubsequentApplication: applications.length > 0,
+    context: 'my-profile'
   });
 
   return (

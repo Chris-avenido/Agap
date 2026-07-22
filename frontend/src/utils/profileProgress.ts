@@ -24,6 +24,7 @@ export const calculateProfileProgress = (data: {
   isSubsequentApplication?: boolean;
   uploadedDocumentUrls?: Record<string, string>;
   documents?: Record<string, any>;
+  context?: 'my-profile' | 'apply-now';
 }) => {
   const steps: string[] = [];
 
@@ -48,11 +49,17 @@ export const calculateProfileProgress = (data: {
   const allDocumentsConfirmed = requiredDocs.every(doc => data.documentsConfirmed && data.documentsConfirmed[doc]);
   if (data.isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
 
-  if ((data.uploadedDocumentUrls && data.uploadedDocumentUrls['Letter of Intent']) || (data.documents && data.documents['Letter of Intent'])) {
-    steps.push('Letter of Intent');
+  if (data.context !== 'my-profile') {
+    if ((data.uploadedDocumentUrls && data.uploadedDocumentUrls['Letter of Intent']) || (data.documents && data.documents['Letter of Intent'])) {
+      steps.push('Letter of Intent');
+    }
   }
 
-  const totalSteps = data.isSubsequentApplication ? 11 : 10;
+  let totalSteps = data.isSubsequentApplication ? 11 : 10;
+  if (data.context === 'my-profile') {
+    totalSteps -= 1;
+  }
+
   const percentage = ((steps.length / totalSteps) * 100).toFixed(2);
   
   return { steps, percentage, totalSteps };
