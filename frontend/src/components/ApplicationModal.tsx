@@ -3379,8 +3379,19 @@ export default function ApplicationModal({
                         barangay: rawData["res_barangay"],
                       };
 
-                      data.permanent_address = {
-                        same_as_res: rawData["same_as_res"] === "on",
+                      const isSameAsRes = rawData["same_as_res"] === "on";
+                      data.permanent_address = isSameAsRes ? {
+                        same_as_res: true,
+                        house: rawData["res_house"],
+                        street: rawData["res_street"],
+                        subdivision: rawData["res_subdivision"],
+                        zip: rawData["res_zip"],
+                        region: rawData["res_region"],
+                        province: rawData["res_province"],
+                        city: rawData["res_city"],
+                        barangay: rawData["res_barangay"],
+                      } : {
+                        same_as_res: false,
                         house: rawData["perm_house"],
                         street: rawData["perm_street"],
                         subdivision: rawData["perm_subdivision"],
