@@ -9,7 +9,8 @@ import {
   GraduationCap,
   FileText,
   Trash2,
-  Plus
+  Plus,
+  Save
 } from "lucide-react";
 // @ts-ignore
 import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
@@ -26,6 +27,25 @@ interface ApplicationModalProps {
   jobData?: any;
 }
 
+const formatCurrencyValue = (val: any) => {
+  if (val === null || val === undefined) return '';
+  const strVal = String(val);
+  if (!strVal) return '';
+  
+  const clean = strVal.replace(/[^0-9.]/g, '');
+  if (!clean) return '';
+  
+  const parts = clean.split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  
+  if (parts.length > 1) {
+    const decimalPart = parts[1].slice(0, 2);
+    return `${integerPart}.${decimalPart}`;
+  }
+  
+  return integerPart;
+};
+
 export default function ApplicationModal({
   isOpen,
   onClose,
@@ -37,6 +57,14 @@ export default function ApplicationModal({
   const isRegistrationFlow = jobTitle === "General Registration";
   const [activeTab, setActiveTab] = useState("C1");
   const [userData, setUserData] = useState<any>(null);
+  const rightContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (rightContentRef.current) {
+      rightContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,6 +125,202 @@ export default function ApplicationModal({
   useEffect(() => {
     scheduleFormProgressRefresh();
   }, [userData, scheduleFormProgressRefresh]);
+
+  const handleSaveProgress = async (showToast = true) => {
+    const form = document.getElementById("application-form") as HTMLFormElement;
+    if (!form) return false;
+
+    const formData = new FormData(form);
+    const rawData = Object.fromEntries(formData.entries());
+    const data: any = { ...rawData };
+
+    data.residential_address = {
+      house: rawData["res_house"],
+      street: rawData["res_street"],
+      subdivision: rawData["res_subdivision"],
+      zip: rawData["res_zip"],
+      region: rawData["res_region"],
+      province: rawData["res_province"],
+      city: rawData["res_city"],
+      barangay: rawData["res_barangay"],
+    };
+
+    data.permanent_address = {
+      same_as_res: rawData["same_as_res"] === "on",
+      house: rawData["perm_house"],
+      street: rawData["perm_street"],
+      subdivision: rawData["perm_subdivision"],
+      zip: rawData["perm_zip"],
+      region: rawData["perm_region"],
+      province: rawData["perm_province"],
+      city: rawData["perm_city"],
+      barangay: rawData["perm_barangay"],
+    };
+
+    data.questionnaire_responses = {
+      q34a: rawData["q34a"], q34b: rawData["q34b"], q34b_details: rawData["q34b_details"],
+      q35a: rawData["q35a"], q35a_details: rawData["q35a_details"],
+      q35b: rawData["q35b"], q35b_date: rawData["q35b_date"], q35b_status: rawData["q35b_status"],
+      q36: rawData["q36"], q36_details: rawData["q36_details"],
+      q37: rawData["q37"], q37_details: rawData["q37_details"],
+      q38a: rawData["q38a"], q38a_details: rawData["q38a_details"],
+      q38b: rawData["q38b"], q38b_details: rawData["q38b_details"],
+      q39: rawData["q39"], q39_details: rawData["q39_details"],
+      q40a: rawData["q40a"], q40a_details: rawData["q40a_details"],
+      q40b: rawData["q40b"], q40b_details: rawData["q40b_details"],
+      q40c: rawData["q40c"], q40c_details: rawData["q40c_details"],
+      ref1_name: rawData["ref1_name"], ref1_address: rawData["ref1_address"], ref1_tel: rawData["ref1_tel"],
+      ref2_name: rawData["ref2_name"], ref2_address: rawData["ref2_address"], ref2_tel: rawData["ref2_tel"],
+      ref3_name: rawData["ref3_name"], ref3_address: rawData["ref3_address"], ref3_tel: rawData["ref3_tel"],
+      gov_id_type: rawData["gov_id_type"], gov_id_no: rawData["gov_id_no"], gov_id_issuance: rawData["gov_id_issuance"],
+    };
+
+    data.family_background = {
+      spouse: {
+        surname: rawData["spouse_surname"],
+        first_name: rawData["spouse_first_name"],
+        middle_name: rawData["spouse_middle_name"],
+        name_extension: rawData["spouse_name_extension"],
+        occupation: rawData["spouse_occupation"],
+        employer_business_name: rawData["spouse_employer_business_name"],
+        business_address: rawData["spouse_business_address"],
+        telephone_no: rawData["spouse_telephone_no"],
+      },
+      father: {
+        surname: rawData["father_surname"],
+        first_name: rawData["father_first_name"],
+        middle_name: rawData["father_middle_name"],
+        name_extension: rawData["father_name_extension"],
+      },
+      mother: {
+        maiden_surname: rawData["mother_surname"],
+        first_name: rawData["mother_first_name"],
+        middle_name: rawData["mother_middle_name"],
+      },
+      children: rawData["children_list"] ? JSON.parse(rawData["children_list"] as string) : [],
+    };
+
+    const existingOtherInfo = userData?.other_information ? (typeof userData.other_information === 'string' ? JSON.parse(userData.other_information) : userData.other_information) : {};
+    data.other_information = {
+      ...existingOtherInfo,
+      height: rawData["height"],
+      weight: rawData["weight"],
+      agency_employee_no: rawData["agency_employee_no"],
+      citizenship_type: rawData["citizenship_type"],
+      extension_name: rawData["extension_name"],
+      special_skills: rawData["special_skills"] ? JSON.parse(rawData["special_skills"] as string) : [],
+      distinctions: rawData["distinctions"] ? JSON.parse(rawData["distinctions"] as string) : [],
+      memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"] as string) : [],
+    };
+
+    const edBg = [];
+    for (let i = 0; i < 5; i++) {
+      edBg.push({
+        school_name: rawData[`edu_${i}_school_name`] || "",
+        degree_course: rawData[`edu_${i}_degree_course`] || "",
+        period_from: rawData[`edu_${i}_period_from`] || "",
+        period_to: rawData[`edu_${i}_period_to`] || "",
+        highest_level: rawData[`edu_${i}_highest_level`] || "",
+        year_graduated: rawData[`edu_${i}_year_graduated`] || "",
+        honors_received: rawData[`edu_${i}_honors_received`] || ""
+      });
+    }
+    data.educational_background = edBg;
+
+    if (rawData["civil_service_eligibility"]) {
+      data.civil_service_eligibility = JSON.parse(rawData["civil_service_eligibility"] as string);
+    }
+    if (rawData["work_experience"]) {
+      data.work_experience = JSON.parse(rawData["work_experience"] as string);
+    }
+    if (rawData["voluntary_work"]) {
+      data.voluntary_work = JSON.parse(rawData["voluntary_work"] as string);
+    }
+    if (rawData["learning_and_development"]) {
+      data.learning_and_development = JSON.parse(rawData["learning_and_development"] as string);
+    }
+
+    if (!data.sex && userData?.sex) data.sex = userData.sex;
+    data.email_address = rawData["email"] || userData?.email_address;
+
+    const sessionStr = localStorage.getItem("session_data");
+    let sessionId = null;
+    if (sessionStr) {
+      try {
+        sessionId = JSON.parse(sessionStr).id;
+      } catch (e) { }
+    }
+
+    if (!sessionId && isRegistrationFlow) {
+      if (showToast) {
+        Swal.fire("Note", "Please complete registration at the final step to create your account.", "info");
+      }
+      return false;
+    }
+
+    if (sessionId) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const docMapping: Record<string, string> = {
+          "doc_loi": "Letter of Intent",
+          "doc_pds": "Personal Data Sheet",
+          "doc_work_exp": "Work Experience Sheet",
+          "doc_eligibility": "Certificate of Eligibility",
+          "doc_tor": "Transcript of Records",
+          "doc_prc": "Updated PRC License/ID",
+          "doc_diploma": "Diploma (optional)",
+          "doc_resume": "Resume",
+          "doc_performance_rating": "Performance Rating",
+          "doc_training_certificates": "Training Certificates",
+          "doc_application_of_education": "Application of Education",
+          "doc_application_of_learning": "Application of Learning and Development",
+          "doc_outstanding_accomplishments": "Outstanding Accomplishments",
+          "profile_photo": "profile_photo"
+        };
+
+        for (const key of Object.keys(docMapping)) {
+          const docLabel = docMapping[key];
+          let file = formData.get(key) as File;
+          if (selectedFiles[docLabel] && selectedFiles[docLabel].size > 0) {
+            file = selectedFiles[docLabel];
+          }
+          if (file && file.size > 0) {
+            const singleUploadFormData = new FormData();
+            singleUploadFormData.append("files", file);
+            singleUploadFormData.append("documentNames", docLabel);
+            await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}/documents`, {
+              method: 'POST',
+              body: singleUploadFormData
+            }).catch(() => {});
+          }
+        }
+
+        if (response.ok) {
+          if (showToast) {
+            Swal.fire({
+              icon: "success",
+              title: "Progress Saved",
+              text: "Your information has been saved to the database.",
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+          return true;
+        }
+      } catch (err) {
+        console.error("Save progress error:", err);
+        if (showToast) {
+          Swal.fire("Error", "Failed to save progress to database.", "error");
+        }
+      }
+    }
+    return false;
+  };
 
   const handleDocumentSelection = useCallback((documentLabel: string) => (e: any) => {
     const file = e.target.files?.[0];
@@ -267,7 +491,9 @@ export default function ApplicationModal({
       if (pAddr.region) setPermRegion(pAddr.region);
       if (pAddr.province) setPermProvince(pAddr.province);
       if (pAddr.city) setPermCity(pAddr.city);
-      if (pAddr.same_as_res) setSameAsRes(true);
+      if (pAddr.same_as_res || pAddr.sameAsResidential || pAddr.same_as_residential || (rAddr && rAddr.region && rAddr.region === pAddr.region && rAddr.city === pAddr.city && rAddr.barangay === pAddr.barangay && rAddr.house === pAddr.house)) {
+        setSameAsRes(true);
+      }
       if (pAddr.barangay) setPermBarangay(pAddr.barangay);
       if (userData.sex) setSex(userData.sex);
 
@@ -465,7 +691,10 @@ export default function ApplicationModal({
 
     const fd = formRef.current ? new FormData(formRef.current) : null;
     const getVal = (name: string, fallback: any) => {
-      if (fd && fd.has(name)) return fd.get(name) as string;
+      if (fd && fd.has(name)) {
+        const val = fd.get(name) as string;
+        if (val && val.trim()) return val.trim();
+      }
       return fallback;
     };
 
@@ -476,15 +705,72 @@ export default function ApplicationModal({
 
     const parsedData = parseProfileToState(userData);
 
+    const liveFirstName = getVal('first_name', parsedData.firstName);
+    const liveLastName = getVal('surname', getVal('last_name', parsedData.lastName));
+    const livePlaceOfBirth = getVal('place_of_birth', parsedData.placeOfBirth);
+    const liveSex = sex || getVal('sex', parsedData.sex);
+    const liveCivilStatus = getVal('civil_status', parsedData.civilStatus);
+    const liveCitizenship = getVal('citizenship', parsedData.citizenship);
+
+    const liveMotherSurname = getVal('mother_surname', parsedData.motherSurname);
+    const liveMotherFirst = getVal('mother_first_name', parsedData.motherFirst);
+    const liveFatherSurname = getVal('father_surname', parsedData.fatherSurname);
+    const liveFatherFirst = getVal('father_first_name', parsedData.fatherFirst);
+    const liveSpouseSurname = getVal('spouse_surname', parsedData.spouseSurname);
+    const liveSpouseFirst = getVal('spouse_first_name', parsedData.spouseFirst);
+
+    const liveEdSchools = [
+      getVal('edu_0_school_name', ''),
+      getVal('edu_1_school_name', ''),
+      getVal('edu_2_school_name', ''),
+      getVal('edu_3_school_name', ''),
+      getVal('edu_4_school_name', '')
+    ];
+    const liveEdDates = { ...parsedData.educationalDates };
+    if (liveEdSchools.some(s => s.length > 0)) {
+      liveEdDates['elementary'] = { school: liveEdSchools.find(s => s.length > 0) };
+    }
+
+    const localDocs: Record<string, boolean> = {
+      'Personal Data Sheet': Boolean(selectedFiles['Personal Data Sheet'] || hasSelectedFile('doc_pds')),
+      'Work Experience Sheet': Boolean(selectedFiles['Work Experience Sheet'] || hasSelectedFile('doc_work_exp')),
+      'Certificate of Eligibility': Boolean(selectedFiles['Certificate of Eligibility'] || hasSelectedFile('doc_eligibility')),
+      'Transcript of Records': Boolean(selectedFiles['Transcript of Records'] || hasSelectedFile('doc_tor')),
+      'Updated PRC License/ID': Boolean(selectedFiles['Updated PRC License/ID'] || hasSelectedFile('doc_prc')),
+      'Letter of Intent': Boolean(selectedFiles['Letter of Intent'] || hasSelectedFile('doc_loi'))
+    };
+
     const data = {
       ...parsedData,
+      firstName: liveFirstName,
+      lastName: liveLastName,
+      placeOfBirth: livePlaceOfBirth,
+      sex: liveSex,
+      civilStatus: liveCivilStatus,
+      citizenship: liveCitizenship,
+      motherSurname: liveMotherSurname,
+      motherFirst: liveMotherFirst,
+      fatherSurname: liveFatherSurname,
+      fatherFirst: liveFatherFirst,
+      spouseSurname: liveSpouseSurname,
+      spouseFirst: liveSpouseFirst,
+      educationalDates: liveEdDates,
+      civilServiceList: (civilServiceList && civilServiceList.length > 0) ? civilServiceList : parsedData.civilServiceList,
+      workExperienceList: (workExperienceList && workExperienceList.length > 0) ? workExperienceList : parsedData.workExperienceList,
+      voluntaryWorkList: (voluntaryWorkList && voluntaryWorkList.length > 0) ? voluntaryWorkList : parsedData.voluntaryWorkList,
+      learningDevelopmentList: (learningDevelopmentList && learningDevelopmentList.length > 0) ? learningDevelopmentList : parsedData.learningDevelopmentList,
+      skillsList: (skillsList && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : Boolean(s?.value))) ? skillsList : parsedData.skillsList,
+      distinctionsList: (distinctionsList && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : Boolean(d?.value))) ? distinctionsList : parsedData.distinctionsList,
+      membershipsList: (membershipsList && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : Boolean(m?.value))) ? membershipsList : parsedData.membershipsList,
+      questionnaire: (qAnswers && Object.values(qAnswers).some((v: any) => typeof v === 'string' && v.trim() !== '')) ? qAnswers : (qRes || parsedData.questionnaire),
+      documents: localDocs,
       isSubsequentApplication: !isRegistrationFlow,
       context: (jobTitle === "Profile Update" ? "my-profile" : "apply-now") as "my-profile" | "apply-now"
     };
 
     return calculateProfileProgress(data);
   }, [
-    userData, isRegistrationFlow, formVersion
+    userData, isRegistrationFlow, formVersion, selectedFiles, sex, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList, membershipsList, qRes, qAnswers
   ]);
 
   if (!isOpen) return null;
@@ -626,14 +912,20 @@ export default function ApplicationModal({
               const isActive = activeTab === tab.id;
               const isMyProfile = jobTitle === "Profile Update";
               const isCompleted = tab.id === 'C10' 
-                ? (isMyProfile || completedSteps.includes('Letter of Intent') || completedSteps.includes('Documents Confirmed'))
+                ? completedSteps.includes('Essential Documents')
                 : completedSteps.includes(tab.label);
 
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (rightContentRef.current) {
+                      rightContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   className={`flex items-center justify-between px-4 md:px-5 py-3 md:py-3.5 text-left border-r md:border-r-0 md:border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap min-w-max md:min-w-0 ${isActive ? "bg-blue-50/30" : ""}`}
                 >
                   <div className="flex items-center gap-2 md:gap-3.5">
@@ -651,16 +943,26 @@ export default function ApplicationModal({
                     </span>
                   </div>
                   <div
-                    className={`hidden md:block w-2 h-2 rounded-full shrink-0 ml-4 ${isCompleted ? "bg-[#34a853]" : isActive ? "bg-red-500" : "bg-gray-200"}`}
+                    className={`hidden md:block w-2 h-2 rounded-full shrink-0 ml-4 ${isCompleted ? "bg-[#34a853]" : isActive ? "bg-[#1a73e8]" : "bg-gray-200"}`}
                   ></div>
                 </button>
               );
             })}
           </div>
+
+          <div className="p-3 border-t border-gray-100 hidden md:block">
+            <button
+              type="button"
+              onClick={() => handleSaveProgress(true)}
+              className="w-full py-2.5 px-4 bg-[#16a34a] hover:bg-[#15803d] text-white text-[13px] font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Save className="w-4 h-4" /> Save Progress
+            </button>
+          </div>
         </div>
 
         {/* Right Content */}
-        <div className="flex-1 flex flex-col gap-4 md:gap-6 overflow-y-auto max-h-full pr-1 md:pr-2 scrollbar-thin pb-10">
+        <div ref={rightContentRef} className="flex-1 flex flex-col gap-4 md:gap-6 overflow-y-auto max-h-full pr-1 md:pr-2 scrollbar-thin pb-10">
           {/* Progress Alert */}
           <div className="bg-[#e8f5e9] border border-[#bbf7d0] p-3 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl shadow-sm shrink-0">
             <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto">
@@ -1937,11 +2239,29 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div className="md:col-span-2 flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Career Service/RA 1080 (Board/Bar)/Under Special Laws/CES/CSEE</span>
-                            <input type="text" value={item.eligibility || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].eligibility = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter eligibility" />
+                            <input
+                              type="text"
+                              value={item.eligibility !== undefined ? item.eligibility : (item.name || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, eligibility: val, name: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter eligibility"
+                            />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Rating (if applicable)</span>
-                            <input type="text" value={item.rating || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].rating = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter rating" />
+                            <input
+                              type="text"
+                              value={item.rating || ''}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, rating: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter rating"
+                            />
                           </div>
                         </div>
 
@@ -1949,11 +2269,24 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Date of Examination / Conferment</span>
-                            <ModernDatePicker value={item.date ? item.date.split('T')[0] : ''} onChange={(val: any) => { const n = [...civilServiceList]; n[idx].date = val; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker
+                              value={item.date ? (typeof item.date === 'string' ? item.date.split('T')[0] : '') : (item.date_of_exam ? item.date_of_exam.split('T')[0] : '')}
+                              onChange={(val: any) => setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, date: val, date_of_exam: val } : it))}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white"
+                            />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Place of Examination / Conferment</span>
-                            <input type="text" value={item.place || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].place = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter place" />
+                            <input
+                              type="text"
+                              value={item.place !== undefined ? item.place : (item.place_of_exam || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, place: val, place_of_exam: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter place"
+                            />
                           </div>
                         </div>
 
@@ -1961,11 +2294,24 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Number (if applicable)</span>
-                            <input type="text" value={item.licenseNo || ''} onChange={(e: any) => { const n = [...civilServiceList]; n[idx].licenseNo = e.target.value; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter license no" />
+                            <input
+                              type="text"
+                              value={item.licenseNo !== undefined ? item.licenseNo : (item.license_number || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, licenseNo: val, license_number: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter license no"
+                            />
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">License Date of Validity (if applicable)</span>
-                            <ModernDatePicker value={item.licenseDate ? item.licenseDate.split('T')[0] : ''} onChange={(val: any) => { const n = [...civilServiceList]; n[idx].licenseDate = val; setCivilServiceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                            <ModernDatePicker
+                              value={item.licenseDate ? (typeof item.licenseDate === 'string' ? item.licenseDate.split('T')[0] : '') : (item.license_validity ? item.license_validity.split('T')[0] : '')}
+                              onChange={(val: any) => setCivilServiceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, licenseDate: val, license_validity: val } : it))}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white"
+                            />
                           </div>
                         </div>
 
@@ -2040,13 +2386,39 @@ export default function ApplicationModal({
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
                             <div className="relative w-full">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">?</span>
-                              <input type="number" step="0.01" value={item.monthlySalary || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].monthlySalary = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 pl-7 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="0.00" />
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-bold text-[15px] pointer-events-none select-none">₱</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={item.monthlySalary !== undefined ? formatCurrencyValue(item.monthlySalary) : formatCurrencyValue(item.salary || '')}
+                                onChange={(e: any) => {
+                                  const val = formatCurrencyValue(e.target.value);
+                                  setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, monthlySalary: val, salary: val } : it));
+                                }}
+                                onBlur={(e: any) => {
+                                  const raw = e.target.value.replace(/,/g, '');
+                                  if (raw && !isNaN(Number(raw))) {
+                                    const formatted = Number(raw).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                    setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, monthlySalary: formatted, salary: formatted } : it));
+                                  }
+                                }}
+                                className="border border-gray-300 rounded p-2.5 pl-8 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full font-medium"
+                                placeholder="0.00"
+                              />
                             </div>
                           </div>
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
-                            <input type="text" value={item.salaryGrade || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].salaryGrade = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter salary/job/pay grade & step" />
+                            <input
+                              type="text"
+                              value={item.salaryGrade !== undefined ? item.salaryGrade : (item.pay_grade || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, salaryGrade: val, pay_grade: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter salary/job/pay grade & step"
+                            />
                           </div>
                         </div>
 
@@ -2054,7 +2426,16 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Status of Appointment</span>
-                            <input type="text" value={item.statusOfAppointment || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].statusOfAppointment = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="Enter status of appointment" />
+                            <input
+                              type="text"
+                              value={item.statusOfAppointment !== undefined ? item.statusOfAppointment : (item.status || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, statusOfAppointment: val, status: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                              placeholder="Enter status of appointment"
+                            />
                           </div>
                         </div>
 
@@ -2062,7 +2443,14 @@ export default function ApplicationModal({
                         <div className="grid grid-cols-1 gap-5">
                           <div className="flex flex-col justify-between">
                             <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Gov't Service (Y/N)</span>
-                            <select value={item.govtService || ''} onChange={(e: any) => { const n = [...workExperienceList]; n[idx].govtService = e.target.value; setWorkExperienceList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white">
+                            <select
+                              value={item.govtService !== undefined ? item.govtService : (item.govt_service || '')}
+                              onChange={(e: any) => {
+                                const val = e.target.value;
+                                setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, govtService: val, govt_service: val } : it));
+                              }}
+                              className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white"
+                            >
                               <option value="">Select option</option>
                               <option value="Y">Yes</option>
                               <option value="N">No</option>
@@ -2919,9 +3307,10 @@ export default function ApplicationModal({
             <div className="text-sm text-gray-500 font-medium">
               Step {tabs.findIndex((t) => t.id === activeTab) + 1} of 10
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
               {activeTab !== "C1" && (
                 <button
+                  type="button"
                   onClick={() => {
                     const currentIndex = tabs.findIndex(
                       (t) => t.id === activeTab,
@@ -2933,6 +3322,14 @@ export default function ApplicationModal({
                   <ChevronLeft className="w-4 h-4" /> BACK
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => handleSaveProgress(true)}
+                className="px-5 py-2 flex items-center gap-1.5 text-sm font-bold text-white bg-[#16a34a] hover:bg-[#15803d] rounded transition-colors shadow-sm"
+              >
+                <Save className="w-4 h-4" /> SAVE
+              </button>
 
               {activeTab !== "C10" ? (
                 <button

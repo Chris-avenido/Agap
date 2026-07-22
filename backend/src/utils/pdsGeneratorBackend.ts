@@ -204,9 +204,33 @@ export const generatePDSBackend = async (applicantData: any) => {
     startRow: 18, endRow: 38, columns: { title: 'A', fromDate: 'E', toDate: 'F', hours: 'G', type: 'H', sponsor: 'I' }
   });
 
-  populateArray(sheetC3, otherInfo.skills || applicantData.skillsList, { startRow: 42, endRow: 48, columns: { value: 'A' } });
-  populateArray(sheetC3, otherInfo.distinctions || applicantData.distinctionsList, { startRow: 42, endRow: 48, columns: { value: 'D' } });
-  populateArray(sheetC3, otherInfo.memberships || applicantData.membershipsList, { startRow: 42, endRow: 48, columns: { value: 'J' } });
+  const normalizeStringList = (raw: any) => {
+    if (!raw) return [];
+    let list = raw;
+    if (typeof list === 'string') {
+      try { list = JSON.parse(list); } catch { list = [raw]; }
+    }
+    if (!Array.isArray(list)) list = [list];
+    return list.map((item: any) => {
+      if (typeof item === 'string') return { value: item };
+      return { value: item?.value || item?.name || String(item || '') };
+    });
+  };
+
+  const skills = normalizeStringList(otherInfo.special_skills || otherInfo.skills || applicantData.skillsList || applicantData.special_skills);
+  const distinctions = normalizeStringList(otherInfo.distinctions || applicantData.distinctionsList);
+  const memberships = normalizeStringList(otherInfo.memberships || applicantData.membershipsList);
+
+  // Clear rows 42..48 in sheetC3 to remove hardcoded template example text like "Playing mobile legend"
+  for (let r = 42; r <= 48; r++) {
+    sheetC3.cell(`A${r}`).value('');
+    sheetC3.cell(`D${r}`).value('');
+    sheetC3.cell(`J${r}`).value('');
+  }
+
+  populateArray(sheetC3, skills, { startRow: 42, endRow: 48, columns: { value: 'A' } });
+  populateArray(sheetC3, distinctions, { startRow: 42, endRow: 48, columns: { value: 'D' } });
+  populateArray(sheetC3, memberships, { startRow: 42, endRow: 48, columns: { value: 'J' } });
 
   // --- SHEET C4 ---
   // Questionnaire Form Controls & Fallback Data

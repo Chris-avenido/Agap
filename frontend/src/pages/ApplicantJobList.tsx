@@ -18,6 +18,25 @@ import { JobCard, JobTableList } from '../components/JobCards';
 import ModernDatePicker from "../components/ModernDatePicker";
 import { calculateProfileProgress } from '../utils/profileProgress';
 
+const formatCurrencyValue = (val: any) => {
+  if (val === null || val === undefined) return '';
+  const strVal = String(val);
+  if (!strVal) return '';
+  
+  const clean = strVal.replace(/[^0-9.]/g, '');
+  if (!clean) return '';
+  
+  const parts = clean.split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  
+  if (parts.length > 1) {
+    const decimalPart = parts[1].slice(0, 2);
+    return `${integerPart}.${decimalPart}`;
+  }
+  
+  return integerPart;
+};
+
 export default function ApplicantJobList() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,7 +64,44 @@ export default function ApplicantJobList() {
 
   const [availableRegions, setAvailableRegions] = useState<string[]>([]);
   const [availableDivisions, setAvailableDivisions] = useState<string[]>([]);
+  const [divisionsByRegion, setDivisionsByRegion] = useState<Record<string, string[]>>({});
   const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
+
+  const filteredAvailableDivisions = useMemo(() => {
+    if (filterRegion === 'All Regions') {
+      return availableDivisions;
+    }
+    const set = new Set<string>();
+    if (divisionsByRegion && divisionsByRegion[filterRegion]) {
+      divisionsByRegion[filterRegion].forEach(d => set.add(d));
+    }
+    positions.forEach(job => {
+      if ((job.location || 'Unknown') === filterRegion) {
+        const div = job.division || job.office;
+        if (div) set.add(div);
+      }
+    });
+    return set.size > 0 ? Array.from(set).sort() : availableDivisions;
+  }, [filterRegion, availableDivisions, divisionsByRegion, positions]);
+
+  const handleRegionChange = (newRegion: string) => {
+    setFilterRegion(newRegion);
+    if (newRegion !== 'All Regions') {
+      const set = new Set<string>();
+      if (divisionsByRegion && divisionsByRegion[newRegion]) {
+        divisionsByRegion[newRegion].forEach(d => set.add(d));
+      }
+      positions.forEach(job => {
+        if ((job.location || 'Unknown') === newRegion) {
+          const div = job.division || job.office;
+          if (div) set.add(div);
+        }
+      });
+      if (filterDivision !== 'All Divisions' && !set.has(filterDivision)) {
+        setFilterDivision('All Divisions');
+      }
+    }
+  };
 
   const filteredPositions = useMemo(() => positions.filter(job => {
     const matchSearch = !searchQuery ||
@@ -136,6 +192,19 @@ export default function ApplicantJobList() {
   const [permStreet, setPermStreet] = useState('');
   const [permSubdivision, setPermSubdivision] = useState('');
   const [permZip, setPermZip] = useState('');
+
+  useEffect(() => {
+    if (sameAsResidential) {
+      setPermHouse(resHouse);
+      setPermStreet(resStreet);
+      setPermSubdivision(resSubdivision);
+      setPermZip(resZip);
+      setPermRegion(resRegion);
+      setPermProvince(resProvince);
+      setPermCity(resCity);
+      setPermBarangay(resBarangay);
+    }
+  }, [sameAsResidential, resHouse, resStreet, resSubdivision, resZip, resRegion, resProvince, resCity, resBarangay]);
   const [telephoneNo, setTelephoneNo] = useState('');
   const [mobileNo, setMobileNo] = useState('');
   const [alternateEmail, setAlternateEmail] = useState('');
@@ -167,6 +236,7 @@ export default function ApplicantJobList() {
 
   const handleTabClick = (targetStep: string) => {
     setCurrentStep(targetStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePersonalInfoSubmit = (e: React.FormEvent) => {
@@ -305,6 +375,10 @@ export default function ApplicantJobList() {
   const [questionnaire, setQuestionnaire] = useState<Record<string, { answer: string, details: string }>>({});
   const [referencesList, setReferencesList] = useState<any[]>([{ name: '', address: '', telephone: '' }]);
   const [governmentId, setGovernmentId] = useState({ type: '', idNo: '', datePlace: '' });
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
+  const [showLoiModal, setShowLoiModal] = useState(false);
+  const [loiFile, setLoiFile] = useState<File | null>(null);
+  const [loiUploading, setLoiUploading] = useState(false);
 
   const { steps: completedSteps, percentage, totalSteps: progressTotalSteps } = useMemo(() => {
     return calculateProfileProgress({
@@ -538,14 +612,15 @@ export default function ApplicantJobList() {
           barangay: resBarangay,
         },
         permanent_address: {
-          house: permHouse,
-          street: permStreet,
-          subdivision: permSubdivision,
-          zip: permZip,
-          region: permRegion,
-          province: permProvince,
-          city: permCity,
-          barangay: permBarangay,
+          same_as_res: sameAsResidential,
+          house: sameAsResidential ? resHouse : permHouse,
+          street: sameAsResidential ? resStreet : permStreet,
+          subdivision: sameAsResidential ? resSubdivision : permSubdivision,
+          zip: sameAsResidential ? resZip : permZip,
+          region: sameAsResidential ? resRegion : permRegion,
+          province: sameAsResidential ? resProvince : permProvince,
+          city: sameAsResidential ? resCity : permCity,
+          barangay: sameAsResidential ? resBarangay : permBarangay,
         },
         telephone_no: telephoneNo,
         mobile_no: mobileNo,
@@ -687,8 +762,9 @@ export default function ApplicantJobList() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
-          setAvailableRegions(data.data.regions);
-          setAvailableDivisions(data.data.divisions);
+          setAvailableRegions(data.data.regions || []);
+          setAvailableDivisions(data.data.divisions || []);
+          setDivisionsByRegion(data.data.divisionsByRegion || {});
         }
       })
       .catch(err => console.error('Error fetching locations:', err));
@@ -814,6 +890,17 @@ export default function ApplicantJobList() {
             setPermProvince(pa.province || '');
             setPermCity(pa.city || '');
             setPermBarangay(pa.barangay || '');
+
+            const ra = p.residential_address ? (typeof p.residential_address === 'string' ? JSON.parse(p.residential_address) : p.residential_address) : {};
+            const isSame = Boolean(
+              pa.same_as_res ||
+              pa.sameAsResidential ||
+              pa.same_as_residential ||
+              (ra && ra.region && ra.region === pa.region && ra.city === pa.city && ra.barangay === pa.barangay && ra.house === pa.house)
+            );
+            if (isSame) {
+              setSameAsResidential(true);
+            }
           }
 
           if (p.family_background) {
@@ -1125,9 +1212,9 @@ export default function ApplicantJobList() {
             <div className="flex items-center overflow-x-auto hide-scrollbar">
               <button
                 onClick={() => navigate('/applicant-dashboard')}
-                className="flex items-center gap-2 px-6 sm:px-8 py-5 text-[14px] font-bold text-gray-600 hover:text-gray-900 transition-colors shrink-0"
+                className="bg-[#16a34a] hover:bg-[#15803d] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2 group shrink-0 my-2 ml-4 sm:ml-6 mr-3"
               >
-                <ArrowLeft className="w-[18px] h-[18px]" />
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('job-board')}
@@ -1384,7 +1471,7 @@ export default function ApplicantJobList() {
                       <MapPin className="w-5 h-5 text-rose-500 shrink-0 mr-3" />
                       <select
                         value={filterRegion}
-                        onChange={(e: any) => setFilterRegion(e.target.value)}
+                        onChange={(e: any) => handleRegionChange(e.target.value)}
                         className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                       >
                         <option value="All Regions">All Regions</option>
@@ -1400,7 +1487,7 @@ export default function ApplicantJobList() {
                         className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                       >
                         <option value="All Divisions">All Divisions</option>
-                        {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
+                        {filteredAvailableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
 
@@ -1684,42 +1771,7 @@ export default function ApplicantJobList() {
                       );
                     })}
                   </div>
-                  <div className="flex flex-col mt-4 border border-gray-200 rounded p-4 mx-4 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-[34px] h-[38px] bg-gray-100 flex flex-col items-center justify-center relative border border-gray-200 rounded-sm overflow-hidden shrink-0">
-                        <div className="absolute top-1 text-orange-400 font-extrabold text-[14px]">↑</div>
-                        <div className="w-full h-1.5 bg-blue-500 absolute bottom-0"></div>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-[13px] text-gray-700">Upload Letter of Intent</span>
-                          <HelpCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white rounded-full" />
-                        </div>
-                        <span className="text-[11px] text-gray-500">For this position.</span>
-                      </div>
-                    </div>
-                    {uploadedDocumentUrls && uploadedDocumentUrls['Letter of Intent'] ? (
-                      <div className="flex flex-col gap-2 w-full mt-2">
-                        <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200">
-                          &#10003; Uploaded
-                        </span>
-                        <div className="flex flex-col gap-2">
-                          <a href={uploadedDocumentUrls['Letter of Intent'].startsWith("http") ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(uploadedDocumentUrls['Letter of Intent'])}` : uploadedDocumentUrls['Letter of Intent']} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                            View File
-                          </a>
-                          <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                            Replace File
-                            <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
-                          </label>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
-                        Upload Now
-                        <input type="file" className="hidden" accept=".pdf" onChange={handleLetterOfIntentUpload} />
-                      </label>
-                    )}
-                  </div>
+
                 </div>
 
                 {/* Right Content */}
@@ -1745,10 +1797,7 @@ export default function ApplicantJobList() {
                     {parseFloat(percentage) >= 100 ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          const form = document.getElementById('form-Essential Documents') as HTMLFormElement;
-                          if (form) form.requestSubmit();
-                        }}
+                        onClick={() => setShowLoiModal(true)}
                         className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-extrabold text-[13px] py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 whitespace-nowrap uppercase tracking-wider shrink-0"
                       >
                         Submit Application
@@ -2604,17 +2653,27 @@ export default function ApplicantJobList() {
                                 </div>
                                 <div className="flex flex-col justify-between h-full">
                                   <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Monthly Salary</span>
-                                  <input
-                                    type="text"
-                                    placeholder="Enter monthly salary"
-                                    value={item.monthlySalary}
-                                    onChange={(e: any) => {
-                                      const newList = [...workExperienceList];
-                                      newList[idx].monthlySalary = e.target.value;
-                                      setWorkExperienceList(newList);
-                                    }}
-                                    className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
-                                  />
+                                  <div className="relative w-full">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-bold text-[15px] pointer-events-none select-none">₱</span>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="0.00"
+                                      value={item.monthlySalary !== undefined ? formatCurrencyValue(item.monthlySalary) : formatCurrencyValue(item.salary || '')}
+                                      onChange={(e: any) => {
+                                        const val = formatCurrencyValue(e.target.value);
+                                        setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, monthlySalary: val, salary: val } : it));
+                                      }}
+                                      onBlur={(e: any) => {
+                                        const raw = e.target.value.replace(/,/g, '');
+                                        if (raw && !isNaN(Number(raw))) {
+                                          const formatted = Number(raw).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                          setWorkExperienceList(prev => prev.map((it: any, i: number) => i === idx ? { ...it, monthlySalary: formatted, salary: formatted } : it));
+                                        }
+                                      }}
+                                      className="border border-gray-300 rounded p-2.5 pl-8 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full font-medium"
+                                    />
+                                  </div>
                                 </div>
                                 <div className="flex flex-col justify-between h-full">
                                   <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Salary/Job/Pay Grade & Step</span>
@@ -3285,6 +3344,12 @@ export default function ApplicantJobList() {
                           <p className="text-[13px] text-gray-500 italic">Please upload the required essential documents for your application. (Max file size: 5MB per document)</p>
                         </div>
 
+                        {(() => {
+                          const REQUIRED_DOCS = ['Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID'];
+                          const confirmedCount = REQUIRED_DOCS.filter(d => documentsConfirmed[d]).length;
+                          const docsPct = Math.round((confirmedCount / REQUIRED_DOCS.length) * 100);
+                          const docsAllDone = confirmedCount === REQUIRED_DOCS.length;
+                          return (
                         <div
                           className={`border rounded-lg overflow-hidden bg-white shadow-sm transition-all duration-500 ${highlightDocs ? 'border-red-500 ring-2 ring-red-200' : 'border-gray-200'
                             }`}
@@ -3292,10 +3357,20 @@ export default function ApplicantJobList() {
                         >
                           <div className={`border-b px-5 py-3.5 transition-colors duration-500 ${highlightDocs ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
                             }`}>
-                            <h3 className={`font-bold text-[14px] uppercase tracking-wide ${highlightDocs ? 'text-red-700' : 'text-gray-700'
+                            <div className="flex items-center justify-between">
+                              <h3 className={`font-bold text-[14px] uppercase tracking-wide ${highlightDocs ? 'text-red-700' : 'text-gray-700'
+                                }`}>
+                                Essential Documents {highlightDocs && <span className="text-red-500 lowercase normal-case font-normal ml-2">(Action Required)</span>}
+                              </h3>
+                              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[12px] font-bold border transition-all duration-300 ${
+                                docsAllDone
+                                  ? 'bg-green-50 border-green-200 text-green-700'
+                                  : 'bg-gray-50 border-gray-200 text-gray-500'
                               }`}>
-                              Essential Documents {highlightDocs && <span className="text-red-500 lowercase normal-case font-normal ml-2">(Action Required)</span>}
-                            </h3>
+                                <div className={`w-2 h-2 rounded-full ${ docsAllDone ? 'bg-green-500' : 'bg-gray-300' }`} />
+                                {confirmedCount}/{REQUIRED_DOCS.length} confirmed &nbsp;·&nbsp; {docsPct}%
+                              </div>
+                            </div>
                           </div>
                           <div className="p-5 flex flex-col gap-6">
                             {([ 'Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc]; const isEditing = editingDocs[doc] || false; const isOptionalList = ['Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc];
@@ -3304,22 +3379,13 @@ export default function ApplicantJobList() {
                                 <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
-                                      {isSubsequentApplication && isRequired ? (
-                                        <input
-                                          type="checkbox"
-                                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                          checked={documentsConfirmed[doc] || false}
-                                          onChange={e => setDocumentsConfirmed(prev => ({ ...prev, [doc]: e.target.checked }))}
-                                        />
+                                      {documentsConfirmed[doc] ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                       ) : (
-                                        isComplete ? (
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        isRequired ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                         ) : (
-                                          isRequired ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                          ) : (
-                                            <div className="w-4 h-4"></div>
-                                          )
+                                          <div className="w-4 h-4"></div>
                                         )
                                       )}
                                       <span className="text-[14px] font-medium text-gray-700 flex items-center gap-2">
@@ -3338,27 +3404,59 @@ export default function ApplicantJobList() {
                                       </span>
                                     </div>
                                     {existingUrl && (
-                                      <a
-                                        href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        download={doc + ".pdf"}
-                                        className="text-[12px] text-blue-600 hover:underline mt-1 font-medium flex items-center gap-1 ml-6"
-                                      >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> Download File
-                                      </a>
+                                      <div className="flex items-center gap-3 ml-6 mt-1">
+                                        <a
+                                          href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          download={doc + ".pdf"}
+                                          className="text-[12px] text-blue-600 hover:underline font-medium flex items-center gap-1"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> Download File
+                                        </a>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPdfViewerUrl(`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(existingUrl)}`)}
+                                          className="text-[12px] text-emerald-600 hover:underline font-medium flex items-center gap-1"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> View
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
 
                                   <div className="flex flex-col md:items-end gap-2">
                                     {existingUrl && !isEditing ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => setEditingDocs(prev => ({ ...prev, [doc]: true }))}
-                                        className="text-[12px] font-bold text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50 px-3 py-1.5 rounded transition-colors self-start md:self-auto"
-                                      >
-                                        UPDATE
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        {!documentsConfirmed[doc] && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setDocumentsConfirmed(prev => ({ ...prev, [doc]: true }))}
+                                            className="text-[12px] font-bold text-white bg-green-600 hover:bg-green-700 border border-green-700 px-3 py-1.5 rounded transition-colors self-start md:self-auto flex items-center gap-1"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            CONFIRM
+                                          </button>
+                                        )}
+                                        {documentsConfirmed[doc] && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setDocumentsConfirmed(prev => ({ ...prev, [doc]: false }))}
+                                            className="text-[12px] font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded transition-colors self-start md:self-auto flex items-center gap-1 cursor-default"
+                                            title="Click to unconfirm"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            CONFIRMED
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingDocs(prev => ({ ...prev, [doc]: true }))}
+                                          className="text-[12px] font-bold text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50 px-3 py-1.5 rounded transition-colors self-start md:self-auto"
+                                        >
+                                          UPDATE
+                                        </button>
+                                      </div>
                                     ) : (
                                       <div className="flex items-center gap-2">
                                         <input
@@ -3396,6 +3494,8 @@ export default function ApplicantJobList() {
                             })}
                           </div>
                         </div>
+                          );
+                        })()}
 
 
                         {/* Submit Button */}
@@ -3403,7 +3503,11 @@ export default function ApplicantJobList() {
                           <button type="button" onClick={() => setCurrentStep('Legal Questionnaire')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
                             <ChevronLeft className="w-4 h-4" /> Back
                           </button>
-                          <button type="submit" className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setShowLoiModal(true); }}
+                            className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors"
+                          >
                             Submit Application <FileText className="w-4 h-4 ml-1" />
                           </button>
                         </div>
@@ -3416,6 +3520,221 @@ export default function ApplicantJobList() {
           </div>
         </div>
       </main>
+
+      {/* PDF Viewer Modal */}
+      {pdfViewerUrl && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setPdfViewerUrl(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-[#1a73e8]/5 to-transparent shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#1a73e8]/10 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <span className="font-bold text-[15px] text-gray-800">Document Preview</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={pdfViewerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1a73e8] hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                  Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPdfViewerUrl(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* PDF Embed */}
+            <div className="flex-1 overflow-hidden bg-gray-100">
+              <iframe
+                src={`${pdfViewerUrl}#view=FitH&toolbar=0`}
+                className="w-full h-full border-0"
+                title="Document Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Letter of Intent Modal */}
+      {showLoiModal && (
+        <div
+          className="fixed inset-0 z-[210] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => { if (!loiUploading) { setShowLoiModal(false); setLoiFile(null); } }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-[#1a73e8]/5 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#1a73e8]/10 flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div>
+                  <h2 className="font-bold text-[16px] text-gray-800">Letter of Intent</h2>
+                  <p className="text-[12px] text-gray-500">Required before submitting your application</p>
+                </div>
+              </div>
+              {!loiUploading && (
+                <button
+                  type="button"
+                  onClick={() => { setShowLoiModal(false); setLoiFile(null); }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6 flex flex-col gap-5">
+              <p className="text-[13px] text-gray-600 leading-relaxed">
+                Please upload your <strong>Letter of Intent</strong> for the position you are applying for. This document is required to complete your application. Maximum file size: <strong>5MB</strong>.
+              </p>
+
+              {/* Existing LOI status */}
+              {uploadedDocumentUrls?.['Letter of Intent'] && !loiFile && (
+                <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-[13px] font-semibold text-green-700">Letter of Intent already uploaded</span>
+                    <span className="text-[11px] text-green-600">You can replace it by choosing a new file below, or proceed to submit.</span>
+                  </div>
+                  <a
+                    href={`${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(uploadedDocumentUrls['Letter of Intent'])}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-blue-600 hover:underline font-semibold shrink-0"
+                  >
+                    View
+                  </a>
+                </div>
+              )}
+
+              {/* File picker */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
+                  {uploadedDocumentUrls?.['Letter of Intent'] ? 'Replace Letter of Intent (optional)' : 'Upload Letter of Intent'}
+                </label>
+                <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl px-6 py-8 cursor-pointer transition-all ${loiFile ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40'}`}>
+                  {loiFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <span className="text-[13px] font-semibold text-green-700 text-center break-all">{loiFile.name}</span>
+                      <span className="text-[11px] text-gray-400">{(loiFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <span className="text-[13px] text-gray-500 font-medium">Click to choose a PDF file</span>
+                      <span className="text-[11px] text-gray-400">PDF only · Max 5MB</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 5 * 1024 * 1024) {
+                        Swal.fire('File Too Large', 'Please select a PDF smaller than 5MB.', 'error');
+                        return;
+                      }
+                      setLoiFile(f);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
+              <button
+                type="button"
+                disabled={loiUploading}
+                onClick={() => { setShowLoiModal(false); setLoiFile(null); }}
+                className="text-[13px] font-semibold text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loiUploading || (!loiFile && !uploadedDocumentUrls?.['Letter of Intent'])}
+                onClick={async () => {
+                  setLoiUploading(true);
+                  try {
+                    // If a new file is chosen, upload it first
+                    if (loiFile) {
+                      const sessionStr = localStorage.getItem('session_data');
+                      if (!sessionStr) { Swal.fire('Error', 'Not logged in.', 'error'); return; }
+                      const session = JSON.parse(sessionStr);
+                      const formData = new FormData();
+                      formData.append('files', loiFile);
+                      formData.append('documentNames', 'Letter of Intent');
+                      if (applyingJob) formData.append('jobClusterId', applyingJob.id.toString());
+                      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/documents`, {
+                        method: 'POST',
+                        body: formData
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setUploadedDocumentUrls(data.documents);
+                      } else {
+                        Swal.fire('Upload Failed', 'Could not upload Letter of Intent. Please try again.', 'error');
+                        setLoiUploading(false);
+                        return;
+                      }
+                    }
+                    // Close modal and trigger actual form submit
+                    setShowLoiModal(false);
+                    setLoiFile(null);
+                    setLoiUploading(false);
+                    setTimeout(() => {
+                      const form = document.getElementById('form-Essential Documents') as HTMLFormElement;
+                      if (form) form.requestSubmit();
+                    }, 100);
+                  } catch {
+                    Swal.fire('Error', 'An error occurred. Please try again.', 'error');
+                    setLoiUploading(false);
+                  }
+                }}
+                className="flex items-center gap-2 text-[13px] font-bold text-white bg-[#1a73e8] hover:bg-blue-700 px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                {loiUploading ? (
+                  <>
+                    <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    {loiFile ? 'Upload & Submit Application' : 'Submit Application'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

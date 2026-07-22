@@ -110,7 +110,7 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, 
         <div className="flex items-center">
           <div className="flex flex-col">
             <span className="font-bold text-xl leading-tight tracking-wide">AGAP Portal</span>
-            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Application and Placement</span>
+            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Appointments and Placements</span>
           </div>
         </div>
       </div>

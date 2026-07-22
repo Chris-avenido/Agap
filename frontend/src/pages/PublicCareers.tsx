@@ -23,7 +23,44 @@ export default function PublicCareers() {
 
   const [availableRegions, setAvailableRegions] = useState<string[]>([]);
   const [availableDivisions, setAvailableDivisions] = useState<string[]>([]);
+  const [divisionsByRegion, setDivisionsByRegion] = useState<Record<string, string[]>>({});
   const availablePositions = useMemo(() => [...new Set(positions.map(p => p.title))].filter(Boolean), [positions]);
+
+  const filteredAvailableDivisions = useMemo(() => {
+    if (filterRegion === 'All Regions') {
+      return availableDivisions;
+    }
+    const set = new Set<string>();
+    if (divisionsByRegion && divisionsByRegion[filterRegion]) {
+      divisionsByRegion[filterRegion].forEach(d => set.add(d));
+    }
+    positions.forEach(job => {
+      if ((job.location || 'Unknown') === filterRegion) {
+        const div = job.division || job.office;
+        if (div) set.add(div);
+      }
+    });
+    return set.size > 0 ? Array.from(set).sort() : availableDivisions;
+  }, [filterRegion, availableDivisions, divisionsByRegion, positions]);
+
+  const handleRegionChange = (newRegion: string) => {
+    setFilterRegion(newRegion);
+    if (newRegion !== 'All Regions') {
+      const set = new Set<string>();
+      if (divisionsByRegion && divisionsByRegion[newRegion]) {
+        divisionsByRegion[newRegion].forEach(d => set.add(d));
+      }
+      positions.forEach(job => {
+        if ((job.location || 'Unknown') === newRegion) {
+          const div = job.division || job.office;
+          if (div) set.add(div);
+        }
+      });
+      if (filterDivision !== 'All Divisions' && !set.has(filterDivision)) {
+        setFilterDivision('All Divisions');
+      }
+    }
+  };
 
   const filteredPositions = useMemo(() => positions.filter(job => {
     const matchSearch = !searchQuery ||
@@ -54,8 +91,9 @@ export default function PublicCareers() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
-          setAvailableRegions(data.data.regions);
-          setAvailableDivisions(data.data.divisions);
+          setAvailableRegions(data.data.regions || []);
+          setAvailableDivisions(data.data.divisions || []);
+          setDivisionsByRegion(data.data.divisionsByRegion || {});
         }
       })
       .catch(err => console.error('Error fetching locations:', err));
@@ -194,11 +232,7 @@ export default function PublicCareers() {
         };
         localStorage.setItem('session_data', JSON.stringify(item));
         Swal.fire('Success', `Registration successful! Your Applicant ID is ${resData.data?.applicant_number}`, 'success').then(() => {
-          if (selectedJob) {
-            navigate(`/applicant-jobs/${selectedJob.id}`);
-          } else {
-            navigate('/applicant-jobs');
-          }
+          navigate('/applicant-dashboard');
         });
       } else {
         const errorData = await response.json();
@@ -317,7 +351,7 @@ export default function PublicCareers() {
                   <MapPin className="w-5 h-5 text-rose-500 shrink-0 mr-3" />
                   <select
                     value={filterRegion}
-                    onChange={(e: any) => setFilterRegion(e.target.value)}
+                    onChange={(e: any) => handleRegionChange(e.target.value)}
                     className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                   >
                     <option value="All Regions">All Regions</option>
@@ -333,7 +367,7 @@ export default function PublicCareers() {
                     className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                   >
                     <option value="All Divisions">All Divisions</option>
-                    {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
+                    {filteredAvailableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
 

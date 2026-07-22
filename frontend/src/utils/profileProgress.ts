@@ -32,12 +32,43 @@ export const calculateProfileProgress = (data: {
   if (data.motherSurname?.trim() || data.motherFirst?.trim() || data.fatherSurname?.trim() || data.fatherFirst?.trim() || data.spouseSurname?.trim() || data.spouseFirst?.trim()) steps.push('Family Background');
   
   if (data.educationalDates && Object.values(data.educationalDates).some((ed: any) => ed?.school?.trim() !== '')) steps.push('Educational Background');
-  if (data.civilServiceList?.some((cs: any) => cs?.eligibility?.trim() !== '')) steps.push('Eligibility');
-  if (data.workExperienceList?.some((we: any) => we?.company?.trim() !== '' || we?.positionTitle?.trim() !== '')) steps.push('Work Experience');
-  if (data.voluntaryWorkList?.some((vw: any) => vw?.nameAddress?.trim() !== '')) steps.push('Voluntary Work');
-  if (data.learningDevelopmentList?.some((ld: any) => ld?.title?.trim() !== '')) steps.push('Learning & Development');
-  if (data.skillsList?.some((s: any) => s?.value?.trim() !== '') || data.distinctionsList?.some((d: any) => d?.value?.trim() !== '') || data.membershipsList?.some((m: any) => m?.value?.trim() !== '')) steps.push('Other Information');
-  if (data.questionnaire && Object.keys(data.questionnaire).length > 0) steps.push('Legal Questionnaire');
+  if (data.civilServiceList?.some((cs: any) => (cs?.eligibility && String(cs.eligibility).trim() !== '') || (cs?.name && String(cs.name).trim() !== ''))) steps.push('Eligibility');
+  if (data.workExperienceList?.some((we: any) => (we?.company && String(we.company).trim() !== '') || (we?.positionTitle && String(we.positionTitle).trim() !== '') || (we?.position && String(we.position).trim() !== ''))) steps.push('Work Experience');
+  if (data.voluntaryWorkList?.some((vw: any) => (vw?.nameAddress && String(vw.nameAddress).trim() !== '') || (vw?.organization && String(vw.organization).trim() !== ''))) steps.push('Voluntary Work');
+  if (data.learningDevelopmentList?.some((ld: any) => (ld?.title && String(ld.title).trim() !== ''))) steps.push('Learning & Development');
+  const hasItemVal = (item: any) => {
+    if (!item) return false;
+    const val = typeof item === 'string' ? item : (item.value || item.name || '');
+    return String(val).trim() !== '';
+  };
+  const parseList = (list: any) => {
+    if (!list) return [];
+    if (Array.isArray(list)) return list;
+    if (typeof list === 'string') {
+      try {
+        const parsed = JSON.parse(list);
+        if (Array.isArray(parsed)) return parsed;
+        return [list];
+      } catch {
+        return [list];
+      }
+    }
+    return [];
+  };
+  const sList = parseList(data.skillsList);
+  const dList = parseList(data.distinctionsList);
+  const mList = parseList(data.membershipsList);
+  if (sList.some(hasItemVal) || dList.some(hasItemVal) || mList.some(hasItemVal)) steps.push('Other Information');
+  const isQuestionnaireAnswered = (val: any) => {
+    if (!val) return false;
+    if (typeof val === 'string') return val.trim() !== '';
+    if (typeof val === 'object') {
+      const ans = val.answer || val.value || '';
+      return typeof ans === 'string' && ans.trim() !== '';
+    }
+    return false;
+  };
+  if (data.questionnaire && Object.values(data.questionnaire).some(isQuestionnaireAnswered)) steps.push('Legal Questionnaire');
 
   const requiredDocs = [
     'Personal Data Sheet',
@@ -46,20 +77,24 @@ export const calculateProfileProgress = (data: {
     'Transcript of Records',
     'Updated PRC License/ID'
   ];
-  const allDocumentsConfirmed = requiredDocs.every(doc => data.documentsConfirmed && data.documentsConfirmed[doc]);
-  if (data.isSubsequentApplication && allDocumentsConfirmed) steps.push('Documents Confirmed');
 
-  if (data.context !== 'my-profile') {
-    if ((data.uploadedDocumentUrls && data.uploadedDocumentUrls['Letter of Intent']) || (data.documents && data.documents['Letter of Intent'])) {
-      steps.push('Letter of Intent');
-    }
+  // For sidebar: Essential Documents turns green only when all required docs are confirmed
+  const isDocConfirmed = (docName: string) => {
+    return Boolean(data.documentsConfirmed && data.documentsConfirmed[docName]);
+  };
+  const isDocUploaded = (docName: string) => {
+    return Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls[docName]) ||
+           Boolean(data.documents && data.documents[docName]);
+  };
+
+  // Sidebar turns green ONLY when all 5 required docs are explicitly confirmed
+  const allRequiredDocsConfirmed = requiredDocs.every(d => isDocConfirmed(d));
+
+  if (allRequiredDocsConfirmed) {
+    steps.push('Essential Documents');
   }
 
-  let totalSteps = data.isSubsequentApplication ? 11 : 10;
-  if (data.context === 'my-profile') {
-    totalSteps -= 1;
-  }
-
+  const totalSteps = 10;
   const percentage = ((steps.length / totalSteps) * 100).toFixed(2);
   
   return { steps, percentage, totalSteps };
