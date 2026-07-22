@@ -22,6 +22,8 @@ interface ApplicationModalProps {
   onClose: () => void;
   jobTitle: string;
   jobId?: number | null;
+  viewMode?: 'pds' | 'vacancy-details';
+  jobData?: any;
 }
 
 export default function ApplicationModal({
@@ -29,6 +31,8 @@ export default function ApplicationModal({
   onClose,
   jobTitle,
   jobId,
+  viewMode = 'pds',
+  jobData
 }: ApplicationModalProps) {
   const isRegistrationFlow = jobTitle === "General Registration";
   const [activeTab, setActiveTab] = useState("C1");
@@ -483,6 +487,68 @@ export default function ApplicationModal({
   ]);
 
   if (!isOpen) return null;
+
+  if (viewMode === 'vacancy-details' && jobData) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#022851]/40 backdrop-blur-sm p-4 sm:p-6">
+        <div className="bg-white w-full max-w-2xl rounded-[20px] shadow-2xl flex flex-col overflow-hidden relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 transition-colors bg-gray-100 hover:bg-gray-200 rounded-full p-1.5"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="p-8 md:p-10 border-b border-gray-100">
+            <h2 className="text-[28px] font-bold text-[#3b82f6] tracking-tight leading-tight mb-2">{jobData.title}</h2>
+            <div className="text-[15px] text-gray-500 font-medium">
+              {[jobData.location, jobData.division].filter(Boolean).join(' - ') || jobData.office || 'Department of Education'}
+            </div>
+            {jobData.school && (
+              <div className="text-[14px] text-gray-500 mt-1">
+                Place of Assignment: <span className="font-semibold">{jobData.school}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="p-8 md:p-10 bg-gray-50/50 flex-1">
+            <div className="text-[14px] text-gray-600 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+              Posted on <span className="font-bold text-gray-800">{jobData.posted || 'N/A'}</span> and deadline is on <span className="font-bold text-red-500">{jobData.deadline || 'N/A'}</span>
+            </div>
+            
+            <h3 className="text-[16px] font-bold text-gray-900 mb-6 border-b border-gray-200 pb-2 tracking-wide uppercase">Qualification Standards</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-y-5 text-[14px]">
+              {jobData.qsEducation && (
+                <>
+                  <div className="font-bold text-gray-700">Education:</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsEducation}</div>
+                </>
+              )}
+              {jobData.qsTraining && (
+                <>
+                  <div className="font-bold text-gray-700">Training:</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsTraining}</div>
+                </>
+              )}
+              {jobData.qsExperience && (
+                <>
+                  <div className="font-bold text-gray-700">Experience:</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsExperience}</div>
+                </>
+              )}
+              {jobData.qsEligibility && (
+                <>
+                  <div className="font-bold text-gray-700">Eligibility:</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsEligibility}</div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = [
     { id: "C1", label: "Personal Information", icon: User },

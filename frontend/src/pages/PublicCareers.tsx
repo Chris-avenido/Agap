@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users } from 'lucide-react';
 import modernLogo from '../assets/modern_logo.png';
 import { JobCard, JobTableList } from '../components/JobCards';
+import ApplicationModal from '../components/ApplicationModal';
 
 export default function PublicCareers() {
   const navigate = useNavigate();
@@ -220,10 +221,8 @@ export default function PublicCareers() {
         </div>
       </nav>
 
-      {!viewedJob ? (
-        <>
-          {/* Hero Banner Section */}
-          <div
+      {/* Hero Banner Section */}
+      <div
             className="relative w-full overflow-hidden py-20 sm:py-24 px-6 md:px-12 flex-shrink-0"
             style={{
               background: 'linear-gradient(160deg, #05233F 0%, #06345F 58%, #0A6FA6 100%)'
@@ -404,81 +403,16 @@ export default function PublicCareers() {
               </div>
             )}
           </div>
-        </>
-      ) : (
-        <>
-          {/* Details Hero Banner Section */}
-          <div
-            className="relative w-full overflow-hidden py-12 sm:py-16 px-6 md:px-12 flex-shrink-0"
-            style={{
-              background: 'linear-gradient(160deg, #05233F 0%, #06345F 58%, #0A6FA6 100%)'
-            }}
-          >
-            {/* Glow Effects */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#004b93] rounded-full mix-blend-screen filter blur-[120px] opacity-40 translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
 
-            <div className="max-w-5xl mx-auto relative z-10 flex items-center">
-              <button
-                onClick={() => setViewedJob(null)}
-                className="flex items-center gap-2 text-white hover:text-white/80 transition-colors font-medium text-[15px]"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                Back to Job List
-              </button>
-            </div>
-          </div>
-
-          <div className="max-w-5xl w-full mx-auto px-4 relative z-20 -mt-8 mb-24">
-            <div className="bg-white rounded-[20px] shadow-[0_8px_25px_rgba(251,191,36,0.15)] border-[1.5px] border-[#fbbf24] p-8 md:p-12 min-h-[500px]">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-gray-100 pb-8">
-                <div>
-                  <h1 className="text-[28px] font-bold text-[#2563eb] mb-2">{viewedJob.title}</h1>
-                  <div className="text-[14px] text-gray-600 mb-2 font-medium">
-                    {viewedJob.location || 'N/A'} - {viewedJob.division || viewedJob.office || 'N/A'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleApplyClick(viewedJob.id, viewedJob.title)}
-                  className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-8 py-3.5 rounded-xl text-[14px] font-bold tracking-wide transition-colors shrink-0 flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <Briefcase className="w-4 h-4" /> APPLY NOW
-                </button>
-              </div>
-
-              <div className="text-[14px] text-gray-600 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                Posted on <span className="font-bold text-gray-800">{viewedJob.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-red-500">{viewedJob.deadline || 'Jul 18, 2026'}</span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-6 mb-12">
-                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0f4f8] rounded-2xl flex-1">
-                  <CircleDollarSign className="w-8 h-8 text-blue-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">SALARY GRADE</span>
-                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{viewedJob.sg || '4'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0fdf4] rounded-2xl flex-1">
-                  <Users className="w-8 h-8 text-emerald-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">VACANCIES</span>
-                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{viewedJob.vacancyCount || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">QS:</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
-                <div className="font-bold text-gray-900 tracking-wide">Education:</div>
-                <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEducation || 'Completion of two (2) years studies in college (prior to 2018), OR Completion of Grade 12/Senior High School (starting 2016)'}</div>
-
-                <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
-                <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEligibility || 'Career Service Sub Professional / First Level Eligibility'}</div>
-              </div>
-
-            </div>
-          </div>
-        </>
+      {viewedJob && (
+        <ApplicationModal
+          isOpen={!!viewedJob}
+          onClose={() => setViewedJob(null)}
+          jobTitle={viewedJob.title}
+          jobId={viewedJob.id}
+          viewMode="vacancy-details"
+          jobData={viewedJob}
+        />
       )}
 
       {/* Apply Modal */}
@@ -492,81 +426,27 @@ export default function PublicCareers() {
               <X className="w-6 h-6" />
             </button>
 
-            {/* Left Panel: Job Description */}
-            <div className="w-full md:w-[45%] p-8 md:p-10 border-b md:border-b-0 md:border-r border-gray-100 overflow-y-auto">
-              <h2 className="text-[32px] font-bold text-[#3b82f6] tracking-tight leading-tight mb-4">{selectedJob.title}</h2>
-              <div className="text-[15px] text-gray-500 mb-8 border-b border-gray-100 pb-8">
-                {[selectedJob.location, selectedJob.division].filter(Boolean).join(' - ') || selectedJob.office || 'NCR - Division Office'}
-              </div>
-
-              <div className="text-[14px] text-gray-600 mb-10 bg-[#f8fafc] p-4 rounded-xl border border-gray-100 flex items-center">
-                Posted on <span className="font-bold text-gray-800 mx-1">{selectedJob.posted || 'Jul 05, 2026'}</span> and deadline is on <span className="font-bold text-red-500 ml-1">{selectedJob.deadline || 'Jul 31, 2026'}</span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-6 mb-12">
-                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0f4f8] rounded-2xl flex-1">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <CircleDollarSign className="w-6 h-6 text-blue-600 shrink-0" />
+            {/* Account Creation Modal */}
+            <div className="w-full p-8 md:p-10 bg-white flex flex-col items-center">
+              <div className="flex items-center justify-between w-full mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#022851] rounded-full flex items-center justify-center shadow-inner">
+                    <Pen className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">SALARY GRADE</span>
-                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{selectedJob.sg || '11'}</span>
-                  </div>
+                  <h2 className="text-[24px] font-extrabold text-[#022851]">Account Creation</h2>
                 </div>
-                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0fdf4] rounded-2xl flex-1">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <Users className="w-6 h-6 text-emerald-600 shrink-0" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">VACANCIES</span>
-                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{selectedJob.vacancyCount || 1}</span>
-                  </div>
-                </div>
+                <button
+                  onClick={() => {
+                    setShowApplyModal(false);
+                    setViewedJob(selectedJob);
+                  }}
+                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-[13px] transition-colors"
+                >
+                  View Vacancy Details
+                </button>
               </div>
 
-              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">QS:</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
-                {selectedJob.qsEducation && (
-                  <>
-                    <div className="font-bold text-gray-900 tracking-wide">Education:</div>
-                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsEducation}</div>
-                  </>
-                )}
-                
-                {selectedJob.qsTraining && (
-                  <>
-                    <div className="font-bold text-gray-900 tracking-wide">Training:</div>
-                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsTraining}</div>
-                  </>
-                )}
-
-                {selectedJob.qsExperience && (
-                  <>
-                    <div className="font-bold text-gray-900 tracking-wide">Experience:</div>
-                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsExperience}</div>
-                  </>
-                )}
-
-                {selectedJob.qsEligibility && (
-                  <>
-                    <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
-                    <div className="text-gray-600 font-medium leading-relaxed">{selectedJob.qsEligibility}</div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Right Panel: Account Creation */}
-            <div className="w-full md:w-[55%] p-8 md:p-10 bg-gray-50/50 flex flex-col overflow-y-auto">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-[#022851] rounded-full flex items-center justify-center shadow-inner">
-                  <Pen className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-[24px] font-extrabold text-[#022851]">Account Creation</h2>
-              </div>
-
-              <form className="space-y-5" onSubmit={handleSignUp}>
+              <form className="space-y-5 w-full max-w-lg" onSubmit={handleSignUp}>
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">First name</label>
