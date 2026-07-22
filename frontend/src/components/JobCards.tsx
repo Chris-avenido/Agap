@@ -58,8 +58,8 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
             <div className="flex flex-col gap-1.5 mt-5 text-[13px]">
               <span className="text-[14px] font-bold text-gray-900 tracking-wide mb-1">Qualification Standards:</span>
               {job.qsEducation && <div><strong className="text-gray-900 font-semibold">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
-              <div><strong className="text-gray-900 font-semibold">Minimum Years of Experience:</strong> <span className="text-gray-600">{job.qsExperienceMin !== null && job.qsExperienceMin !== undefined ? job.qsExperienceMin : '—'}</span></div>
-              <div><strong className="text-gray-900 font-semibold">Minimum Hours of Training:</strong> <span className="text-gray-600">{job.qsTrainingMin !== null && job.qsTrainingMin !== undefined ? job.qsTrainingMin : '—'}</span></div>
+              <div><strong className="text-gray-900 font-semibold">Minimum Years of Experience:</strong> <span className="text-gray-600">{(job.qsExperienceMin === 0 || job.qsExperienceMin === '0' || job.qsExperience === 0 || job.qsExperience === '0') ? 'None Required' : (job.qsExperienceMin ?? job.qsExperience ?? '—')}</span></div>
+              <div><strong className="text-gray-900 font-semibold">Minimum Hours of Training:</strong> <span className="text-gray-600">{(job.qsTrainingMin === 0 || job.qsTrainingMin === '0' || job.qsTraining === 0 || job.qsTraining === '0') ? 'None Required' : (job.qsTrainingMin ?? job.qsTraining ?? '—')}</span></div>
               {job.qsEligibility && <div><strong className="text-gray-900 font-semibold">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
             </div>
           )}

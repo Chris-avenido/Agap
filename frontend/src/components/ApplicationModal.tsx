@@ -812,16 +812,16 @@ export default function ApplicationModal({
                   <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsEducation}</div>
                 </>
               )}
-              {jobData.qsTraining && (
+              {jobData.qsTraining !== undefined && jobData.qsTraining !== null && jobData.qsTraining !== '' && (
                 <>
                   <div className="font-bold text-gray-700">Training:</div>
-                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsTraining}</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{(jobData.qsTraining === 0 || jobData.qsTraining === '0') ? 'None Required' : jobData.qsTraining}</div>
                 </>
               )}
-              {jobData.qsExperience && (
+              {jobData.qsExperience !== undefined && jobData.qsExperience !== null && jobData.qsExperience !== '' && (
                 <>
                   <div className="font-bold text-gray-700">Experience:</div>
-                  <div className="text-gray-600 font-medium leading-relaxed">{jobData.qsExperience}</div>
+                  <div className="text-gray-600 font-medium leading-relaxed">{(jobData.qsExperience === 0 || jobData.qsExperience === '0') ? 'None Required' : jobData.qsExperience}</div>
                 </>
               )}
               {jobData.qsEligibility && (
