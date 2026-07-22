@@ -223,7 +223,7 @@ export default function ApplicantDashboard() {
               </div>
               <h3 className="text-[16px] font-bold text-[#022851]">
                 {activeFilter === 'active' && 'Active Applications'}
-                {activeFilter === 'past' && 'Past Applications'}
+                {activeFilter === 'history' && 'Application History'}
                 {activeFilter === 'saved' && 'Saved Positions'}
               </h3>
             </div>
