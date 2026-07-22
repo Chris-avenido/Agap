@@ -500,6 +500,10 @@ export default function ApplicantJobList() {
         if (keyName && ['sex', 'civil_status', 'citizenship', 'citizenshipType', 'barangay', 'city', 'province', 'region', 'date_of_birth', 'documents', 'photoUrl'].includes(keyName)) {
           return val;
         }
+        if (keyName && ['hours', 'years_experience', 'training_hours'].includes(keyName)) {
+          const num = Number(val);
+          return isNaN(num) ? val : num;
+        }
         if (typeof val === 'string') return val.toUpperCase();
         if (Array.isArray(val)) return val.map(v => toUpper(v));
         if (val !== null && typeof val === 'object') {
@@ -619,6 +623,8 @@ export default function ApplicantJobList() {
               positionId: applyingJob.id,
               position: applyingJob.title,
               office: applyingJob.office || 'Department of Education',
+              division: applyingJob.division || 'N/A',
+              location: applyingJob.location || applyingJob.region || 'N/A',
               type: applyingJob.type || 'Permanent',
               posted: applyingJob.posted || 'N/A',
               deadline: applyingJob.deadline || 'N/A',
@@ -726,6 +732,8 @@ export default function ApplicantJobList() {
                     positionId: app.position_id,
                     position: app.job_title || jobDetails.title || 'Unknown Position',
                     office: app.office || jobDetails.office || 'Department of Education',
+                    division: app.division || jobDetails.division || 'N/A',
+                    location: app.region || jobDetails.location || 'N/A',
                     type: jobDetails.type || 'Permanent',
                     posted: app.posting_start ? new Date(app.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : (jobDetails.posted || 'N/A'),
                     deadline: app.posting_end ? new Date(app.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : (jobDetails.deadline || 'N/A'),

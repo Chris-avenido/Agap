@@ -14,8 +14,8 @@ export class VacanciesService {
         (SELECT MAX(posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open') as "posting_end",
         p.required_bachelor_degree,
         p.required_degree_keywords,
-        p.min_years_experience,
-        p.min_training_hours,
+        p.years_experience as "min_years_experience",
+        p.training_hours as "min_training_hours",
         p.eligibility_required
       FROM job_clusters c
       JOIN positions p ON c.position_id = p.id

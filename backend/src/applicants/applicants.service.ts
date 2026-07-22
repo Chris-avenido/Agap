@@ -217,7 +217,7 @@ class ApplicantsServiceClass {
 
   async findApplications(applicantId: number) {
     const result = await pool.query(`
-      SELECT a.*, p.title as job_title, c.region as office, qe.overall_fit,
+      SELECT a.*, p.title as job_title, c.region as region, c.division as division, qe.overall_fit,
              (SELECT v.status FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as vacancy_status,
              (SELECT MIN(v.posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_start,
              (SELECT MAX(v.posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_end,
