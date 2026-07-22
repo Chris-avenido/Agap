@@ -1,16 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2 } from 'lucide-react';
+import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users } from 'lucide-react';
 import modernLogo from '../assets/modern_logo.png';
-
-// Removed mock positions array
+import { JobCard, JobTableList } from '../components/JobCards';
 
 export default function PublicCareers() {
   const navigate = useNavigate();
   const [positions, setPositions] = useState<any[]>([]);
   const [currentJobPage, setCurrentJobPage] = useState(1);
-  const [jobsPerPage] = useState(10);
+  const [jobsPerPage, setJobsPerPage] = useState(10);
+  const [viewMode, setViewMode] = useState('card');
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [viewedJob, setViewedJob] = useState<any>(null);
@@ -65,18 +65,24 @@ export default function PublicCareers() {
       .then(data => {
         if (data.success && data.data) {
           const formatted = data.data.map((v: any) => ({
-            id: v.id,
-            title: v.title,
-            office: v.school || 'Department of Education',
+            id: v.jobClusterId || v.id,
+            jobClusterId: v.jobClusterId,
+            positionId: v.position_id,
+            title: v.positionTitle || v.title,
+            office: v.division ? `${v.division}, ${v.region}` : 'Department of Education',
             division: v.division || '',
             type: 'Permanent',
             posted: v.posting_start ? new Date(v.posting_start).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
             deadline: v.posting_end ? new Date(v.posting_end).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
-            sg: v.salary_grade,
-            itemNo: v.item_no,
+            sg: v.salaryGrade || v.salary_grade,
+            itemNo: v.item_no || 'Multiple Items',
             location: v.region || '',
+            vacancyCount: v.vacantItemCount || v.vacancy_count || 1,
+            qsEducation: v.qualificationStandards?.requiredBachelorDegree || v.education || v.required_bachelor_degree || 'Details available in the full job posting.',
+            qsExperience: v.qualificationStandards?.minYearsExperience || v.experience || v.required_experience,
+            qsTraining: v.qualificationStandards?.minTrainingHours || v.training || v.required_training,
+            qsEligibility: v.qualificationStandards?.eligibilityRequired || v.eligibility || v.required_eligibility,
             description: 'Details available in the full job posting.',
-            qualifications: v.required_bachelor_degree || 'Details available in the full job posting.',
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);
@@ -242,247 +248,160 @@ export default function PublicCareers() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="max-w-6xl w-full mx-auto px-4 relative z-20 -mt-8 mb-12">
-            <div className="bg-white p-2 sm:p-2.5 rounded-2xl shadow-xl shadow-gray-200/50 flex flex-col items-stretch gap-2 border border-gray-100">
-
-              {/* Text Search Row */}
-              <div className="w-full flex items-center px-4 py-2 border-b sm:border-b-0 sm:border-gray-200">
-                <Search className="w-5 h-5 text-gray-400 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search position title, item number, or division..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full outline-none text-gray-700 bg-transparent placeholder-gray-400 font-medium text-sm sm:text-base ml-3"
-                />
+          {/* Content Area */}
+          <div className="max-w-6xl w-full mx-auto px-4 pb-24 flex-1 mt-12">
+            {/* Search & Filter */}
+            <div className="flex flex-col gap-4 mb-8">
+              {/* Search Row */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
+                  <Search className="w-5 h-5 text-[#2563eb] shrink-0 mr-3" />
+                  <input
+                    type="text"
+                    placeholder="Search position title, division, or location..."
+                    value={searchQuery}
+                    onChange={(e: any) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 text-[15px] font-medium"
+                  />
+                </div>
+                <button
+                  onClick={handleClearFilters}
+                  className="hidden sm:flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-3 rounded-xl font-semibold transition-all hover:shadow-md active:scale-95 shrink-0"
+                >
+                  <Trash2 className="w-5 h-5 text-gray-500" /> Clear
+                </button>
               </div>
 
-              {/* Dropdowns Row */}
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
-                  <MapPin className="w-5 h-5 text-gray-400" />
+              {/* Filters Row */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
+                  <MapPin className="w-5 h-5 text-rose-500 shrink-0 mr-3" />
                   <select
                     value={filterRegion}
-                    onChange={(e) => setFilterRegion(e.target.value)}
-                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                    onChange={(e: any) => setFilterRegion(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                   >
                     <option value="All Regions">All Regions</option>
                     {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
                 </div>
 
-                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 sm:border-r border-gray-200 shrink-0">
-                  <Building2 className="w-5 h-5 text-gray-400" />
+                <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
+                  <Building2 className="w-5 h-5 text-violet-500 shrink-0 mr-3" />
                   <select
                     value={filterDivision}
-                    onChange={(e) => setFilterDivision(e.target.value)}
-                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                    onChange={(e: any) => setFilterDivision(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                   >
                     <option value="All Divisions">All Divisions</option>
                     {availableDivisions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
                 </div>
 
-                <div className="w-full sm:flex-1 flex items-center px-4 py-2 sm:py-0 gap-2 shrink-0">
-                  <Briefcase className="w-5 h-5 text-gray-400" />
+                <div className="flex-1 relative flex items-center border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-[#0a6fa6] transition-colors focus-within:border-[#0a6fa6] focus-within:ring-1 focus-within:ring-[#0a6fa6]">
+                  <Briefcase className="w-5 h-5 text-amber-500 shrink-0 mr-3" />
                   <select
                     value={filterPosition}
-                    onChange={(e) => setFilterPosition(e.target.value)}
-                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none pr-8 text-sm sm:text-base"
+                    onChange={(e: any) => setFilterPosition(e.target.value)}
+                    className="w-full bg-transparent outline-none text-gray-700 font-medium cursor-pointer appearance-none text-[15px]"
                   >
                     <option value="All Positions">All Positions</option>
                     {availablePositions.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
-                  <ChevronDown className="w-4 h-4 text-gray-400 -ml-6 pointer-events-none" />
                 </div>
-
-                <button
-                  onClick={handleClearFilters}
-                  className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-3.5 rounded-xl font-semibold transition-all hover:shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear
-                </button>
-
-                <button className="w-full sm:w-auto bg-[#022851] hover:bg-[#033a76] text-white px-8 py-3.5 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0">
-                  <Search className="w-4 h-4 sm:hidden" />
-                  Search
-                </button>
-
               </div>
             </div>
-          </div>
 
-          {/* Job Listings */}
-          <div className="max-w-6xl w-full mx-auto px-4 pb-24 flex-1">
-            <div className="flex justify-between items-end mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Latest Vacancies</h2>
-              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                Showing {filteredPositions.length} Positions
-              </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-gray-500">Show</span>
+                <select
+                  value={jobsPerPage}
+                  onChange={(e: any) => setJobsPerPage(Number(e.target.value))}
+                  className="border border-gray-200 rounded px-2 py-1 text-[13px] font-medium text-gray-700 outline-none focus:border-[#0a6fa6]"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-[13px] font-semibold text-gray-500">entries</span>
+              </div>
+              <div className="flex items-center bg-gray-100 rounded-lg p-1 shrink-0">
+                <button onClick={() => setViewMode('card')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'card' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  <LayoutGrid className="w-4 h-4" /> Card View
+                </button>
+                <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${viewMode === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  <List className="w-4 h-4" /> Table View
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {currentJobs.map((job, index) => {
-                const isFeatured = index < 2;
-                const isTemporary = job.type.toLowerCase() === 'temporary';
-
-                return (
-                  <div key={job.id} className="bg-white rounded-[20px] p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 relative flex flex-col group">
-
-                    {/* Badges Row 1 */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {isFeatured && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fff8e1] text-[#eab308] text-[11px] font-bold tracking-widest uppercase">
-                          <Star className="w-3.5 h-3.5 fill-[#eab308]" />
-                          FEATURED
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Badges Row 2 */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[13px] font-bold ${isTemporary
-                        ? 'bg-gray-200/60 text-orange-500'
-                        : 'bg-[#e8f5e9] text-[#2e7d32]'
-                        }`}>
-                        {job.type}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-extrabold tracking-widest uppercase">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#2e7d32]"></div>
-                        OPEN
-                      </span>
-                    </div>
-
-                    {/* Title & Subtitle */}
-                    <h3 className="text-xl sm:text-[22px] font-bold text-[#022851] mb-2 leading-tight">
-                      {job.title}
-                    </h3>
-
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 text-gray-500 mb-1">
-                        <Building2 className="w-4 h-4 shrink-0 text-gray-400" />
-                        <span className="text-[15px] font-medium">{job.office}</span>
-                      </div>
-                      {job.division && (
-                        <div className="text-sm text-gray-400 font-medium ml-6">
-                          {job.division}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-[15px] text-gray-500 leading-relaxed mb-6 line-clamp-2">
-                      {job.description}
-                    </p>
-
-                    {/* Grid Specs */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-gray-100 mb-6">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 tracking-wider">
-                          <CircleDollarSign className="w-3.5 h-3.5" />
-                          SALARY GRADE
-                        </div>
-                        <div className="text-[15px] font-bold text-gray-800">SG-{job.sg}</div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 tracking-wider">
-                          <Hash className="w-3.5 h-3.5" />
-                          ITEM NO.
-                        </div>
-                        <div className="text-[15px] font-bold text-gray-800">{job.itemNo}</div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 tracking-wider">
-                          <MapPin className="w-3.5 h-3.5" />
-                          LOCATION
-                        </div>
-                        <div className="text-[15px] font-bold text-gray-800">{job.location || 'Pasig City'}</div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 tracking-wider">
-                          <CalendarDays className="w-3.5 h-3.5" />
-                          DEADLINE
-                        </div>
-                        <div className="text-[15px] font-bold text-red-500">{job.deadline}</div>
-                      </div>
-                    </div>
-
-                    {/* Qualifications */}
-                    <div className="mb-6">
-                      <h4 className="text-[15px] font-bold text-gray-800 mb-1">Key Qualifications:</h4>
-                      <p className="text-[15px] text-gray-500 leading-relaxed line-clamp-2">
-                        {job.qualifications}
-                      </p>
-                    </div>
-
-                    {/* Days left */}
-                    <div className="flex items-center gap-1.5 text-[15px] font-bold text-red-500 mb-6 mt-auto">
-                      <Clock className="w-4 h-4" />
-                      Only {job.daysLeft || 2} days left to apply!
-                    </div>
-
-                    {/* Buttons */}
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-4">
-                      <button
-                        onClick={() => setViewedJob(job)}
-                        className="sm:col-span-2 text-[15px] font-semibold text-[#022851] bg-white border border-[#022851]/20 hover:bg-gray-50 py-2.5 rounded-xl transition-colors flex items-center justify-center"
-                      >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleApplyClick(job.id, job.title)}
-                        className="sm:col-span-3 text-[15px] font-semibold text-white bg-[#022851] hover:bg-[#033a76] py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 group"
-                      >
-                        Apply Now
-                        <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-
-                  </div>
-                );
-              })}
-            </div>
+            {filteredPositions.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 font-medium">
+                No positions found matching your criteria.
+              </div>
+            ) : viewMode === 'table' ? (
+              <JobTableList 
+                jobs={currentJobs} 
+                tab="job-board" 
+                isPublic={true}
+                onCardClick={setViewedJob}
+                onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
+              />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {currentJobs.map((job) => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    tab="job-board" 
+                    isPublic={true}
+                    onCardClick={setViewedJob}
+                    onApplyClick={(job: any) => handleApplyClick(job.id, job.title)}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between pt-8 mt-8 gap-4">
-              <div className="text-[13px] text-gray-500 font-bold uppercase tracking-wider bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-                SHOWING {filteredPositions.length > 0 ? indexOfFirstJob + 1 : 0} TO {Math.min(indexOfLastJob, filteredPositions.length)} OF {filteredPositions.length} ENTRIES
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
-                <button
-                  onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
-                  disabled={currentJobPage === 1}
-                  className="px-3 sm:px-4 py-2 rounded-lg bg-white border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 shadow-sm"
-                >
-                  Previous
-                </button>
-
-                {Array.from({ length: Math.max(1, totalJobPages) }, (_, i) => i + 1).map(pageNum => (
+            {totalJobPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between pt-6 mt-6 border-t border-gray-100 gap-4">
+                <div className="text-[13px] text-gray-500 font-medium">
+                  Showing {indexOfFirstJob + 1} to {Math.min(indexOfLastJob, filteredPositions.length)} of {filteredPositions.length} entries
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
                   <button
-                    key={pageNum}
-                    onClick={() => setCurrentJobPage(pageNum)}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors shadow-sm ${currentJobPage === pageNum
-                      ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
-                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                      }`}
+                    onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
+                    disabled={currentJobPage === 1}
+                    className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
                   >
-                    {pageNum}
+                    Previous
                   </button>
-                ))}
 
-                <button
-                  onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
-                  disabled={currentJobPage === totalJobPages || totalJobPages <= 1}
-                  className="px-3 sm:px-4 py-2 rounded-lg bg-white border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 shadow-sm"
-                >
-                  Next
-                </button>
+                  {Array.from({ length: totalJobPages }, (_, i) => i + 1).map(pageNum => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentJobPage(pageNum)}
+                      className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${currentJobPage === pageNum
+                        ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
+                        : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
+                    disabled={currentJobPage === totalJobPages}
+                    className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </>
       ) : (
@@ -509,62 +428,64 @@ export default function PublicCareers() {
           </div>
 
           <div className="max-w-5xl w-full mx-auto px-4 relative z-20 -mt-8 mb-24">
-            <div className="bg-white rounded-[4px] shadow-sm border border-gray-100 p-8 md:p-12 min-h-[500px]">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10 border-b border-gray-100 pb-8">
+            <div className="bg-white rounded-[20px] shadow-[0_8px_25px_rgba(251,191,36,0.15)] border-[1.5px] border-[#fbbf24] p-8 md:p-12 min-h-[500px]">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-gray-100 pb-8">
                 <div>
-                  <h1 className="text-[28px] font-normal text-[#00bcd4] mb-2">{viewedJob.title}</h1>
-                  <div className="text-[14px] text-gray-500 mb-1">
-                    Item No. <span className="font-bold text-gray-700">{viewedJob.itemNo || 'N/A'}</span>
+                  <h1 className="text-[28px] font-bold text-[#2563eb] mb-2">{viewedJob.title}</h1>
+                  <div className="text-[14px] text-gray-600 mb-1 font-medium">
+                    Item No. <span className="font-bold text-gray-800">{viewedJob.itemNo || 'N/A'}</span>
                   </div>
-                  <div className="text-[14px] text-gray-500 mb-2">{viewedJob.division || viewedJob.office}</div>
-                  <div className="flex items-center gap-2 text-[14px] text-gray-500">
+                  <div className="text-[14px] text-gray-600 mb-2 font-medium">{viewedJob.division || viewedJob.office}</div>
+                  <div className="flex items-center gap-2 text-[14px] text-gray-600 font-medium">
                     Office of the Director
-                    <span className={`inline-block px-2.5 py-0.5 text-white text-[10px] font-bold rounded uppercase tracking-wider ${viewedJob.type.toLowerCase() === 'permanent' ? 'bg-[#81c784]' : 'bg-[#eab308]'}`}>
+                    <span className={`inline-block px-3 py-1 text-white text-[10px] font-extrabold rounded-full uppercase tracking-widest ${viewedJob.type.toLowerCase() === 'permanent' ? 'bg-[#2e7d32]' : 'bg-[#eab308]'}`}>
                       {viewedJob.type}
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => handleApplyClick(viewedJob.id, viewedJob.title)}
-                  className="bg-[#e67e22] hover:bg-[#d35400] text-white px-8 py-3 rounded text-[13px] font-bold uppercase tracking-wider shadow-sm transition-colors shrink-0"
+                  className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-8 py-3.5 rounded-xl text-[14px] font-bold tracking-wide transition-colors shrink-0 flex items-center justify-center gap-2 shadow-sm"
                 >
-                  Apply Now
+                  <Briefcase className="w-4 h-4" /> APPLY NOW
                 </button>
               </div>
 
-              <div className="text-[13px] text-gray-500 mb-10">
-                Posted on <span className="font-bold text-gray-700">{viewedJob.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-gray-700">{viewedJob.deadline || 'Jul 18, 2026'}</span>
+              <div className="text-[14px] text-gray-600 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                Posted on <span className="font-bold text-gray-800">{viewedJob.posted || 'Jul 08, 2026'}</span> and deadline is on <span className="font-bold text-red-500">{viewedJob.deadline || 'Jul 18, 2026'}</span>
               </div>
 
-              <div className="flex items-center gap-8 text-[14px] text-gray-600 mb-12">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full border border-[#5c6bc0] flex items-center justify-center">
-                    <span className="text-[#5c6bc0] text-[12px] font-bold">₱</span>
+              <div className="flex flex-col sm:flex-row gap-6 mb-12">
+                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0f4f8] rounded-2xl flex-1">
+                  <CircleDollarSign className="w-8 h-8 text-blue-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">SALARY GRADE</span>
+                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{viewedJob.sg || '4'}</span>
                   </div>
-                  Salary Grade : {viewedJob.sg || '4'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full border border-[#5c6bc0] flex items-center justify-center">
-                    <span className="text-[#5c6bc0] text-[12px] font-bold">₱</span>
+                <div className="flex items-center gap-4 px-6 py-4 bg-[#f0fdf4] rounded-2xl flex-1">
+                  <Users className="w-8 h-8 text-emerald-600 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">VACANCIES</span>
+                    <span className="text-[20px] font-extrabold text-gray-800 leading-none">{viewedJob.vacancyCount || 0}</span>
                   </div>
-                  Monthly Salary : PhP {viewedJob.sg === 4 ? '17,506.00' : viewedJob.sg === 9 ? '21,211.00' : viewedJob.sg === 18 ? '46,725.00' : viewedJob.sg === 19 ? '51,357.00' : viewedJob.sg === 24 ? '90,078.00' : 'Unknown'}
                 </div>
               </div>
 
-              <h3 className="text-[18px] font-bold text-gray-700 mb-6">CSC Prescribed Qualification Standard</h3>
+              <h3 className="text-[18px] font-bold text-gray-900 mb-6 border-b border-gray-100 pb-3 tracking-wide">CSC Prescribed Qualification Standard</h3>
 
-              <div className="grid grid-cols-[120px_1fr] gap-y-5 text-[15px]">
-                <div className="font-bold text-gray-700">Education:</div>
-                <div className="text-gray-500 font-light leading-snug">Completion of two (2) years studies in college (prior to 2018), OR<br />Completion of Grade 12/Senior High School (starting 2016)</div>
+              <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-y-6 text-[15px] bg-white">
+                <div className="font-bold text-gray-900 tracking-wide">Education:</div>
+                <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEducation || 'Completion of two (2) years studies in college (prior to 2018), OR Completion of Grade 12/Senior High School (starting 2016)'}</div>
 
-                <div className="font-bold text-gray-700">Training:</div>
-                <div className="text-gray-500 font-light">None required</div>
+                <div className="font-bold text-gray-900 tracking-wide">Training:</div>
+                <div className="text-gray-600 font-medium">{viewedJob.qsTraining || 'None required'}</div>
 
-                <div className="font-bold text-gray-700">Experience:</div>
-                <div className="text-gray-500 font-light">None required</div>
+                <div className="font-bold text-gray-900 tracking-wide">Experience:</div>
+                <div className="text-gray-600 font-medium">{viewedJob.qsExperience || 'None required'}</div>
 
-                <div className="font-bold text-gray-700">Eligibility:</div>
-                <div className="text-gray-500 font-light leading-snug">Career Service Sub Professional / First Level Eligibility</div>
+                <div className="font-bold text-gray-900 tracking-wide">Eligibility:</div>
+                <div className="text-gray-600 font-medium leading-relaxed">{viewedJob.qsEligibility || 'Career Service Sub Professional / First Level Eligibility'}</div>
               </div>
 
             </div>
