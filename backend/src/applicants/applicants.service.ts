@@ -3,6 +3,73 @@ import { pool } from '../database';
 const pdfParse = require('pdf-parse');
 import * as mammoth from 'mammoth';
 
+function calculateExperience(workExpList: any[]): number {
+  if (!Array.isArray(workExpList)) return 0;
+  let totalDays = 0;
+  for (const exp of workExpList) {
+    const fromStr = exp.from || exp.fromDate || exp.date_from;
+    const toStr = exp.to || exp.toDate || exp.date_to;
+    if (fromStr && toStr) {
+      const from = new Date(fromStr);
+      let to = new Date();
+      if (toStr.toLowerCase() !== 'present') {
+        to = new Date(toStr);
+      }
+      if (!isNaN(from.getTime()) && !isNaN(to.getTime()) && to >= from) {
+        const diffTime = Math.abs(to.getTime() - from.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        totalDays += diffDays;
+      }
+    }
+  }
+  return Number((totalDays / 365).toFixed(2));
+}
+
+function calculateTraining(learningList: any[]): number {
+  if (!Array.isArray(learningList)) return 0;
+  let totalHours = 0;
+  for (const ld of learningList) {
+    const fromStr = ld.from || ld.fromDate || ld.date_from;
+    const toStr = ld.to || ld.toDate || ld.date_to;
+    
+    let added = false;
+    if (fromStr && toStr && fromStr !== 'N/A' && toStr !== 'N/A') {
+      const from = new Date(fromStr);
+      const to = new Date(toStr);
+      if (!isNaN(from.getTime()) && !isNaN(to.getTime()) && to >= from) {
+        const diffTime = Math.abs(to.getTime() - from.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        totalHours += (diffDays * 8);
+        added = true;
+      }
+    }
+
+    if (!added && ld.hours && ld.hours !== 'N/A') {
+      const hrs = Number(ld.hours);
+      if (!isNaN(hrs)) totalHours += hrs;
+    }
+  }
+  return totalHours;
+}
+
+function extractBachelorsDegree(educationalList: any[]): string | null {
+  if (!Array.isArray(educationalList)) return null;
+  for (const ed of educationalList) {
+    if (ed.level && (ed.level.toLowerCase() === 'college' || ed.level.toLowerCase() === 'bachelor')) {
+      return ed.degree || ed.course || ed.basic_education_degree || null;
+    }
+  }
+  return null;
+}
+
+function extractEligibility(eligibilityList: any[]): string | null {
+  if (!Array.isArray(eligibilityList)) return null;
+  const eligibilities = eligibilityList
+    .map(e => e.eligibility || e.career_service || e.title)
+    .filter(Boolean);
+  return eligibilities.length > 0 ? eligibilities.join(', ') : null;
+}
+
 class ApplicantsServiceClass {
 
   async parseResume(file: any) {
@@ -301,13 +368,15 @@ class ApplicantsServiceClass {
         spouse_surname, spouse_first_name, spouse_middle_name, spouse_name_extension, spouse_occupation,
         spouse_employer_business, spouse_business_address, spouse_telephone,
         father_surname, father_first_name, father_middle_name, father_name_extension,
-        mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email
+        mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email,
+        years_experience, training_hours, bachelors_degree, eligibility
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         , $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28,
         $29, $30, $31, $32, $33, $34, $35, $36,
-        $37, $38, $39, $40, $41, $42, $43, $44, $45
+        $37, $38, $39, $40, $41, $42, $43, $44, $45,
+        $46, $47, $48, $49
       ) RETURNING *
     `, [
       newApplicantNumber,
@@ -354,7 +423,11 @@ class ApplicantsServiceClass {
       data.family_background?.mother?.first_name || null,
       data.family_background?.mother?.middle_name || null,
       data.family_background?.children ? JSON.stringify(data.family_background.children) : null,
-      data.alternate_email || null
+      data.alternate_email || null,
+      calculateExperience(data.work_experience || []),
+      calculateTraining(data.learning_and_development || []),
+      extractBachelorsDegree(data.educational_background || []),
+      extractEligibility(data.civil_service_eligibility || [])
     ]);
 
     const applicant = result.rows[0];
@@ -415,6 +488,9 @@ class ApplicantsServiceClass {
     addField('alternate_email', data.alternate_email);
 
     addField('educational_background', data.educational_background, true);
+    if (data.educational_background !== undefined) {
+      addField('bachelors_degree', extractBachelorsDegree(data.educational_background));
+    }
     addField('family_background', data.family_background, true);
     if (data.family_background) {
       addField('spouse_surname', data.family_background.spouse?.surname);
@@ -436,9 +512,18 @@ class ApplicantsServiceClass {
     }
 
     addField('civil_service_eligibility', data.civil_service_eligibility, true);
+    if (data.civil_service_eligibility !== undefined) {
+      addField('eligibility', extractEligibility(data.civil_service_eligibility));
+    }
     addField('work_experience', data.work_experience, true);
+    if (data.work_experience !== undefined) {
+      addField('years_experience', calculateExperience(data.work_experience));
+    }
     addField('voluntary_work', data.voluntary_work, true);
     addField('learning_and_development', data.learning_and_development, true);
+    if (data.learning_and_development !== undefined) {
+      addField('training_hours', calculateTraining(data.learning_and_development));
+    }
     addField('other_information', data.other_information, true);
     addField('questionnaire_responses', data.questionnaire_responses, true);
 
