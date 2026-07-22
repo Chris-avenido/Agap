@@ -746,7 +746,14 @@ export default function ApplicantJobList() {
                     comparativeAssessmentScores: app.comparative_assessment_scores || '',
                     overallFit: app.overall_fit || '',
                     vacancyStatus: app.vacancy_status || jobDetails.status || 'Unknown',
-                    status: 'Active'
+                    status: 'Active',
+                    vacancyCount: app.vacancy_count || jobDetails.vacancyCount || 0,
+                    qsEducation: jobDetails.qsEducation,
+                    qsExperience: jobDetails.qsExperience,
+                    qsTraining: jobDetails.qsTraining,
+                    qsEligibility: jobDetails.qsEligibility,
+                    description: jobDetails.description,
+                    daysLeft: jobDetails.daysLeft
                   };
                 }));
               }

@@ -657,68 +657,6 @@ export default function ApplicationModal({
               );
             })}
           </div>
-
-          {!isRegistrationFlow && (
-            <div className="hidden md:flex flex-col mt-4 border border-gray-200 rounded p-4 mx-4 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-[34px] h-[38px] bg-gray-100 flex flex-col items-center justify-center relative border border-gray-200 rounded-sm overflow-hidden shrink-0">
-                  <div className="absolute top-1 text-orange-400 font-extrabold text-[14px]">
-                    ↑
-                  </div>
-                  <div className="w-full h-1.5 bg-blue-500 absolute bottom-0"></div>
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[13px] text-gray-700">
-                      Upload Letter of Intent
-                    </span>
-                    <div className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold">
-                      ?
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-gray-500">
-                    For this position.
-                  </span>
-                </div>
-              </div>
-              {(getDocUrl("Letter of Intent") || selectedDocumentNames["Letter of Intent"]) ? (
-                <div className="flex flex-col gap-2 w-full mt-2 overflow-hidden">
-                  <span
-                    className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 block truncate w-full"
-                    title={
-                      selectedDocumentNames["Letter of Intent"]
-                        ? `Selected: ${selectedDocumentNames["Letter of Intent"]}`
-                        : getStoredDocFileName("Letter of Intent")
-                          ? `Uploaded: ${getStoredDocFileName("Letter of Intent")}`
-                          : "Uploaded"
-                    }
-                  >
-                    {selectedDocumentNames["Letter of Intent"]
-                      ? `Selected: ${selectedDocumentNames["Letter of Intent"]}`
-                      : getStoredDocFileName("Letter of Intent")
-                        ? `Uploaded: ${getStoredDocFileName("Letter of Intent")}`
-                        : "Uploaded"}
-                  </span>
-                  <div className="flex flex-col gap-2">
-                    {(selectedDocumentUrls["Letter of Intent"] || getDocUrl("Letter of Intent")) && (
-                      <a href={(selectedDocumentUrls["Letter of Intent"] || getDocUrl("Letter of Intent")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                        View File
-                      </a>
-                    )}
-                    <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[36px] w-full flex items-center justify-center text-center">
-                      Replace File
-                      <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" onChange={handleDocumentSelection("Letter of Intent")} />
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[42px] w-full flex items-center justify-center text-center">
-                  Upload Now
-                  <input className="hidden" type="file" name="doc_loi" form="application-form" accept=".pdf" onChange={handleDocumentSelection("Letter of Intent")} />
-                </label>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Right Content */}
