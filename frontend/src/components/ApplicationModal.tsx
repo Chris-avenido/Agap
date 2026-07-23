@@ -681,7 +681,8 @@ export default function ApplicationModal({
   useEffect(() => {
     if (userData?.other_information) {
       const oi = typeof userData.other_information === 'string' ? JSON.parse(userData.other_information) : userData.other_information;
-      if (oi.special_skills && Array.isArray(oi.special_skills) && oi.special_skills.length > 0) setSkillsList(oi.special_skills);
+      const skillsData = oi.skills || oi.special_skills;
+      if (skillsData && Array.isArray(skillsData) && skillsData.length > 0) setSkillsList(skillsData);
       if (oi.distinctions && Array.isArray(oi.distinctions) && oi.distinctions.length > 0) setDistinctionsList(oi.distinctions);
       if (oi.memberships && Array.isArray(oi.memberships) && oi.memberships.length > 0) setMembershipsList(oi.memberships);
     }
@@ -1155,7 +1156,7 @@ export default function ApplicationModal({
                         className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
                         type="text"
                         name="extension_name"
-                        defaultValue={otherInfo?.extension_name || ""}
+                        defaultValue={otherInfo?.extension_name || otherInfo?.extensionName || ""}
                       />
                     </div>
                   </div>
@@ -1322,7 +1323,7 @@ export default function ApplicationModal({
                     placeholder="Enter agency employee number"
                     className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px]"
                     type="text"
-                    defaultValue={otherInfo?.agency_employee_no || ""}
+                    defaultValue={otherInfo?.agency_employee_no || otherInfo?.agencyEmployeeNo || ""}
                   />
                 </div>
                 <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
