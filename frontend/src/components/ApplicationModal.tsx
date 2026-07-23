@@ -534,16 +534,26 @@ export default function ApplicationModal({
     }
   }, [userData]);
 
+  const otherInfo = userData?.other_information
+    ? typeof userData.other_information === "string"
+      ? JSON.parse(userData.other_information)
+      : userData.other_information
+    : {};
 
   const [childrenList, setChildrenList] = useState<any[]>([{ name: '', dob: null }]);
   useEffect(() => {
+    let loadedChildren = false;
     if (userData?.family_background) {
       const fb = typeof userData.family_background === 'string' ? JSON.parse(userData.family_background) : userData.family_background;
       if (fb.children && Array.isArray(fb.children) && fb.children.length > 0) {
         setChildrenList(fb.children);
+        loadedChildren = true;
       }
     }
-  }, [userData]);
+    if (!loadedChildren && otherInfo?.children && Array.isArray(otherInfo.children) && otherInfo.children.length > 0) {
+      setChildrenList(otherInfo.children);
+    }
+  }, [userData, otherInfo]);
 
   const resAddress = userData?.residential_address
     ? typeof userData.residential_address === "string"
@@ -722,11 +732,7 @@ export default function ApplicationModal({
     }
   }, [userData]);
 
-  const otherInfo = userData?.other_information
-    ? typeof userData.other_information === "string"
-      ? JSON.parse(userData.other_information)
-      : userData.other_information
-    : {};
+
 
   const storedDocuments = isRegistrationFlow ? {} : { ...(otherInfo?.documents || {}) };
   delete storedDocuments['Letter of Intent'];
@@ -1354,8 +1360,8 @@ export default function ApplicationModal({
                           name="citizenship_type"
                           value="by Birth"
                           defaultChecked={
-                            otherInfo?.citizenship_type?.toLowerCase() ===
-                            "by birth"
+                            otherInfo?.citizenship_type?.toLowerCase() === "by birth" ||
+                            otherInfo?.citizenshipType?.toLowerCase() === "by birth"
                           }
                         />
                         by Birth
@@ -1367,8 +1373,8 @@ export default function ApplicationModal({
                           name="citizenship_type"
                           value="by Naturalization"
                           defaultChecked={
-                            otherInfo?.citizenship_type?.toLowerCase() ===
-                            "by naturalization"
+                            otherInfo?.citizenship_type?.toLowerCase() === "by naturalization" ||
+                            otherInfo?.citizenshipType?.toLowerCase() === "by naturalization"
                           }
                         />
                         by Naturalization
@@ -1847,22 +1853,26 @@ export default function ApplicationModal({
                 {/* Spouse's Details Row */}
                 <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 border-b border-gray-100 pb-6">
                   <label className="lg:w-[180px] shrink-0 lg:text-right font-bold text-gray-600 text-[14px] pt-2">Spouse's Details</label>
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col justify-between h-full">
-                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Occupation</span>
-                      <input name="spouse_occupation" defaultValue={familyBackground?.spouse?.occupation || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER OCCUPATION" />
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col justify-between h-full">
+                        <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Occupation</span>
+                        <input name="spouse_occupation" defaultValue={familyBackground?.spouse?.occupation || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER OCCUPATION" />
+                      </div>
+                      <div className="flex flex-col justify-between h-full">
+                        <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Employer/Business Name</span>
+                        <input name="spouse_employer_business_name" defaultValue={familyBackground?.spouse?.employer_business_name || familyBackground?.spouse?.employer || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER EMPLOYER/BUSINESS NAME" />
+                      </div>
                     </div>
-                    <div className="flex flex-col justify-between h-full">
-                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Employer/Business Name</span>
-                      <input name="spouse_employer_business_name" defaultValue={familyBackground?.spouse?.employer_business_name || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER EMPLOYER/BUSINESS NAME" />
-                    </div>
-                    <div className="flex flex-col justify-between h-full">
-                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Business Address</span>
-                      <input name="spouse_business_address" defaultValue={familyBackground?.spouse?.business_address || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER BUSINESS ADDRESS" />
-                    </div>
-                    <div className="flex flex-col justify-between h-full">
-                      <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                      <input name="spouse_telephone_no" defaultValue={familyBackground?.spouse?.telephone_no || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER TELEPHONE NO." />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col justify-between h-full">
+                        <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Business Address</span>
+                        <input name="spouse_business_address" defaultValue={familyBackground?.spouse?.business_address || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER BUSINESS ADDRESS" />
+                      </div>
+                      <div className="flex flex-col justify-between h-full">
+                        <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
+                        <input name="spouse_telephone_no" defaultValue={familyBackground?.spouse?.telephone_no || familyBackground?.spouse?.telephone || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" type="text" placeholder="ENTER TELEPHONE NO." />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1896,7 +1906,7 @@ export default function ApplicationModal({
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Surname</span>
-                      <input name="mother_surname" defaultValue={familyBackground?.mother?.maiden_surname || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" placeholder="ENTER SURNAME" />
+                      <input name="mother_surname" defaultValue={familyBackground?.mother?.maiden_surname || familyBackground?.mother?.surname || ""} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full" type="text" placeholder="ENTER SURNAME" />
                     </div>
                     <div className="flex flex-col justify-between h-full">
                       <span className="text-[12px] text-gray-400 mb-1.5 font-medium">First Name</span>
@@ -1924,7 +1934,7 @@ export default function ApplicationModal({
                         </div>
                         <div className="flex-1 flex flex-col justify-between h-full">
                           <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Date of Birth</span>
-                          <ModernDatePicker value={child.dob ? child.dob.split('T')[0] : ''} onChange={(val: any) => { const n = [...childrenList]; n[idx].dob = val; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
+                          <ModernDatePicker value={typeof child.dob === 'string' && child.dob.includes('T') ? child.dob.split('T')[0] : (child.dob || '')} onChange={(val: any) => { const n = [...childrenList]; n[idx].dob = val; setChildrenList(n); }} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full bg-white" />
                         </div>
                         <button type="button" onClick={() => setChildrenList(childrenList.filter((_: any, i: number) => i !== idx))} className="h-[42px] px-4 border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 rounded flex items-center justify-center transition-colors bg-white shadow-sm shrink-0">
                           <Trash2 className="w-4 h-4" />
@@ -2726,7 +2736,7 @@ export default function ApplicationModal({
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">SPECIAL SKILLS & HOBBIES</h4>
                     {skillsList.map((skill, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <input type="text" value={skill} onChange={(e: any) => { const n = [...skillsList]; n[idx] = e.target.value; setSkillsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter skill / hobby" />
+                        <input type="text" value={typeof skill === 'object' ? skill.value || '' : skill} onChange={(e: any) => { const n = [...skillsList]; n[idx] = typeof n[idx] === 'object' ? { ...n[idx], value: e.target.value } : e.target.value; setSkillsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter skill / hobby" />
                         <button type="button" onClick={() => setSkillsList(skillsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -2743,9 +2753,9 @@ export default function ApplicationModal({
                   {/* Column 2 */}
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">NON-ACADEMIC DISTINCTIONS</h4>
-                    {distinctionsList.map((dist, idx) => (
+                    {distinctionsList.map((distinction, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <input type="text" value={dist} onChange={(e: any) => { const n = [...distinctionsList]; n[idx] = e.target.value; setDistinctionsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter distinction" />
+                        <input type="text" value={typeof distinction === 'object' ? distinction.value || '' : distinction} onChange={(e: any) => { const n = [...distinctionsList]; n[idx] = typeof n[idx] === 'object' ? { ...n[idx], value: e.target.value } : e.target.value; setDistinctionsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter distinction" />
                         <button type="button" onClick={() => setDistinctionsList(distinctionsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -2762,9 +2772,9 @@ export default function ApplicationModal({
                   {/* Column 3 */}
                   <div className="flex flex-col gap-4">
                     <h4 className="font-bold text-[14px] text-gray-700 border-b border-gray-100 pb-2 uppercase tracking-wide">MEMBERSHIPS IN ASSOCIATIONS</h4>
-                    {membershipsList.map((mem, idx) => (
+                    {membershipsList.map((membership, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <input type="text" value={mem} onChange={(e: any) => { const n = [...membershipsList]; n[idx] = e.target.value; setMembershipsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter membership" />
+                        <input type="text" value={typeof membership === 'object' ? membership.value || '' : membership} onChange={(e: any) => { const n = [...membershipsList]; n[idx] = typeof n[idx] === 'object' ? { ...n[idx], value: e.target.value } : e.target.value; setMembershipsList(n); }} className="flex-1 border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px]" placeholder="Enter membership" />
                         <button type="button" onClick={() => setMembershipsList(membershipsList.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-2 rounded transition-colors shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -3021,45 +3031,45 @@ export default function ApplicationModal({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border-b border-gray-100 pb-5">
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Name</span>
-                          <input type="text" name="ref1_name" defaultValue={qRes?.ref1_name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref1_name" defaultValue={qRes?.ref1_name || otherInfo?.references?.[0]?.name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Address</span>
-                          <input type="text" name="ref1_address" defaultValue={qRes?.ref1_address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref1_address" defaultValue={qRes?.ref1_address || otherInfo?.references?.[0]?.address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                          <input type="text" name="ref1_tel" defaultValue={qRes?.ref1_tel || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref1_tel" defaultValue={qRes?.ref1_tel || otherInfo?.references?.[0]?.telephone || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                       </div>
                       {/* Row 2 */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border-b border-gray-100 pb-5">
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Name</span>
-                          <input type="text" name="ref2_name" defaultValue={qRes?.ref2_name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref2_name" defaultValue={qRes?.ref2_name || otherInfo?.references?.[1]?.name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Address</span>
-                          <input type="text" name="ref2_address" defaultValue={qRes?.ref2_address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref2_address" defaultValue={qRes?.ref2_address || otherInfo?.references?.[1]?.address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                          <input type="text" name="ref2_tel" defaultValue={qRes?.ref2_tel || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref2_tel" defaultValue={qRes?.ref2_tel || otherInfo?.references?.[1]?.telephone || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                       </div>
                       {/* Row 3 */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Name</span>
-                          <input type="text" name="ref3_name" defaultValue={qRes?.ref3_name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref3_name" defaultValue={qRes?.ref3_name || otherInfo?.references?.[2]?.name || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Address</span>
-                          <input type="text" name="ref3_address" defaultValue={qRes?.ref3_address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref3_address" defaultValue={qRes?.ref3_address || otherInfo?.references?.[2]?.address || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <span className="text-[13px] text-gray-400 mb-1.5 font-medium">Telephone No.</span>
-                          <input type="text" name="ref3_tel" defaultValue={qRes?.ref3_tel || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="ref3_tel" defaultValue={qRes?.ref3_tel || otherInfo?.references?.[2]?.telephone || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                       </div>
                     </div>
@@ -3079,21 +3089,21 @@ export default function ApplicationModal({
                             <span className="text-[13px] text-gray-400 font-medium">Government Issued ID</span>
                             <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
-                          <input type="text" name="gov_id_type" defaultValue={qRes?.gov_id_type || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="gov_id_type" defaultValue={qRes?.gov_id_type || otherInfo?.governmentId?.type || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" placeholder="e.g. Passport" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">ID/License/Passport No.</span>
                             <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
-                          <input type="text" name="gov_id_no" defaultValue={qRes?.gov_id_no || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="gov_id_no" defaultValue={qRes?.gov_id_no || otherInfo?.governmentId?.idNo || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                         <div className="flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-1.5">
                             <span className="text-[13px] text-gray-400 font-medium">Date/Place of Issuance</span>
                             <button type="button" onClick={(e: any) => { const input = e.currentTarget.parentElement?.nextElementSibling as HTMLInputElement; if (input) { input.value = 'N/A'; input.dispatchEvent(new Event('change', { bubbles: true })); } }} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-0.5 rounded transition-colors border border-gray-200 font-medium">N/A</button>
                           </div>
-                          <input type="text" name="gov_id_issuance" defaultValue={qRes?.gov_id_issuance || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
+                          <input type="text" name="gov_id_issuance" defaultValue={qRes?.gov_id_issuance || otherInfo?.governmentId?.datePlace || ''} className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full" />
                         </div>
                       </div>
                     </div>

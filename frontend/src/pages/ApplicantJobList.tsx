@@ -920,9 +920,9 @@ export default function ApplicantJobList() {
               setSpouseMiddle(fb.spouse.middle_name || '');
               setSpouseExt(fb.spouse.name_extension || '');
               setSpouseOccupation(fb.spouse.occupation || '');
-              setSpouseEmployer(fb.spouse.employer_business_name || p.spouse_employer_business || '');
+              setSpouseEmployer(fb.spouse.employer_business_name || fb.spouse.employer || p.spouse_employer_business || '');
               setSpouseBusAddress(fb.spouse.business_address || '');
-              setSpouseTelephone(fb.spouse.telephone_no || p.spouse_telephone || '');
+              setSpouseTelephone(fb.spouse.telephone_no || fb.spouse.telephone || p.spouse_telephone || '');
             }
             if (fb.father) {
               setFatherSurname(fb.father.surname || '');
@@ -931,7 +931,7 @@ export default function ApplicantJobList() {
               setFatherExt(fb.father.name_extension || '');
             }
             if (fb.mother) {
-              setMotherSurname(fb.mother.maiden_surname || p.mother_maiden_surname || '');
+              setMotherSurname(fb.mother.maiden_surname || fb.mother.surname || p.mother_maiden_surname || '');
               setMotherFirst(fb.mother.first_name || '');
               setMotherMiddle(fb.mother.middle_name || '');
             }
