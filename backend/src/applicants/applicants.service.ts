@@ -382,14 +382,14 @@ class ApplicantsServiceClass {
         spouse_employer_business, spouse_business_address, spouse_telephone,
         father_surname, father_first_name, father_middle_name, father_name_extension,
         mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email,
-        years_experience, training_hours, bachelors_degree, eligibility, age
+        years_experience, training_hours, bachelors_degree, eligibility, age, religion, disability, ethnic_group
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         , $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28,
         $29, $30, $31, $32, $33, $34, $35, $36,
         $37, $38, $39, $40, $41, $42, $43, $44, $45,
-        $46, $47, $48, $49, $50
+        $46, $47, $48, $49, $50, $51, $52, $53
       ) RETURNING *
     `, [
       newApplicantNumber,
@@ -441,7 +441,10 @@ class ApplicantsServiceClass {
       calculateTraining(data.learning_and_development || []),
       extractBachelorsDegree(data.educational_background || []),
       extractEligibility(data.civil_service_eligibility || []),
-      calculateAge(data.date_of_birth)
+      calculateAge(data.date_of_birth),
+      data.religion || null,
+      data.disability || null,
+      data.ethnic_group || null
     ]);
 
     const applicant = result.rows[0];

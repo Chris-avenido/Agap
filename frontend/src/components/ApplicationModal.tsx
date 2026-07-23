@@ -3629,6 +3629,9 @@ export default function ApplicationModal({
                         data.positionId = jobId.toString();
                       }
 
+                      data.disability = rawData["q40b"] === "yes" ? rawData["q40b_details"] || "" : "No";
+                      data.ethnic_group = rawData["q40b_ethnic"] === "yes" ? rawData["q40b_ethnic_details"] || "" : "No";
+
                       try {
                         const sessionStr = localStorage.getItem("session_data");
                         let sessionId = null;
