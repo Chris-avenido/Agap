@@ -672,9 +672,9 @@ export default function ApplicationModal({
       : userData.questionnaire_responses
     : {};
 
-  const [skillsList, setSkillsList] = useState<string[]>(['']);
-  const [distinctionsList, setDistinctionsList] = useState<string[]>(['']);
-  const [membershipsList, setMembershipsList] = useState<string[]>(['']);
+  const [skillsList, setSkillsList] = useState<any[]>(['']);
+  const [distinctionsList, setDistinctionsList] = useState<any[]>(['']);
+  const [membershipsList, setMembershipsList] = useState<any[]>(['']);
 
   const [qAnswers, setQAnswers] = useState<Record<string, string>>({});
 
