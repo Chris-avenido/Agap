@@ -20,8 +20,10 @@ CREATE TABLE applicants (
     sex VARCHAR(20), 
     civil_status VARCHAR(50), 
     citizenship VARCHAR(100) DEFAULT 'Filipino',
-    blood_type VARCHAR(10),
+    blood_type VARCHAR(50),
     religion VARCHAR(100),
+    disability VARCHAR(100),
+    ethnic_group VARCHAR(100),
     
     -- Government IDs
     gsis_id_no VARCHAR(50),

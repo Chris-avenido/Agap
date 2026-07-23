@@ -18,6 +18,10 @@ import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy"
 import ModernDatePicker from "./ModernDatePicker";
 import { calculateProfileProgress, parseProfileToState } from "../utils/profileProgress";
 
+const ETHNIC_GROUPS = [
+  "ABELING", "ABELLEN", "ABELLING", "ABERLING", "ABIYAN (AETA)", "ADASEN", "AETA", "AGTA-AGAY", "AGTA-CIMARON", "AGTA-DUMAGAT", "AGTA-TABANGNON", "AGTA-TABOY", "AGUTAYNON", "AKEANON", "ALAB", "ALANGAN", "ALANGAN MANGYAN", "AMBALA", "APAYAO", "AROMANEN-MANOBO", "AROMANON", "ATA", "ATA-MANOBO", "ATI", "BADJAO", "BADJAO, SAMA LAUT", "BAGKALOT", "BAGO", "BAGOBO", "BAGOBO-TAGABAWA", "BALATOC", "BALIWON", "BALUGA", "BANAO", "BANGON", "BANTOANON", "BANWAON", "BARLIG", "BASAO", "BATAK", "BATANGAN", "BATANGAN MANGYAN", "BELWANG", "BIKOL/BICOL", "BINONGAN", "BISAYA/BINISAYA", "BLAAN", "BOHOLANO", "BONTOK", "BUGKALOT", "BUHID", "BUHID MANGYAN", "BUKIDNON", "BUTBUT", "CAGALUAN", "CAGAYANEN", "CALINGA", "CAPIZEÑO", "CAVITEÑO", "CEBUANO", "CHAVACANO", "CHINESE", "CIMARON", "COTABATEÑO", "COTABATEÑO-CHAVACANO", "CUYONEN", "CUYUNON", "DACALAN", "DAGAYNEN", "DANAK", "DANANAO", "DAVAO-CHAVACANO", "DAVAWEÑO", "DIANGAN", "DIBABAWON", "DIBABEEN MULITAAN", "DIBABEN", "DIRERAYAAN", "DULANGAN", "DUMAGAT-ALTA", "DUMAGAT-REMONTADO", "ESCAYA", "GADDANG", "GUBANG", "GUBATNON", "GUBATNON MANGYAN", "GUIANGAN", "GUILAYON", "GUINAANG", "HALAWODNON", "HANUNUO", "HANUNUO MANGYAN", "HENANGA", "HIGAONON", "HILIGAYNON/LLONGGO", "IABANAG", "IBALOY", "IBATAN", "IFUGAO", "IKALAHAN", "ILAUD", "ILIANEN", "ILOCANO", "IRANON", "IRAYA", "IRAYA MANGYAN", "ISAROG", "ISINAI", "ISOROKEN", "ITAWES", "ITAWIA", "ITNEG", "ITOM", "IVATAN", "JAMA MAPON", "KABAYUKAN", "KABIHUG", "KADAKLAN/KACHAKRAN", "KAILAWAN/KAYLAWAN", "KALAGAN", "KALANGUYA", "KALIBUGAN", "KALIBUGAN/KOLIBUGAN", "KALINGA", "KAMAYO", "KAMIGIN", "KAMIGUIN", "KANKANAEY", "KANKANAEY IBENGUET", "KANKANAEY IYAPLAY", "KAPAMPANGAN", "KARINTIK", "KARULANO", "KAUNANA", "KEN-EY", "KIRENTEKEN", "KLATA", "KONGKING", "KOROLANON", "LAHITANEN", "LAMBANGIAN", "LAMBANGLAN", "LANGILAN", "LIVUNGANEN", "LLONGOT", "LUBO", "LUBUAGAN", "MABAKA", "MAENG", "MAG-ANTI", "MAG-ANTSI", "MAG-INDI", "MAGAHAT", "MAGBEKIN", "MAGBUKON", "MAGKUNANA", "MAGUINDANAO", "MAJOKAYONG", "MALAWEG/MALAUEG", "MALBONG", "MAMANWA", "MANDAYA", "MANDEK-EY", "MANDUKAYAN", "MANGALI", "MANGGUANGAN", "MANOBO", "MANOBO B\"LIT", "MANOBO-DULANGAN", "MANOBO-UBO", "MANSAKA", "MARANAO", "MASADIIT", "MASBATEÑO/MASBATENON", "MATIGSALOG", "MAYUDAN", "MOLBOG", "NANENG", "NEGRITO", "OBU-MANUVU", "PALA WAN", "PALAWAN-O", "PALAWANI", "PALAWANON", "PAN-AYANON", "PANAY-BUKIDNON", "PANGASINAN/PANGGALATO", "PARANANUM", "PUGOT", "PULANGIEN", "PULANGIYEN", "PULLON", "RATAGNON", "RATAGNON MANGYAN", "REMONTADO", "SADANGA", "SAKKI", "SALEGSEG", "SAMA", "SAMA BADJAO", "SAMA BANGINGI", "SAMA LAUT", "SAMAL", "SANGIL", "SIBUYAN MANGYAN-TAGABUKID", "SUBANEN", "SULOD/BUDIKNON", "SUMADEL", "T-BOLI", "TABANGON", "TADYAWAN", "TADYAWAN MANGYAN", "TAGABAWA", "TAGAKAOLO", "TAGALOG", "TAGANUA", "TAGAWAHANON", "TAGBANUA", "TAGBANUA/KALAMIANEN", "TALAANDIG", "TALAINGOD", "TALAINGOD, LANGILAN", "TALOCTOK", "TAO'T BATO", "TAU-BUID", "TAUSUG", "TAUT-BATO", "TBOLI", "TEDURAY", "TIGWAHANON", "TINANANEN", "TINGGLAN", "TINGGUIAN", "TINGLAYAN", "TIRURAY", "TONGLAYAN", "TULGAO", "UBO MANOBO", "UBO-MANOBO", "UMAYAMNON", "WARAY", "YAKAN", "YAPAYAO", "YBANAG", "YOGAD", "ZAMBAL"
+];
+
 interface ApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -158,17 +162,19 @@ export default function ApplicationModal({
     };
 
     data.questionnaire_responses = {
-      q34a: rawData["q34a"], q34b: rawData["q34b"], q34b_details: rawData["q34b_details"],
-      q35a: rawData["q35a"], q35a_details: rawData["q35a_details"],
-      q35b: rawData["q35b"], q35b_date: rawData["q35b_date"], q35b_status: rawData["q35b_status"],
-      q36: rawData["q36"], q36_details: rawData["q36_details"],
-      q37: rawData["q37"], q37_details: rawData["q37_details"],
-      q38a: rawData["q38a"], q38a_details: rawData["q38a_details"],
-      q38b: rawData["q38b"], q38b_details: rawData["q38b_details"],
-      q39: rawData["q39"], q39_details: rawData["q39_details"],
-      q40a: rawData["q40a"], q40a_details: rawData["q40a_details"],
-      q40b: rawData["q40b"], q40b_details: rawData["q40b_details"],
-      q40c: rawData["q40c"], q40c_details: rawData["q40c_details"],
+      "34a": { answer: rawData["q34a"] === "yes" ? "Yes" : (rawData["q34a"] === "no" ? "No" : ""), details: "" },
+      "34b": { answer: rawData["q34b"] === "yes" ? "Yes" : (rawData["q34b"] === "no" ? "No" : ""), details: rawData["q34b_details"] || "" },
+      "35a": { answer: rawData["q35a"] === "yes" ? "Yes" : (rawData["q35a"] === "no" ? "No" : ""), details: rawData["q35a_details"] || "" },
+      "35b": { answer: rawData["q35b"] === "yes" ? "Yes" : (rawData["q35b"] === "no" ? "No" : ""), details: rawData["q35b_date"] ? `${rawData["q35b_date"]} - ${rawData["q35b_status"]}` : "" },
+      "36": { answer: rawData["q36"] === "yes" ? "Yes" : (rawData["q36"] === "no" ? "No" : ""), details: rawData["q36_details"] || "" },
+      "37": { answer: rawData["q37"] === "yes" ? "Yes" : (rawData["q37"] === "no" ? "No" : ""), details: rawData["q37_details"] || "" },
+      "38a": { answer: rawData["q38a"] === "yes" ? "Yes" : (rawData["q38a"] === "no" ? "No" : ""), details: rawData["q38a_details"] || "" },
+      "38b": { answer: rawData["q38b"] === "yes" ? "Yes" : (rawData["q38b"] === "no" ? "No" : ""), details: rawData["q38b_details"] || "" },
+      "39": { answer: rawData["q39"] === "yes" ? "Yes" : (rawData["q39"] === "no" ? "No" : ""), details: rawData["q39_details"] || "" },
+      "40a": { answer: rawData["q40a"] === "yes" ? "Yes" : (rawData["q40a"] === "no" ? "No" : ""), details: rawData["q40a_details"] || "" },
+      "40b": { answer: rawData["q40b"] === "yes" ? "Yes" : (rawData["q40b"] === "no" ? "No" : ""), details: rawData["q40b_details"] || "" },
+      "40b_ethnic": { answer: rawData["q40b_ethnic"] === "yes" ? "Yes" : (rawData["q40b_ethnic"] === "no" ? "No" : ""), details: rawData["q40b_ethnic_details"] || "" },
+      "40c": { answer: rawData["q40c"] === "yes" ? "Yes" : (rawData["q40c"] === "no" ? "No" : ""), details: rawData["q40c_details"] || "" },
       ref1_name: rawData["ref1_name"], ref1_address: rawData["ref1_address"], ref1_tel: rawData["ref1_tel"],
       ref2_name: rawData["ref2_name"], ref2_address: rawData["ref2_address"], ref2_tel: rawData["ref2_tel"],
       ref3_name: rawData["ref3_name"], ref3_address: rawData["ref3_address"], ref3_tel: rawData["ref3_tel"],
@@ -201,6 +207,13 @@ export default function ApplicationModal({
     };
 
     const existingOtherInfo = userData?.other_information ? (typeof userData.other_information === 'string' ? JSON.parse(userData.other_information) : userData.other_information) : {};
+    const parseListToObjects = (rawStr: any) => {
+      if (!rawStr) return [];
+      const parsed = JSON.parse(rawStr as string);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item: any) => typeof item === 'string' ? { value: item } : item);
+    };
+
     data.other_information = {
       ...existingOtherInfo,
       height: rawData["height"],
@@ -208,21 +221,31 @@ export default function ApplicationModal({
       agency_employee_no: rawData["agency_employee_no"],
       citizenship_type: rawData["citizenship_type"],
       extension_name: rawData["extension_name"],
-      special_skills: rawData["special_skills"] ? JSON.parse(rawData["special_skills"] as string) : [],
-      distinctions: rawData["distinctions"] ? JSON.parse(rawData["distinctions"] as string) : [],
-      memberships: rawData["memberships"] ? JSON.parse(rawData["memberships"] as string) : [],
+      special_skills: parseListToObjects(rawData["special_skills"]),
+      skills: parseListToObjects(rawData["special_skills"]),
+      distinctions: parseListToObjects(rawData["distinctions"]),
+      memberships: parseListToObjects(rawData["memberships"]),
     };
 
     const edBg = [];
+    const levels = ["elementary", "secondary", "vocational", "college", "graduate"];
     for (let i = 0; i < 5; i++) {
       edBg.push({
+        level: levels[i],
         school_name: rawData[`edu_${i}_school_name`] || "",
+        school: rawData[`edu_${i}_school_name`] || "",
         degree_course: rawData[`edu_${i}_degree_course`] || "",
+        degree: rawData[`edu_${i}_degree_course`] || "",
         period_from: rawData[`edu_${i}_period_from`] || "",
+        from: rawData[`edu_${i}_period_from`] || "",
         period_to: rawData[`edu_${i}_period_to`] || "",
+        to: rawData[`edu_${i}_period_to`] || "",
         highest_level: rawData[`edu_${i}_highest_level`] || "",
+        units: rawData[`edu_${i}_highest_level`] || "",
         year_graduated: rawData[`edu_${i}_year_graduated`] || "",
-        honors_received: rawData[`edu_${i}_honors_received`] || ""
+        year: rawData[`edu_${i}_year_graduated`] || "",
+        honors_received: rawData[`edu_${i}_honors_received`] || "",
+        honors: rawData[`edu_${i}_honors_received`] || ""
       });
     }
     data.educational_background = edBg;
@@ -259,6 +282,8 @@ export default function ApplicationModal({
     }
 
     if (sessionId) {
+      data.disability = rawData["q40b"] === "yes" ? rawData["q40b_details"] || "" : "No";
+      data.ethnic_group = rawData["q40b_ethnic"] === "yes" ? rawData["q40b_ethnic_details"] || "" : "No";
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}`, {
           method: "PUT",
@@ -535,11 +560,38 @@ export default function ApplicationModal({
       ? JSON.parse(userData.family_background)
       : userData.family_background
     : {};
-  const eduBg = userData?.educational_background
+  const rawEduBg = userData?.educational_background
     ? typeof userData.educational_background === "string"
       ? JSON.parse(userData.educational_background)
       : userData.educational_background
     : [];
+
+  const eduBg = new Array(5).fill({});
+  
+  rawEduBg.forEach((eb: any, idx: number) => {
+     let targetIdx = idx;
+     if (eb.level) {
+       const lvl = eb.level.toLowerCase();
+       if (lvl.includes('elementary')) targetIdx = 0;
+       else if (lvl.includes('secondary')) targetIdx = 1;
+       else if (lvl.includes('vocational')) targetIdx = 2;
+       else if (lvl.includes('college')) targetIdx = 3;
+       else if (lvl.includes('graduate')) targetIdx = 4;
+     }
+     
+     if (targetIdx >= 0 && targetIdx < 5) {
+       eduBg[targetIdx] = {
+          ...eb,
+          school_name: eb.school_name || eb.school || '',
+          degree_course: eb.degree_course || eb.degree || '',
+          period_from: eb.period_from || eb.from || '',
+          period_to: eb.period_to || eb.to || '',
+          highest_level: eb.highest_level || eb.units || '',
+          year_graduated: eb.year_graduated || eb.year || '',
+          honors_received: eb.honors_received || eb.honors || ''
+       };
+     }
+  });
 
   const [civilServiceList, setCivilServiceList] = useState<any[]>([{ eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }]);
   useEffect(() => {
@@ -625,19 +677,47 @@ export default function ApplicationModal({
     }
 
     if (qRes) {
+      const getA = (id: string) => {
+        const keyWithQ = `q${id}`;
+        const flatVal = qRes[keyWithQ] || qRes[id];
+        if (typeof flatVal === 'string') return flatVal.toLowerCase();
+        if (qRes[id] && qRes[id].answer) return qRes[id].answer.toLowerCase();
+        if (qRes[keyWithQ] && qRes[keyWithQ].answer) return qRes[keyWithQ].answer.toLowerCase();
+        return '';
+      };
+      
+      const getD = (id: string) => {
+        const detailsKey = `q${id}_details`;
+        if (qRes[detailsKey]) return qRes[detailsKey];
+        if (qRes[id] && qRes[id].details) return qRes[id].details;
+        const keyWithQ = `q${id}`;
+        if (qRes[keyWithQ] && qRes[keyWithQ].details) return qRes[keyWithQ].details;
+        return '';
+      };
+
+      // Ensure that qRes has all properties populated in a flat way for the render methods to consume directly
+      const ids = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40b_ethnic', '40c'];
+      ids.forEach(id => {
+        const a = getA(id);
+        const d = getD(id);
+        qRes[`q${id}`] = a;
+        qRes[`q${id}_details`] = d;
+      });
+
       setQAnswers({
-        q34a: qRes.q34a || '',
-        q34b: qRes.q34b || '',
-        q35a: qRes.q35a || '',
-        q35b: qRes.q35b || '',
-        q36: qRes.q36 || '',
-        q37: qRes.q37 || '',
-        q38a: qRes.q38a || '',
-        q38b: qRes.q38b || '',
-        q39: qRes.q39 || '',
-        q40a: qRes.q40a || '',
-        q40b: qRes.q40b || '',
-        q40c: qRes.q40c || '',
+        q34a: getA('34a'),
+        q34b: getA('34b'),
+        q35a: getA('35a'),
+        q35b: getA('35b'),
+        q36: getA('36'),
+        q37: getA('37'),
+        q38a: getA('38a'),
+        q38b: getA('38b'),
+        q39: getA('39'),
+        q40a: getA('40a'),
+        q40b: getA('40b'),
+        q40b_ethnic: getA('40b_ethnic'),
+        q40c: getA('40c'),
       });
     }
   }, [userData]);
@@ -2882,6 +2962,33 @@ export default function ApplicationModal({
                           </div>
                           {qAnswers.q40b === "yes" && (
                             <input type="text" name="q40b_details" defaultValue={qRes?.q40b_details || ''} placeholder="If YES, please specify ID No" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <p className="text-[14px] text-gray-700 leading-relaxed">
+                            Do you belong to an Indigenous Cultural Community / Indigenous Peoples (ICC/IP) or any ethnic group?
+                          </p>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b_ethnic" value="yes" checked={qAnswers.q40b_ethnic === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40b_ethnic: e.target.value }))} className="accent-blue-600" /> Yes</label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q40b_ethnic" value="no" checked={qAnswers.q40b_ethnic === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q40b_ethnic: e.target.value }))} className="accent-blue-600" /> No</label>
+                          </div>
+                          {qAnswers.q40b_ethnic === "yes" && (
+                            <>
+                              <input 
+                                type="text" 
+                                name="q40b_ethnic_details" 
+                                list="modal-ethnic-groups"
+                                required
+                                defaultValue={qRes?.q40b_ethnic_details || ''} 
+                                placeholder="Search or select your ethnic group" 
+                                className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" 
+                                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Please select your ethnic group.')}
+                                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                              />
+                              <datalist id="modal-ethnic-groups">
+                                {ETHNIC_GROUPS.map(eg => <option key={eg} value={eg} />)}
+                              </datalist>
+                            </>
                           )}
                         </div>
                         <div className="flex flex-col gap-3">

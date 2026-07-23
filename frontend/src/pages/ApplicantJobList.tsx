@@ -18,6 +18,10 @@ import { JobCard, JobTableList } from '../components/JobCards';
 import ModernDatePicker from "../components/ModernDatePicker";
 import { calculateProfileProgress } from '../utils/profileProgress';
 
+const ETHNIC_GROUPS = [
+  "ABELING", "ABELLEN", "ABELLING", "ABERLING", "ABIYAN (AETA)", "ADASEN", "AETA", "AGTA-AGAY", "AGTA-CIMARON", "AGTA-DUMAGAT", "AGTA-TABANGNON", "AGTA-TABOY", "AGUTAYNON", "AKEANON", "ALAB", "ALANGAN", "ALANGAN MANGYAN", "AMBALA", "APAYAO", "AROMANEN-MANOBO", "AROMANON", "ATA", "ATA-MANOBO", "ATI", "BADJAO", "BADJAO, SAMA LAUT", "BAGKALOT", "BAGO", "BAGOBO", "BAGOBO-TAGABAWA", "BALATOC", "BALIWON", "BALUGA", "BANAO", "BANGON", "BANTOANON", "BANWAON", "BARLIG", "BASAO", "BATAK", "BATANGAN", "BATANGAN MANGYAN", "BELWANG", "BIKOL/BICOL", "BINONGAN", "BISAYA/BINISAYA", "BLAAN", "BOHOLANO", "BONTOK", "BUGKALOT", "BUHID", "BUHID MANGYAN", "BUKIDNON", "BUTBUT", "CAGALUAN", "CAGAYANEN", "CALINGA", "CAPIZEÑO", "CAVITEÑO", "CEBUANO", "CHAVACANO", "CHINESE", "CIMARON", "COTABATEÑO", "COTABATEÑO-CHAVACANO", "CUYONEN", "CUYUNON", "DACALAN", "DAGAYNEN", "DANAK", "DANANAO", "DAVAO-CHAVACANO", "DAVAWEÑO", "DIANGAN", "DIBABAWON", "DIBABEEN MULITAAN", "DIBABEN", "DIRERAYAAN", "DULANGAN", "DUMAGAT-ALTA", "DUMAGAT-REMONTADO", "ESCAYA", "GADDANG", "GUBANG", "GUBATNON", "GUBATNON MANGYAN", "GUIANGAN", "GUILAYON", "GUINAANG", "HALAWODNON", "HANUNUO", "HANUNUO MANGYAN", "HENANGA", "HIGAONON", "HILIGAYNON/LLONGGO", "IABANAG", "IBALOY", "IBATAN", "IFUGAO", "IKALAHAN", "ILAUD", "ILIANEN", "ILOCANO", "IRANON", "IRAYA", "IRAYA MANGYAN", "ISAROG", "ISINAI", "ISOROKEN", "ITAWES", "ITAWIA", "ITNEG", "ITOM", "IVATAN", "JAMA MAPON", "KABAYUKAN", "KABIHUG", "KADAKLAN/KACHAKRAN", "KAILAWAN/KAYLAWAN", "KALAGAN", "KALANGUYA", "KALIBUGAN", "KALIBUGAN/KOLIBUGAN", "KALINGA", "KAMAYO", "KAMIGIN", "KAMIGUIN", "KANKANAEY", "KANKANAEY IBENGUET", "KANKANAEY IYAPLAY", "KAPAMPANGAN", "KARINTIK", "KARULANO", "KAUNANA", "KEN-EY", "KIRENTEKEN", "KLATA", "KONGKING", "KOROLANON", "LAHITANEN", "LAMBANGIAN", "LAMBANGLAN", "LANGILAN", "LIVUNGANEN", "LLONGOT", "LUBO", "LUBUAGAN", "MABAKA", "MAENG", "MAG-ANTI", "MAG-ANTSI", "MAG-INDI", "MAGAHAT", "MAGBEKIN", "MAGBUKON", "MAGKUNANA", "MAGUINDANAO", "MAJOKAYONG", "MALAWEG/MALAUEG", "MALBONG", "MAMANWA", "MANDAYA", "MANDEK-EY", "MANDUKAYAN", "MANGALI", "MANGGUANGAN", "MANOBO", "MANOBO B\"LIT", "MANOBO-DULANGAN", "MANOBO-UBO", "MANSAKA", "MARANAO", "MASADIIT", "MASBATEÑO/MASBATENON", "MATIGSALOG", "MAYUDAN", "MOLBOG", "NANENG", "NEGRITO", "OBU-MANUVU", "PALA WAN", "PALAWAN-O", "PALAWANI", "PALAWANON", "PAN-AYANON", "PANAY-BUKIDNON", "PANGASINAN/PANGGALATO", "PARANANUM", "PUGOT", "PULANGIEN", "PULANGIYEN", "PULLON", "RATAGNON", "RATAGNON MANGYAN", "REMONTADO", "SADANGA", "SAKKI", "SALEGSEG", "SAMA", "SAMA BADJAO", "SAMA BANGINGI", "SAMA LAUT", "SAMAL", "SANGIL", "SIBUYAN MANGYAN-TAGABUKID", "SUBANEN", "SULOD/BUDIKNON", "SUMADEL", "T-BOLI", "TABANGON", "TADYAWAN", "TADYAWAN MANGYAN", "TAGABAWA", "TAGAKAOLO", "TAGALOG", "TAGANUA", "TAGAWAHANON", "TAGBANUA", "TAGBANUA/KALAMIANEN", "TALAANDIG", "TALAINGOD", "TALAINGOD, LANGILAN", "TALOCTOK", "TAO'T BATO", "TAU-BUID", "TAUSUG", "TAUT-BATO", "TBOLI", "TEDURAY", "TIGWAHANON", "TINANANEN", "TINGGLAN", "TINGGUIAN", "TINGLAYAN", "TIRURAY", "TONGLAYAN", "TULGAO", "UBO MANOBO", "UBO-MANOBO", "UMAYAMNON", "WARAY", "YAKAN", "YAPAYAO", "YBANAG", "YOGAD", "ZAMBAL"
+];
+
 const formatCurrencyValue = (val: any) => {
   if (val === null || val === undefined) return '';
   const strVal = String(val);
@@ -669,7 +673,9 @@ export default function ApplicantJobList() {
           documents: currentUploadedDocs,
           photoUrl: photoUrl
         },
-        questionnaire_responses: questionnaire
+        questionnaire_responses: questionnaire,
+        disability: questionnaire['40b']?.answer === 'Yes' ? (questionnaire['40b']?.details || '') : 'No',
+        ethnic_group: questionnaire['40b_ethnic']?.answer === 'Yes' ? (questionnaire['40b_ethnic']?.details || '') : 'No'
       });
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`, {
@@ -3177,6 +3183,7 @@ export default function ApplicantJobList() {
                               { id: '39', text: '39. Have you acquired the status of an immigrant or permanent resident of another country?' },
                               { id: '40a', text: '40. Pursuant to: (a) Indigenous People\'s Act (RA 8371); (b) Magna Carta for Disabled Persons (RA 7277); and (c) Solo Parents Welfare Act of 2000 (RA 8972), please answer the following items: a. Are you a member of any indigenous group?' },
                               { id: '40b', text: 'b. Are you a person with disability?' },
+                              { id: '40b_ethnic', text: 'Do you belong to an Indigenous Cultural Community / Indigenous Peoples (ICC/IP) or any ethnic group?' },
                               { id: '40c', text: 'c. Are you a solo parent?' }
                             ].map(q => (
                               <div key={q.id} className="flex flex-col gap-3 pb-6 border-b border-gray-100 last:border-0 last:pb-0">
@@ -3208,14 +3215,33 @@ export default function ApplicantJobList() {
                                   </label>
                                 </div>
                                 {questionnaire[q.id]?.answer === 'Yes' && (
-                                  <input
-                                    type="text"
-                                    required
-                                    placeholder="Please provide details"
-                                    value={questionnaire[q.id]?.details || ''}
-                                    onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: 'Yes', details: e.target.value } })}
-                                    className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 mt-1 h-[42px] w-full"
-                                  />
+                                  q.id === '40b_ethnic' ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        list="ethnic-groups"
+                                        required
+                                        placeholder="Search or select your ethnic group"
+                                        value={questionnaire[q.id]?.details || ''}
+                                        onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Please select your ethnic group.')}
+                                        onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                                        onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: 'Yes', details: e.target.value } })}
+                                        className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 mt-1 h-[42px] w-full"
+                                      />
+                                      <datalist id="ethnic-groups">
+                                        {ETHNIC_GROUPS.map(eg => <option key={eg} value={eg} />)}
+                                      </datalist>
+                                    </>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      required
+                                      placeholder={q.id === '40b' ? 'If YES, please specify ID No' : 'Please provide details'}
+                                      value={questionnaire[q.id]?.details || ''}
+                                      onChange={(e: any) => setQuestionnaire({ ...questionnaire, [q.id]: { answer: 'Yes', details: e.target.value } })}
+                                      className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 mt-1 h-[42px] w-full"
+                                    />
+                                  )
                                 )}
                               </div>
                             ))}
