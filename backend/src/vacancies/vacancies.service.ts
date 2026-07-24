@@ -8,7 +8,7 @@ export class VacanciesService {
         p.title as "positionTitle",
         c.region as "region",
         c.division as "division",
-        (SELECT salary_grade FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as "salaryGrade",
+        p.salary_grade as "salaryGrade",
         (SELECT COUNT(*) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))::int as "vacantItemCount",
         (SELECT MIN(posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open') as "posting_start",
         (SELECT MAX(posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open') as "posting_end",

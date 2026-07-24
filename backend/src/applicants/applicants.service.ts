@@ -302,7 +302,7 @@ class ApplicantsServiceClass {
              (SELECT MIN(v.posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_start,
              (SELECT MAX(v.posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_end,
              (SELECT v.item_no FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as item_no,
-             (SELECT v.salary_grade FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as salary_grade
+             p.salary_grade as salary_grade
       FROM applications a
       LEFT JOIN job_clusters c ON a.job_cluster_id::text = c.id::text
       LEFT JOIN positions p ON c.position_id = p.id
