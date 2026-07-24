@@ -2826,7 +2826,13 @@ export default function ApplicationModal({
                             <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="yes" checked={qAnswers.q34a === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34a: e.target.value }))} className="accent-blue-600" /> Yes</label>
                             <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34a" value="no" checked={qAnswers.q34a === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34a: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
+                          {qAnswers.q34a === "yes" && (
+                            <input type="text" name="q34a_details" defaultValue={qRes?.q34a_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
+                          )}
                         </div>
+                        
+                        <div className="w-full h-px bg-gray-100 my-2" />
+                        
                         <div className="flex flex-col gap-3">
                           <p className="text-[14px] text-gray-700 leading-relaxed">
                             within the fourth degree (for Local Government Unit - Career Employees)?
@@ -2835,7 +2841,7 @@ export default function ApplicationModal({
                             <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="yes" checked={qAnswers.q34b === "yes"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34b: e.target.value }))} className="accent-blue-600" /> Yes</label>
                             <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="q34b" value="no" checked={qAnswers.q34b === "no"} onChange={(e) => setQAnswers(prev => ({ ...prev, q34b: e.target.value }))} className="accent-blue-600" /> No</label>
                           </div>
-                          {(qAnswers.q34a === "yes" || qAnswers.q34b === "yes") && (
+                          {qAnswers.q34b === "yes" && (
                             <input type="text" name="q34b_details" defaultValue={qRes?.q34b_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
                           )}
                         </div>
