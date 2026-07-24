@@ -28,7 +28,7 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
           <div className="mt-2 mb-1">
              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold tracking-wide border border-blue-100">
                <MapPin className="w-3 h-3 mr-1" />
-               {job.school || job.division || job.office || 'N/A'}
+               {job.region || job.location ? `${job.region || job.location} - ` : ''}{job.school || job.division || job.office || 'N/A'}
              </span>
           </div>
 

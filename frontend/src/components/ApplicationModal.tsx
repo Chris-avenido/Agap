@@ -709,8 +709,14 @@ export default function ApplicationModal({
       // Ensure that qRes has all properties populated in a flat way for the render methods to consume directly
       const ids = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40b_ethnic', '40c'];
       ids.forEach(id => {
-        const a = getA(id);
-        const d = getD(id);
+        let a = getA(id);
+        let d = getD(id);
+        
+        if (id === '40b_ethnic' && !a && userData?.ethnic_group) {
+          a = userData.ethnic_group !== 'No' ? 'yes' : 'no';
+          d = userData.ethnic_group !== 'No' ? userData.ethnic_group : '';
+        }
+
         qRes[`q${id}`] = a;
         qRes[`q${id}_details`] = d;
       });

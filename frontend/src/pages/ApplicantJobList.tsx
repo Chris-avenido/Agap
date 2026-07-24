@@ -1114,6 +1114,14 @@ export default function ApplicantJobList() {
                 details: details
               };
             }
+
+            if (!normalizedQ['40b_ethnic'] && p.ethnic_group) {
+              normalizedQ['40b_ethnic'] = {
+                answer: p.ethnic_group !== 'No' ? 'Yes' : 'No',
+                details: p.ethnic_group !== 'No' ? p.ethnic_group : ''
+              };
+            }
+
             setQuestionnaire(normalizedQ);
             if (foundRefs && refs.length > 0) setReferencesList(refs);
             if (foundGov) setGovernmentId(newGovId);
