@@ -6,43 +6,6 @@ import modernLogo from '../assets/modern_logo.png';
 import { JobCard, JobTableList } from '../components/JobCards';
 import ApplicationModal from '../components/ApplicationModal';
 
-const religions = [
-  "Roman Catholic", "Islam", "Iglesia ni Cristo", "Aglipayan", "Seventh-day Adventist", "Bible Baptist Church", "Jehovah's Witnesses", "Church of Christ", "Born Again Christian", "Other"
-];
-
-const disabilities = [
-  "No", "Visual", "Hearing", "Orthopedic", "Speech", "Intellectual", "Psychosocial", "Learning", "Other"
-];
-
-const ethnicGroups = [
-  "No", "ABELING", "ABELLEN", "ABELLING", "ABERLING", "ABIYAN (AETA)", "ADASEN", 
-  "AETA", "AGTA-AGAY", "AGTA-CIMARON", "AGTA-DUMAGAT", "AGTA-TABANGNON", "AGTA-TABOY", "AGUTAYNON", "AKEANON", "ALAB", 
-  "ALANGAN", "ALANGAN MANGYAN", "AMBALA", "APAYAO", "AROMANEN-MANOBO", "AROMANON", "ATA", "ATA-MANOBO", "ATI", "BADJAO", 
-  "BADJAO, SAMA LAUT", "BAGKALOT", "BAGO", "BAGOBO", "BAGOBO-TAGABAWA", "BALATOC", "BALIWON", "BALUGA", "BANAO", 
-  "BANGON", "BANTOANON", "BANWAON", "BARLIG", "BASAO", "BATAK", "BATANGAN", "BATANGAN MANGYAN", "BELWANG", 
-  "BIKOL/BICOL", "BINONGAN", "BISAYA/BINISAYA", "BLAAN", "BOHOLANO", "BONTOK", "BUGKALOT", "BUHID", "BUHID MANGYAN", 
-  "BUKIDNON", "BUTBUT", "CAGALUAN", "CAGAYANEN", "CALINGA", "CAPIZEÑO", "CAVITEÑO", "CEBUANO", "CHAVACANO", "CHINESE", 
-  "CIMARON", "COTABATEÑO", "COTABATEÑO-CHAVACANO", "CUYONEN", "CUYUNON", "DACALAN", "DAGAYNEN", "DANAK", "DANANAO", 
-  "DAVAO-CHAVACANO", "DAVAWEÑO", "DIANGAN", "DIBABAWON", "DIBABEEN MULITAAN", "DIBABEN", "DIRERAYAAN", "DULANGAN", 
-  "DUMAGAT-ALTA", "DUMAGAT-REMONTADO", "ESCAYA", "GADDANG", "GUBANG", "GUBATNON", "GUBATNON MANGYAN", "GUIANGAN", 
-  "GUILAYON", "GUINAANG", "HALAWODNON", "HANUNUO", "HANUNUO MANGYAN", "HENANGA", "HIGAONON", "HILIGAYNON/LLONGGO", 
-  "IABANAG", "IBALOY", "IBATAN", "IFUGAO", "IKALAHAN", "ILAUD", "ILIANEN", "ILOCANO", "IRANON", "IRAYA", "IRAYA MANGYAN", "ISAROG", "ISINAI", "ISOROKEN", "ITAWES", "ITAWIA", "ITNEG", "ITOM", "IVATAN", "JAMA MAPON", "KABAYUKAN", 
-  "KABIHUG", "KADAKLAN/KACHAKRAN", "KAILAWAN/KAYLAWAN", "KALAGAN", "KALANGUYA", "KALIBUGAN", "KALIBUGAN/KOLIBUGAN", 
-  "KALINGA", "KAMAYO", "KAMIGIN", "KAMIGUIN", "KANKANAEY", "KANKANAEY IBENGUET", "KANKANAEY IYAPLAY", "KAPAMPANGAN", 
-  "KARINTIK", "KARULANO", "KAUNANA", "KEN-EY", "KIRENTEKEN", "KLATA", "KONGKING", "KOROLANON", "LAHITANEN", 
-  "LAMBANGIAN", "LAMBANGLAN", "LANGILAN", "LIVUNGANEN", "LLONGOT", "LUBO", "LUBUAGAN", "MABAKA", "MAENG", "MAG-ANTI", 
-  "MAG-ANTSI", "MAG-INDI", "MAGAHAT", "MAGBEKIN", "MAGBUKON", "MAGKUNANA", "MAGUINDANAO", "MAJOKAYONG", 
-  "MALAWEG/MALAUEG", "MALBONG", "MAMANWA", "MANDAYA", "MANDEK-EY", "MANDUKAYAN", "MANGALI", "MANGGUANGAN", "MANOBO", 
-  "MANOBO B\"LIT", "MANOBO-DULANGAN", "MANOBO-UBO", "MANSAKA", "MARANAO", "MASADIIT", "MASBATEÑO/MASBATENON", 
-  "MATIGSALOG", "MAYUDAN", "MOLBOG", "NANENG", "NEGRITO", "OBU-MANUVU", "PALA WAN", "PALAWAN-O", "PALAWANI", 
-  "PALAWANON", "PAN-AYANON", "PANAY-BUKIDNON", "PANGASINAN/PANGGALATO", "PARANANUM", "PUGOT", "PULANGIEN", "PULANGIYEN", 
-  "PULLON", "RATAGNON", "RATAGNON MANGYAN", "REMONTADO", "SADANGA", "SAKKI", "SALEGSEG", "SAMA", "SAMA BADJAO", "SAMA BANGINGI", "SAMA LAUT", "SAMAL", "SANGIL", "SIBUYAN MANGYAN-TAGABUKID", "SUBANEN", "SULOD/BUDIKNON", "SUMADEL", 
-  "T-BOLI", "TABANGON", "TADYAWAN", "TADYAWAN MANGYAN", "TAGABAWA", "TAGAKAOLO", "TAGALOG", "TAGANUA", "TAGAWAHANON", 
-  "TAGBANUA", "TAGBANUA/KALAMIANEN", "TALAANDIG", "TALAINGOD", "TALAINGOD, LANGILAN", "TALOCTOK", "TAO'T BATO", 
-  "TAU-BUID", "TAUSUG", "TAUT-BATO", "TBOLI", "TEDURAY", "TIGWAHANON", "TINANANEN", "TINGGLAN", "TINGGUIAN", 
-  "TINGLAYAN", "TIRURAY", "TONGLAYAN", "TULGAO", "UBO MANOBO", "UBO-MANOBO", "UMAYAMNON", "WARAY", "YAKAN", "YAPAYAO", 
-  "YBANAG", "YOGAD", "ZAMBAL"
-];
 
 export default function PublicCareers() {
   const navigate = useNavigate();
@@ -238,10 +201,6 @@ export default function PublicCareers() {
     const lastName = formData.get('surname') as string;
     const email = formData.get('email_address') as string;
     const password = formData.get('password') as string;
-    const religion = formData.get('religion') as string;
-    const disability = formData.get('disability') as string;
-    const ethnicGroup = formData.get('ethnic_group') as string;
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Swal.fire('Invalid Email', 'Please enter a valid email address.', 'warning');
@@ -252,10 +211,7 @@ export default function PublicCareers() {
       first_name: firstName,
       surname: lastName,
       email_address: email,
-      password: password,
-      religion: religion,
-      disability: disability,
-      ethnic_group: ethnicGroup
+      password: password
     };
 
     try {
@@ -581,28 +537,6 @@ export default function PublicCareers() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Religion</label>
-                    <select name="religion" className="w-full p-3 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] bg-white transition-all shadow-sm" required defaultValue="">
-                      <option value="" disabled>Select Religion</option>
-                      {religions.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Disability</label>
-                    <select name="disability" className="w-full p-3 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] bg-white transition-all shadow-sm" required defaultValue="No">
-                      {disabilities.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Ethnic Group / ICC/IP</label>
-                  <select name="ethnic_group" className="w-full p-3 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-[#0a6fa6] focus:ring-1 focus:ring-[#0a6fa6] bg-white transition-all shadow-sm" required defaultValue="No">
-                    {ethnicGroups.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
 
                 <button type="submit" className="w-full py-3.5 bg-[#022851] hover:bg-[#033a76] text-white font-bold rounded-xl shadow-md hover:shadow-lg active:scale-95 mt-8 transition-all tracking-wide text-[14px] flex items-center justify-center gap-2 group">
                   SIGN UP
