@@ -61,21 +61,42 @@ export class VacanciesService {
   }
 
   static async getAgapLocations() {
-    const regionsResult = await pool.query('SELECT region FROM agap_schools WHERE region IS NOT NULL GROUP BY region ORDER BY region');
-    const divisionsResult = await pool.query('SELECT division FROM agap_schools WHERE division IS NOT NULL GROUP BY division ORDER BY division');
-    const regdivResult = await pool.query('SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL ORDER BY region, division');
+    const regdivResult = await pool.query(`
+      SELECT DISTINCT c.region, c.division 
+      FROM job_clusters c
+      WHERE EXISTS (
+        SELECT 1 FROM vacancies v 
+        WHERE v.job_cluster_id = c.id AND v.status = 'open' 
+        AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+      )
+      AND c.region IS NOT NULL
+    `);
     
+    const regionsSet = new Set<string>();
+    const divisionsSet = new Set<string>();
     const divisionsByRegion: Record<string, string[]> = {};
+    
     regdivResult.rows.forEach(r => {
-      if (!divisionsByRegion[r.region]) divisionsByRegion[r.region] = [];
-      if (r.division && !divisionsByRegion[r.region].includes(r.division)) {
-        divisionsByRegion[r.region].push(r.division);
+      if (r.region) {
+        regionsSet.add(r.region);
+        if (!divisionsByRegion[r.region]) divisionsByRegion[r.region] = [];
+        if (r.division) {
+          divisionsSet.add(r.division);
+          if (!divisionsByRegion[r.region].includes(r.division)) {
+            divisionsByRegion[r.region].push(r.division);
+          }
+        }
       }
     });
 
+    // Sort divisions within each region
+    Object.keys(divisionsByRegion).forEach(reg => {
+      divisionsByRegion[reg].sort();
+    });
+
     return {
-      regions: regionsResult.rows.map(r => r.region),
-      divisions: divisionsResult.rows.map(r => r.division),
+      regions: Array.from(regionsSet).sort(),
+      divisions: Array.from(divisionsSet).sort(),
       divisionsByRegion
     };
   }
