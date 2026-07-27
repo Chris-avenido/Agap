@@ -249,7 +249,7 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
       
       let safeName = `${surname}_${docTypeSlug}_${Date.now()}_${appNumber}`;
-      if (docName === 'Letter of Intent' && req.body.jobClusterId) {
+      if ((docName === 'Letter of Intent' || docName === 'Sworn Declaration') && req.body.jobClusterId) {
         const jId = String(req.body.jobClusterId).replace(/[^a-zA-Z0-9-]/g, '_');
         safeName += `_${jId}`;
       }
