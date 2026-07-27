@@ -239,8 +239,18 @@ class ApplicantsServiceClass {
       throw new Error("Invalid job cluster ID provided.");
     }
     
-    const applicantRes = await pool.query('SELECT applicant_number FROM applicants WHERE id = $1', [applicantId]);
-    const applicantNumber = applicantRes.rows[0]?.applicant_number || null;
+    const applicantRes = await pool.query('SELECT applicant_number, other_information FROM applicants WHERE id = $1', [applicantId]);
+    const applicantRow = applicantRes.rows[0];
+    const applicantNumber = applicantRow?.applicant_number || null;
+    
+    let otherInfo = applicantRow?.other_information || {};
+    if (typeof otherInfo === 'string') {
+      try {
+        otherInfo = JSON.parse(otherInfo);
+      } catch (e) {}
+    }
+    const letterOfIntent = otherInfo?.documents?.['Letter of Intent'] || null;
+    const swornDocument = otherInfo?.documents?.['Sworn Declaration'] || null;
 
     console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, jobClusterId=${jobClusterId}`);
     
@@ -278,14 +288,14 @@ class ApplicantsServiceClass {
     }
     const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
-    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null]);
+    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null, letterOfIntent, swornDocument]);
     
     try {
       const result = await pool.query(`
-        INSERT INTO applications (id, application_number, applicant_id, job_cluster_id, status, date_applied, created_at)
-        VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())
+        INSERT INTO applications (id, application_number, applicant_id, job_cluster_id, status, date_applied, created_at, letter_of_intent, sworn_document)
+        VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW(), $5, $6)
         RETURNING *
-      `, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null]);
+      `, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null, letterOfIntent, swornDocument]);
 
       console.log(`[DEBUG] applyJob INSERT successful. Returning row:`, result.rows[0]);
       return result.rows[0];

@@ -151,7 +151,13 @@ JWT_SECRET=STRIDE_INSIGHTED_SECRET_2026_KEY_PROD
 
     with tarfile.open(ARCHIVE_NAME, "w:gz") as tar:
         for f in files_to_include:
-            if os.path.exists(f):
+            if f == ".env":
+                if os.path.exists(".env.prod.tmp"):
+                    tar.add(".env.prod.tmp", arcname=".env", filter=exclude_node_modules)
+                    print(f"       + .env (from .env.prod.tmp)")
+                else:
+                    print(f"       [SKIP] not found: .env.prod.tmp")
+            elif os.path.exists(f):
                 tar.add(f, filter=exclude_node_modules)
                 print(f"       + {f}")
             else:
