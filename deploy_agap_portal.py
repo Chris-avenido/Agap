@@ -73,9 +73,8 @@ def main():
     # 2. Archive files
     print(f"\n[2/5] ARCHIVING deployment payload -> {ARCHIVE_NAME}...")
 
-# --- FIXED PRODUCTION ENVIRONMENT ---
-PRODUCTION_ENV = """\
-
+    # --- FIXED PRODUCTION ENVIRONMENT ---
+    PRODUCTION_ENV = """\
 DATABASE_URL=postgres://Administrator1:pRZTbQ2T1JD7@stride-posgre-prod-01.postgres.database.azure.com:5432/AGAP?sslmode=require
 EMAIL_USER=helpdesk.stride@gmail.com
 EMAIL_PASS=nsij vamm oqeu yhlx
@@ -134,9 +133,9 @@ VITE_DEV_SSO_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJpbnNpZ2h0ZWQt
 JWT_SECRET=STRIDE_INSIGHTED_SECRET_2026_KEY_PROD
 """
 
-# Write to temp file for archiving
-with open(".env.prod.tmp", "w") as f:
-    f.write(PRODUCTION_ENV)
+    # Write to temp file for archiving
+    with open(".env.prod.tmp", "w") as f:
+        f.write(PRODUCTION_ENV)
 
     files_to_include = ["backend", "frontend/dist", "package.json", "package-lock.json", ".env", ECOSYSTEM_CONFIG]
     
