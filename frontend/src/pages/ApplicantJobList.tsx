@@ -3836,7 +3836,7 @@ export default function ApplicantJobList() {
               {/* File picker */}
               <div className="flex flex-col gap-2">
                 <label className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
-                  {uploadedDocumentUrls?.['Sworn Declaration'] ? 'Replace Sworn Declaration (optional)' : 'Upload Sworn Declaration'}
+                  Upload Sworn Declaration
                 </label>
                 <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl px-6 py-8 cursor-pointer transition-all ${swornDeclFile ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40'}`}>
                   {swornDeclFile ? (
@@ -3887,8 +3887,13 @@ export default function ApplicantJobList() {
               </button>
               <button
                 type="button"
-                disabled={swornDeclUploading || (!swornDeclFile && !uploadedDocumentUrls?.['Sworn Declaration'])}
+                disabled={swornDeclUploading}
                 onClick={async () => {
+                  if (!swornDeclFile) {
+                    Swal.fire('Required', 'Please upload your Sworn Declaration.', 'warning');
+                    return;
+                  }
+                  
                   setSwornDeclUploading(true);
                   try {
                     // Upload Sworn Declaration if new file is selected
