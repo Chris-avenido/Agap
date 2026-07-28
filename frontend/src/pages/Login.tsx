@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2 } from 'lucide-react';
-import ApplicationModal from '../components/ApplicationModal';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
@@ -15,7 +14,12 @@ export default function Login() {
   const [loginMethod, setLoginMethod] = useState<'password' | 'passcode'>('password');
 
   // Registration state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     const sessionStr = localStorage.getItem('session_data');
@@ -97,6 +101,56 @@ export default function Login() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (regPassword !== confirmPassword) {
+      Swal.fire('Error', 'Passwords do not match', 'error');
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName,
+          surname: lastName,
+          email_address: regEmail,
+          password: regPassword
+        })
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const now = new Date();
+        const item = {
+          id: resData.data.id,
+          applicant_number: resData.data.applicant_number,
+          email: resData.data.email_address || resData.data.email,
+          expiry: now.getTime() + 3 * 60 * 60 * 1000,
+        };
+        localStorage.setItem('session_data', JSON.stringify(item));
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Account created successfully!',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          navigate('/applicant-dashboard');
+        });
+      } else {
+        Swal.fire('Error', resData.message || 'Registration failed', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Server error', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-[var(--bg-2)] relative" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Back Button */}
@@ -121,17 +175,132 @@ export default function Login() {
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-[var(--ink)] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            Welcome back!
+            {isRegistering ? 'Create an Account' : 'Welcome back!'}
           </h2>
           <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
-            Sign in to access your account
+            {isRegistering ? 'Join AGAP Portal to start your application' : 'Sign in to access your account'}
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]/70">
             Government HR Management Information System
           </p>
 
           <div className="mt-8">
-            <form onSubmit={handleLogin} className="space-y-6">
+            {isRegistering ? (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-[var(--ink)]">First Name</label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-[var(--muted)]" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                        placeholder="Juan"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-[var(--ink)]">Last Name</label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <input
+                        type="text"
+                        required
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                        className="block w-full px-3 sm:text-sm border-gray-300 rounded-md border py-2 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                        placeholder="Dela Cruz"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)]">Email Address</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-[var(--muted)]" />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      placeholder="name@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)]">Password</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-[var(--muted)]" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={regPassword}
+                      onChange={e => setRegPassword(e.target.value)}
+                      className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)]">Confirm Password</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-[var(--muted)]" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {loading ? 'Creating Account...' : 'Register'}
+                  </button>
+                </div>
+
+                <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setIsRegistering(false); setShowPassword(false); }}
+                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
+                  >
+                    Sign in here
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--ink)]">Username</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -228,15 +397,16 @@ export default function Login() {
 
               <div className="mt-4 text-center text-sm text-[var(--muted)]">
                 Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(true)}
-                  className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
-                >
-                  Register here
-                </button>
-              </div>
-            </form>
+                  <button
+                    type="button"
+                    onClick={() => { setIsRegistering(true); setShowPassword(false); }}
+                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
+                  >
+                    Register here
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -294,13 +464,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-
-      {/* Applicant Registration Modal */}
-      <ApplicationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        jobTitle="General Registration"
-      />
     </div>
   );
 }

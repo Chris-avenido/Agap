@@ -7,5 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: process.env.VITE_BASE_PATH || '/',
   envDir: '../',
-  assetsInclude: ['**/*.docx']
+  assetsInclude: ['**/*.docx'],
+  server: {
+    port: 5174,
+  }
 })
