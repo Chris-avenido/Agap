@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
+import Swal from 'sweetalert2';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 
@@ -20,6 +21,51 @@ export default function ApplicantDashboard() {
   const handleFilterChange = (filter: 'active' | 'history' | 'saved') => {
     setActiveFilter(filter);
     setCurrentPage(1);
+  };
+
+  const handleSetPasscode = async () => {
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) return;
+    const session = JSON.parse(sessionStr);
+
+    const { value: passcode } = await Swal.fire({
+      title: 'Set Login Passcode',
+      input: 'text',
+      inputLabel: 'Enter a 6-digit passcode',
+      inputPlaceholder: 'e.g., 123456',
+      inputAttributes: {
+        maxlength: '6',
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to write something!'
+        }
+        if (!/^\d{6}$/.test(value)) {
+          return 'Passcode must be exactly 6 digits!'
+        }
+      }
+    });
+
+    if (passcode) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/passcode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ passcode })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          Swal.fire('Success', data.message, 'success');
+        } else {
+          Swal.fire('Error', data.message || 'Failed to update passcode', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', 'Unable to reach the server', 'error');
+      }
+    }
   };
 
   useEffect(() => {
@@ -115,12 +161,20 @@ export default function ApplicantDashboard() {
             <h1 className="text-[32px] font-extrabold text-[#022851] tracking-tight">Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}! 👋</h1>
             <p className="text-gray-500 font-medium text-[15px] mt-1">Here's a quick overview of your application activity.</p>
           </div>
-          <button
-            onClick={() => navigate('/applicant-jobs')}
-            className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
-          >
-            <Briefcase className="w-4 h-4" /> Go to Job Board <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSetPasscode}
+              className="bg-white border-2 border-[#022851]/20 hover:border-[#022851] text-[#022851] px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all text-[14px] flex items-center justify-center gap-2"
+            >
+              <Lock className="w-4 h-4" /> Set Passcode
+            </button>
+            <button
+              onClick={() => navigate('/applicant-jobs')}
+              className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
+            >
+              <Briefcase className="w-4 h-4" /> Go to Job Board <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
 
         {/* Profile Completion Card */}

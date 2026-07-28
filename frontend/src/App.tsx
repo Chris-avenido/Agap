@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import ApplicantDashboard from './pages/ApplicantDashboard';
 import PublicCareers from './pages/PublicCareers';
 import ApplicantJobList from './pages/ApplicantJobList';
+import ResetPassword from './pages/ResetPassword';
 
 import ApplicationPage from './pages/ApplicationPage';
 
@@ -103,6 +104,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/applicant-login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Applicant Facing Routes (No Sidebar for Registration) */}
           <Route path="/applicant-dashboard" element={<ProtectedRoute><ApplicantDashboard /></ProtectedRoute>} />

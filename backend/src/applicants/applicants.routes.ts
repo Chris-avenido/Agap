@@ -28,9 +28,9 @@ router.post('/parse-resume', upload.single('resume'), async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email_address, password } = req.body;
+  const { email_address, password, loginMethod } = req.body;
   try {
-    const applicant = await ApplicantsService.login(email_address, password);
+    const applicant = await ApplicantsService.login(email_address, password, loginMethod);
     if (!applicant) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -38,6 +38,35 @@ router.post('/login', async (req, res) => {
   } catch (error: any) {
     console.error("Error logging in:", error);
     res.status(500).json({ message: error.message || 'Error logging in' });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+  try {
+    // Always return success even if email is not found to prevent enumeration
+    await ApplicantsService.forgotPassword(email);
+    res.json({ success: true, message: 'If that email is registered, a password reset link has been sent.' });
+  } catch (error: any) {
+    console.error("Error in forgot-password:", error);
+    res.status(500).json({ message: 'Error processing password reset request' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { token, new_password } = req.body;
+  if (!token || !new_password) {
+    return res.status(400).json({ message: 'Token and new password are required' });
+  }
+  try {
+    await ApplicantsService.resetPassword(token, new_password);
+    res.json({ success: true, message: 'Password has been successfully reset' });
+  } catch (error: any) {
+    console.error("Error in reset-password:", error);
+    res.status(400).json({ message: error.message || 'Error resetting password' });
   }
 });
 
@@ -177,6 +206,19 @@ router.post('/', async (req, res) => {
   }
 });
 
+
+router.post('/:id/passcode', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
+  try {
+    const { passcode } = req.body;
+    await ApplicantsService.setPasscode(id, passcode);
+    res.json({ success: true, message: 'Passcode updated successfully' });
+  } catch (error: any) {
+    console.error("Error setting passcode:", error);
+    res.status(400).json({ message: error.message || 'Error setting passcode' });
+  }
+});
 
 router.post('/:id/change-password', async (req, res, next) => {
   const id = Number(req.params.id);

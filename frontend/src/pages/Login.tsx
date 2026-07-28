@@ -12,6 +12,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'password' | 'passcode'>('password');
 
   // Registration state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,7 +41,7 @@ export default function Login() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_address: email, password })
+        body: JSON.stringify({ email_address: email, password, loginMethod })
       });
 
       if (response.ok) {
@@ -62,6 +63,37 @@ export default function Login() {
       Swal.fire('Error', 'Server error', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const { value: fpEmail } = await Swal.fire({
+      title: 'Forgot Password',
+      input: 'email',
+      inputLabel: 'Enter your email address',
+      inputPlaceholder: 'name@example.com',
+      showCancelButton: true,
+      confirmButtonText: 'Send Reset Link',
+      confirmButtonColor: '#022851',
+    });
+
+    if (fpEmail) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: fpEmail })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          Swal.fire('Success', data.message, 'success');
+        } else {
+          Swal.fire('Error', data.message || 'Failed to send reset link', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', 'Unable to reach the server', 'error');
+      }
     }
   };
 
@@ -117,27 +149,51 @@ export default function Login() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--ink)]">Password</label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-[var(--muted)]" />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                    placeholder="••••••••"
-                  />
+              <div className="space-y-4">
+                <div className="flex bg-gray-100 p-1 rounded-lg">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors"
+                    onClick={() => { setLoginMethod('password'); setPassword(''); }}
+                    className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors ${loginMethod === 'password' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    Password
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
+                    className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors ${loginMethod === 'passcode' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    6-Digit Passcode
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)]">
+                    {loginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-[var(--muted)]" />
+                    </div>
+                    <input
+                      type={loginMethod === 'password' ? (showPassword ? 'text' : 'password') : 'text'}
+                      required
+                      maxLength={loginMethod === 'passcode' ? 6 : undefined}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      placeholder={loginMethod === 'password' ? '••••••••' : 'Enter 6-digit passcode'}
+                    />
+                    {loginMethod === 'password' && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -153,7 +209,7 @@ export default function Login() {
                   </label>
                 </div>
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors">
+                  <a href="#" onClick={handleForgotPassword} className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors">
                     Forgot your password?
                   </a>
                 </div>

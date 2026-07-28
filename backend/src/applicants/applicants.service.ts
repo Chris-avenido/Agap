@@ -2,6 +2,8 @@ import * as bcrypt from 'bcryptjs';
 import { pool } from '../database';
 const pdfParse = require('pdf-parse');
 import * as mammoth from 'mammoth';
+import * as jwt from 'jsonwebtoken';
+import { sendPasswordResetEmail } from '../utils/mailer';
 
 function calculateExperience(workExpList: any[]): number {
   if (!Array.isArray(workExpList)) return 0;
@@ -225,12 +227,33 @@ class ApplicantsServiceClass {
     return result.rows;
   }
 
-  async login(email_address: string, password_raw: string) {
+  async login(email_address: string, password_raw: string, loginMethod?: string) {
     const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
     const applicant = result.rows[0];
-    if (!applicant || !applicant.password_hash) return null;
-    const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
-    if (!isMatch) return null;
+    if (!applicant) return null;
+    
+    if (loginMethod === 'passcode') {
+      if (applicant.passcode && applicant.passcode === password_raw) {
+        return applicant;
+      }
+      return null;
+    }
+
+    if (loginMethod === 'password') {
+      if (!applicant.password_hash) return null;
+      const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
+      return isMatch ? applicant : null;
+    }
+
+    // Fallback for older clients that don't send loginMethod
+    if (applicant.passcode && applicant.passcode === password_raw) {
+      return applicant;
+    }
+
+    if (!applicant.password_hash) return null;
+    const isMatchFallback = await bcrypt.compare(password_raw, applicant.password_hash);
+    if (!isMatchFallback) return null;
+    
     return applicant;
   }
 
@@ -566,6 +589,61 @@ class ApplicantsServiceClass {
     const result = await pool.query(query, values);
     return result.rows[0];
   }
+
+  async forgotPassword(email: string) {
+    const result = await pool.query('SELECT id FROM applicants WHERE email_address = $1', [email]);
+    if (result.rows.length === 0) {
+      return false; 
+    }
+
+    const applicantId = result.rows[0].id;
+    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    const token = jwt.sign({ applicantId }, secret, { expiresIn: '1h' });
+
+    await sendPasswordResetEmail(email, token);
+    return true;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    try {
+      const decoded: any = jwt.verify(token, secret);
+      if (!decoded || !decoded.applicantId) {
+        throw new Error('Invalid token structure');
+      }
+
+      const applicantId = decoded.applicantId;
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+
+      const result = await pool.query(
+        'UPDATE applicants SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+        [passwordHash, applicantId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Applicant not found');
+      }
+      return true;
+    } catch (error) {
+      throw new Error('Invalid or expired token');
+    }
+  }
+
+  async setPasscode(applicantId: number, passcode: string) {
+    if (!/^\d{6}$/.test(passcode)) {
+      throw new Error("Passcode must be exactly 6 digits.");
+    }
+    const result = await pool.query(
+      'UPDATE applicants SET passcode = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+      [passcode, applicantId]
+    );
+    if (result.rows.length === 0) {
+      throw new Error("Applicant not found");
+    }
+    return true;
+  }
 }
+
 
 export const ApplicantsService = new ApplicantsServiceClass();
