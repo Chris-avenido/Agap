@@ -46,21 +46,6 @@ export default function PublicCareers() {
 
   const handleRegionChange = (newRegion: string) => {
     setFilterRegion(newRegion);
-    if (newRegion !== 'All Regions') {
-      const set = new Set<string>();
-      if (divisionsByRegion && divisionsByRegion[newRegion]) {
-        divisionsByRegion[newRegion].forEach(d => set.add(d));
-      }
-      positions.forEach(job => {
-        if ((job.location || 'Unknown') === newRegion) {
-          const div = job.division || job.office;
-          if (div) set.add(div);
-        }
-      });
-      if (filterDivision !== 'All Divisions' && !set.has(filterDivision)) {
-        setFilterDivision('All Divisions');
-      }
-    }
   };
 
   const filteredPositions = useMemo(() => positions.filter(job => {
