@@ -3242,7 +3242,7 @@ export default function ApplicationModal({
                     {/* Item 5 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Updated PRC License/ID <span className="text-red-500">*</span></span>
+                        <span className="font-medium text-gray-700">Updated PRC License/ID (optional)</span>
                       </div>
                       {getDocUrl("Updated PRC License/ID") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
@@ -3260,7 +3260,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_prc" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_prc" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 

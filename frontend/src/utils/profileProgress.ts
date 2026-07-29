@@ -74,8 +74,7 @@ export const calculateProfileProgress = (data: {
     'Personal Data Sheet',
     'Work Experience Sheet',
     'Certificate of Eligibility',
-    'Transcript of Records',
-    'Updated PRC License/ID'
+    'Transcript of Records'
   ];
 
   // For sidebar: Essential Documents turns green only when all required docs are confirmed

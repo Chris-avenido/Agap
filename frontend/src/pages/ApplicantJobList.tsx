@@ -2404,17 +2404,15 @@ export default function ApplicantJobList() {
                               <h3 className="font-bold text-gray-700 text-[14px] uppercase tracking-wide">{level.label} {level.required && <span className="text-red-500">*</span>}</h3>
                             </div>
                             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                              <div className={`flex flex-col justify-between h-full ${['elementary', 'secondary'].includes(level.id) ? '' : 'md:col-span-2'}`}>
+                              <div className="flex flex-col justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Name of School (Write in full)</span>
                                 <input type="text" value={educationalDates[level.id]?.school || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), school: e.target.value } })} required={level.required} placeholder="Enter name of school" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
                               </div>
 
-                              {['vocational', 'college', 'graduate'].includes(level.id) && (
-                                <div className="flex flex-col justify-between h-full">
-                                  <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
-                                  <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), degree: e.target.value } })} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
-                                </div>
-                              )}
+                              <div className="flex flex-col justify-between h-full">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Basic Education/Degree/Course (Write in full)</span>
+                                <input type="text" value={educationalDates[level.id]?.degree || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), degree: e.target.value } })} required={level.required} placeholder="Enter degree/course" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
+                              </div>
 
                               <div className="flex flex-col justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Period of Attendance (From - To)</span>
@@ -2432,18 +2430,14 @@ export default function ApplicantJobList() {
                                 </div>
                               </div>
 
-                              {['vocational', 'college', 'graduate'].includes(level.id) && (
-                                <>
-                                  <div className="flex flex-col justify-between h-full">
-                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
-                                    <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), units: e.target.value } })} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
-                                  </div>
-                                  <div className="flex flex-col justify-between h-full">
-                                    <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
-                                    <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), year: e.target.value } })} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
-                                  </div>
-                                </>
-                              )}
+                              <div className="flex flex-col justify-between h-full">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Highest Level/Units Earned (if not graduated)</span>
+                                <input type="text" value={educationalDates[level.id]?.units || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), units: e.target.value } })} required={level.required} placeholder="Enter level/units" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
+                              </div>
+                              <div className="flex flex-col justify-between h-full">
+                                <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Year Graduated</span>
+                                <input type="text" value={educationalDates[level.id]?.year || ''} onChange={e => setEducationalDates({ ...educationalDates, [level.id]: { ...(educationalDates[level.id] || {}), year: e.target.value } })} required={level.required} placeholder="Enter year" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full min-w-0" />
+                              </div>
 
                               <div className="flex flex-col md:col-span-2 justify-between h-full">
                                 <span className="text-[12px] text-gray-400 mb-1.5 font-medium">Scholarship/Academic Honors Received</span>
@@ -3391,7 +3385,7 @@ export default function ApplicantJobList() {
                         </div>
 
                         {(() => {
-                          const REQUIRED_DOCS = ['Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID'];
+                          const REQUIRED_DOCS = ['Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records'];
                           const confirmedCount = REQUIRED_DOCS.filter(d => documentsConfirmed[d]).length;
                           const docsPct = Math.round((confirmedCount / REQUIRED_DOCS.length) * 100);
                           const docsAllDone = confirmedCount === REQUIRED_DOCS.length;
@@ -3419,7 +3413,7 @@ export default function ApplicantJobList() {
                             </div>
                           </div>
                           <div className="p-5 flex flex-col gap-6">
-                            {([ 'Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc]; const isEditing = editingDocs[doc] || false; const isOptionalList = ['Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc];
+                            {([ 'Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc]; const isEditing = editingDocs[doc] || false; const isOptionalList = ['Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc];
 
                               return (
                                 <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
