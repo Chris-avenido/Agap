@@ -3842,20 +3842,20 @@ export default function ApplicantJobList() {
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span className="text-[13px] text-gray-500 font-medium">Click to choose a file</span>
-                      <span className="text-[11px] text-gray-400">PDF, JPG, PNG · Max 5MB</span>
+                      <span className="text-[13px] text-gray-500 font-medium">Click to choose a PDF file</span>
+                      <span className="text-[11px] text-gray-400">PDF only · Max 5MB</span>
                     </div>
                   )}
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
-                      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+                      const validTypes = ['application/pdf'];
                       if (!validTypes.includes(f.type)) {
-                         Swal.fire('Invalid File', 'Please upload a PDF, JPG, or PNG file.', 'error');
+                         Swal.fire('Invalid File', 'Please upload a PDF file only.', 'error');
                          return;
                       }
                       if (f.size > 5 * 1024 * 1024) {
