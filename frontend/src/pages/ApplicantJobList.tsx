@@ -176,6 +176,9 @@ export default function ApplicantJobList() {
   const permCitiesList = permProvince ? city_mun.filter((c: any) => c.prov_code === permProvince) : [];
   const permBarangaysList = permCity ? barangays.filter((b: any) => b.mun_code === permCity) : [];
 
+  const isResBarangayOther = resBarangay === 'OTHER' || (resBarangay && resBarangaysList.length > 0 && !resBarangaysList.some((b: any) => b.name.toUpperCase() === resBarangay.toUpperCase()));
+  const isPermBarangayOther = permBarangay === 'OTHER' || (permBarangay && permBarangaysList.length > 0 && !permBarangaysList.some((b: any) => b.name.toUpperCase() === permBarangay.toUpperCase()));
+
   // Normalize uppercase barangays from database to match proper casing in options
   useEffect(() => {
     if (resBarangay && resBarangaysList.length > 0) {
@@ -2060,7 +2063,7 @@ export default function ApplicantJobList() {
                                 <select
                                   required
                                   className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
-                                  value={resBarangay}
+                                  value={isResBarangayOther ? 'OTHER' : resBarangay}
                                   onChange={(e: any) => setResBarangay(e.target.value)}
                                   disabled={!resCity}
                                 >
@@ -2068,7 +2071,20 @@ export default function ApplicantJobList() {
                                   {resBarangaysList.map((b: any, idx: number) => (
                                     <option key={idx} value={b.name}>{b.name}</option>
                                   ))}
+                                  <option value="OTHER">Other</option>
                                 </select>
+                                {isResBarangayOther && (
+                                  <div className="mt-2">
+                                    <input
+                                      type="text"
+                                      required
+                                      placeholder="Type your barangay"
+                                      className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                                      value={resBarangay === 'OTHER' ? '' : resBarangay}
+                                      onChange={(e: any) => setResBarangay(e.target.value)}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -2169,7 +2185,7 @@ export default function ApplicantJobList() {
                                     <select
                                       required={!sameAsResidential}
                                       className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
-                                      value={permBarangay}
+                                      value={isPermBarangayOther ? 'OTHER' : permBarangay}
                                       onChange={(e: any) => setPermBarangay(e.target.value)}
                                       disabled={!permCity}
                                     >
@@ -2177,7 +2193,20 @@ export default function ApplicantJobList() {
                                       {permBarangaysList.map((b: any, idx: number) => (
                                         <option key={idx} value={b.name}>{b.name}</option>
                                       ))}
+                                      <option value="OTHER">Other</option>
                                     </select>
+                                    {isPermBarangayOther && (
+                                      <div className="mt-2">
+                                        <input
+                                          type="text"
+                                          required={!sameAsResidential}
+                                          placeholder="Type your barangay"
+                                          className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full"
+                                          value={permBarangay === 'OTHER' ? '' : permBarangay}
+                                          onChange={(e: any) => setPermBarangay(e.target.value)}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </>

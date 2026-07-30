@@ -496,6 +496,9 @@ export default function ApplicationModal({
     [permCity],
   );
 
+  const isResBarangayOther = resBarangay === 'OTHER' || (resBarangay && resBarangaysList.length > 0 && !resBarangaysList.some((b: any) => b.name.toUpperCase() === resBarangay.toUpperCase()));
+  const isPermBarangayOther = permBarangay === 'OTHER' || (permBarangay && permBarangaysList.length > 0 && !permBarangaysList.some((b: any) => b.name.toUpperCase() === permBarangay.toUpperCase()));
+
   useEffect(() => {
     if (userData) {
       const rAddr = userData.residential_address
@@ -1529,8 +1532,8 @@ export default function ApplicationModal({
                             Barangay
                           </span>
                           <select
-                            name="res_barangay"
-                            value={resBarangay}
+                            name={isResBarangayOther ? undefined : "res_barangay"}
+                            value={isResBarangayOther ? "OTHER" : resBarangay}
                             onChange={(e) => setResBarangay(e.target.value)}
                             required
                             className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
@@ -1542,7 +1545,21 @@ export default function ApplicationModal({
                                 {b.name}
                               </option>
                             ))}
+                            <option value="OTHER">Other</option>
                           </select>
+                          {isResBarangayOther && (
+                            <div className="mt-2">
+                              <input
+                                type="text"
+                                name={isResBarangayOther ? "res_barangay" : undefined}
+                                required
+                                placeholder="Type your barangay"
+                                className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
+                                value={resBarangay === "OTHER" ? "" : resBarangay}
+                                onChange={(e) => setResBarangay(e.target.value)}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1707,8 +1724,8 @@ export default function ApplicationModal({
                               Barangay
                             </span>
                             <select
-                              name="perm_barangay"
-                              value={permBarangay}
+                              name={isPermBarangayOther ? undefined : "perm_barangay"}
+                              value={isPermBarangayOther ? "OTHER" : permBarangay}
                               onChange={(e) => setPermBarangay(e.target.value)}
                               required
                               className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
@@ -1720,7 +1737,21 @@ export default function ApplicationModal({
                                   {b.name}
                                 </option>
                               ))}
+                              <option value="OTHER">Other</option>
                             </select>
+                            {isPermBarangayOther && (
+                              <div className="mt-2">
+                                <input
+                                  type="text"
+                                  name={isPermBarangayOther ? "perm_barangay" : undefined}
+                                  required
+                                  placeholder="Type your barangay"
+                                  className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 h-[42px] w-full"
+                                  value={permBarangay === "OTHER" ? "" : permBarangay}
+                                  onChange={(e) => setPermBarangay(e.target.value)}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
