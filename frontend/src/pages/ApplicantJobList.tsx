@@ -3464,9 +3464,16 @@ export default function ApplicantJobList() {
                                           <span>Performance Rating <span className="text-gray-400 font-normal italic text-[10px]">(Mandatory for positions with experience requirement)</span></span>
                                         ) : doc === 'Outstanding Accomplishments' ? (
                                           <span>Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
+                                        ) : doc === 'Transcript of Records' ? (
+                                          <span className="flex flex-col">
+                                            <span>Transcript of Records {isRequired && <span className="text-red-500">*</span>}</span>
+                                            <span className="text-gray-400 font-normal italic text-[10.5px] mt-0.5 max-w-[500px] leading-relaxed">
+                                              Note: Applicants may upload, together with their TOR in a single merged file, the official document or certification confirming completion of at least 200 hours of supervised practicum or internship experience in guidance and counseling
+                                            </span>
+                                          </span>
                                         ) : (
                                           doc
-                                        )} {isRequired && <span className="text-red-500">*</span>}
+                                        )} {doc !== 'Transcript of Records' && isRequired && <span className="text-red-500">*</span>}
                                         {isSubsequentApplication && isRequired && (
                                           <span className="text-[10px] text-gray-400 font-normal normal-case">(Check to confirm)</span>
                                         )}

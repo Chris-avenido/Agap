@@ -3317,6 +3317,9 @@ export default function ApplicationModal({
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Transcript of Records <span className="text-red-500">*</span></span>
+                        <span className="text-gray-400 font-normal italic text-[10.5px] mt-1 leading-relaxed">
+                          Note: Applicants may upload, together with their TOR in a single merged file, the official document or certification confirming completion of at least 200 hours of supervised practicum or internship experience in guidance and counseling
+                        </span>
                       </div>
                       {getDocUrl("Transcript of Records") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
