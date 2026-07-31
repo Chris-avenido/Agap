@@ -590,19 +590,18 @@ export default function ApplicantDashboard() {
                   <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Date Applied</th>
                   <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Application Status</th>
                   <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Assessment Status</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Actions / Documents</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium">
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
                       Loading your data...
                     </td>
                   </tr>
                 ) : filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium">
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
                       {activeFilter === 'active' && "You don't have any active applications."}
                       {activeFilter === 'history' && "You don't have any applications yet."}
                       {activeFilter === 'saved' && "You haven't saved any positions yet."}
@@ -638,51 +637,6 @@ export default function ApplicantDashboard() {
                         <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-purple-50 text-purple-700 uppercase tracking-wide border border-purple-200">
                           {app.assessmentStatus}
                         </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        {activeFilter !== 'saved' ? (
-                          <div className="flex flex-col gap-2">
-                            {/* Letter of Intent Actions */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-gray-500 w-[110px] shrink-0">Letter of Intent:</span>
-                              <button
-                                onClick={() => handleViewDocument('Letter of Intent', app.letterOfIntent, app.id)}
-                                className="px-2.5 py-1 text-[11px] font-bold rounded bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-1"
-                                title="View Letter of Intent"
-                              >
-                                View
-                              </button>
-                              <button
-                                onClick={() => handleReplaceDocument('Letter of Intent', app.id)}
-                                className="px-2.5 py-1 text-[11px] font-bold rounded bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                                title="Replace Letter of Intent for selected application(s)"
-                              >
-                                Replace
-                              </button>
-                            </div>
-
-                            {/* CAV / Sworn Document Actions */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-gray-500 w-[110px] shrink-0">CAV / Sworn:</span>
-                              <button
-                                onClick={() => handleViewDocument('Sworn Declaration', app.swornDocument, app.id)}
-                                className="px-2.5 py-1 text-[11px] font-bold rounded bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-1"
-                                title="View CAV / Sworn Document"
-                              >
-                                View
-                              </button>
-                              <button
-                                onClick={() => handleReplaceDocument('Sworn Declaration', app.id, app.position)}
-                                className="px-2.5 py-1 text-[11px] font-bold rounded bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                                title="Replace CAV / Sworn Document for this application"
-                              >
-                                Replace
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[12px] text-gray-400 font-medium">N/A</span>
-                        )}
                       </td>
                     </tr>
                   ))
