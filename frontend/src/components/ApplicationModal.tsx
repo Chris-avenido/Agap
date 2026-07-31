@@ -292,7 +292,7 @@ export default function ApplicationModal({
 
         const docMapping: Record<string, string> = {
           "doc_loi": "Letter of Intent",
-          "doc_pds": "Personal Data Sheet",
+          "doc_pds": "Notarized Personal Data Sheet",
           "doc_work_exp": "Work Experience Sheet",
           "doc_eligibility": "Certificate of Eligibility",
           "doc_tor": "Transcript of Records",
@@ -785,7 +785,10 @@ export default function ApplicationModal({
   delete storedDocuments['Letter of Intent'];
 
   const getDocUrl = (docName: string) => {
-    const url = storedDocuments?.[docName];
+    let url = storedDocuments?.[docName];
+    if (!url && docName === "Notarized Personal Data Sheet") {
+      url = storedDocuments?.["Personal Data Sheet"];
+    }
     if (!url) return null;
     if (url.startsWith("http")) {
       return `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(url)}`;
@@ -794,7 +797,10 @@ export default function ApplicationModal({
   };
 
   const getStoredDocFileName = (docName: string) => {
-    const url = storedDocuments?.[docName];
+    let url = storedDocuments?.[docName];
+    if (!url && docName === "Notarized Personal Data Sheet") {
+      url = storedDocuments?.["Personal Data Sheet"];
+    }
     if (!url || typeof url !== "string") return "";
 
     const rawFileName = url.split("?")[0].split("/").pop() || "";
@@ -807,7 +813,7 @@ export default function ApplicationModal({
 
   const requiredDocuments = useMemo(() => {
     const docs = [
-      { label: 'Personal Data Sheet', inputName: 'doc_pds' },
+      { label: 'Notarized Personal Data Sheet', inputName: 'doc_pds' },
       { label: 'Work Experience Sheet', inputName: 'doc_work_exp' },
       { label: 'Certificate of Eligibility', inputName: 'doc_eligibility' },
       { label: 'Transcript of Records', inputName: 'doc_tor' },
@@ -865,7 +871,7 @@ export default function ApplicationModal({
     }
 
     const localDocs: Record<string, boolean> = {
-      'Personal Data Sheet': Boolean(selectedFiles['Personal Data Sheet'] || hasSelectedFile('doc_pds')),
+      'Notarized Personal Data Sheet': Boolean(selectedFiles['Notarized Personal Data Sheet'] || selectedFiles['Personal Data Sheet'] || hasSelectedFile('doc_pds')),
       'Work Experience Sheet': Boolean(selectedFiles['Work Experience Sheet'] || hasSelectedFile('doc_work_exp')),
       'Certificate of Eligibility': Boolean(selectedFiles['Certificate of Eligibility'] || hasSelectedFile('doc_eligibility')),
       'Transcript of Records': Boolean(selectedFiles['Transcript of Records'] || hasSelectedFile('doc_tor')),
@@ -3234,18 +3240,18 @@ export default function ApplicationModal({
                     {/* Item 1 */}
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700">Personal Data Sheet <span className="text-red-500">*</span></span>
+                        <span className="font-medium text-gray-700">Notarized Personal Data Sheet <span className="text-red-500">*</span></span>
                       </div>
-                      {getDocUrl("Personal Data Sheet") ? (
+                      {getDocUrl("Notarized Personal Data Sheet") ? (
                         <div className="flex flex-col gap-2 w-full mt-2">
-                          {selectedDocumentNames["Personal Data Sheet"] ? (
+                          {selectedDocumentNames["Notarized Personal Data Sheet"] || selectedDocumentNames["Personal Data Sheet"] ? (
                             <span className="text-[12px] text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded text-center border border-blue-200 flex items-center justify-center gap-1.5 max-w-full overflow-hidden animate-pop">
                               <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
                               </svg>
                               <span className="shrink-0">Selected:</span>
-                              <span className="truncate max-w-[120px] sm:max-w-[220px] md:max-w-[280px] text-left" title={selectedDocumentNames["Personal Data Sheet"]}>
-                                {selectedDocumentNames["Personal Data Sheet"]}
+                              <span className="truncate max-w-[120px] sm:max-w-[220px] md:max-w-[280px] text-left" title={selectedDocumentNames["Notarized Personal Data Sheet"] || selectedDocumentNames["Personal Data Sheet"]}>
+                                {selectedDocumentNames["Notarized Personal Data Sheet"] || selectedDocumentNames["Personal Data Sheet"]}
                               </span>
                               <span className="shrink-0 font-normal opacity-90">(Ready to replace)</span>
                             </span>
@@ -3258,12 +3264,12 @@ export default function ApplicationModal({
                             </span>
                           )}
                           <div className="flex gap-2 w-full">
-                            <a href={(selectedDocumentUrls["Personal Data Sheet"] || getDocUrl("Personal Data Sheet")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
+                            <a href={(selectedDocumentUrls["Notarized Personal Data Sheet"] || selectedDocumentUrls["Personal Data Sheet"] || getDocUrl("Notarized Personal Data Sheet")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
                               View File
                             </a>
                             <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
                               Replace File
-                              <input type="file" name="doc_pds" accept=".pdf" onChange={handleDocumentSelection("Personal Data Sheet")} className="hidden" />
+                              <input type="file" name="doc_pds" accept=".pdf" onChange={handleDocumentSelection("Notarized Personal Data Sheet")} className="hidden" />
                             </label>
                           </div>
                         </div>
@@ -3978,7 +3984,7 @@ export default function ApplicationModal({
                           try {
                             const docMapping: Record<string, string> = {
                               "doc_loi": "Letter of Intent",
-                              "doc_pds": "Personal Data Sheet",
+                              "doc_pds": "Notarized Personal Data Sheet",
                               "doc_work_exp": "Work Experience Sheet",
                               "doc_eligibility": "Certificate of Eligibility",
                               "doc_tor": "Transcript of Records",

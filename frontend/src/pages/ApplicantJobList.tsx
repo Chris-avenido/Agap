@@ -511,13 +511,14 @@ export default function ApplicantJobList() {
 
     if (isSubsequentApplication) {
       const requiredDocs = [
-        'Personal Data Sheet',
+        'Notarized Personal Data Sheet',
         'Work Experience Sheet',
         'Certificate of Eligibility',
         'Transcript of Records',
         'Updated PRC License/ID'
       ];
-      const allDocumentsConfirmed = requiredDocs.every(doc => documentsConfirmed[doc]);
+      const isConfirmed = (doc: string) => documentsConfirmed[doc] || (doc === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet']);
+      const allDocumentsConfirmed = requiredDocs.every(doc => isConfirmed(doc));
       if (!allDocumentsConfirmed) {
         Swal.fire(
           'Documents Not Confirmed',
@@ -3468,8 +3469,8 @@ export default function ApplicantJobList() {
                         </div>
 
                         {(() => {
-                          const REQUIRED_DOCS = ['Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records'];
-                          const confirmedCount = REQUIRED_DOCS.filter(d => documentsConfirmed[d]).length;
+                          const REQUIRED_DOCS = ['Notarized Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records'];
+                          const confirmedCount = REQUIRED_DOCS.filter(d => documentsConfirmed[d] || (d === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet'])).length;
                           const docsPct = Math.round((confirmedCount / REQUIRED_DOCS.length) * 100);
                           const docsAllDone = confirmedCount === REQUIRED_DOCS.length;
                           return (
@@ -3496,13 +3497,13 @@ export default function ApplicantJobList() {
                             </div>
                           </div>
                           <div className="p-5 flex flex-col gap-6">
-                            {([ 'Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc]; const isEditing = editingDocs[doc] || false; const isOptionalList = ['Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc];
+                            {([ 'Notarized Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc] || (doc === 'Notarized Personal Data Sheet' ? uploadedDocumentUrls['Personal Data Sheet'] : undefined); const isEditing = editingDocs[doc] || false; const isOptionalList = ['Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc] || (doc === 'Notarized Personal Data Sheet' && !!documents['Personal Data Sheet']);
 
                               return (
                                 <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
-                                      {documentsConfirmed[doc] ? (
+                                      {documentsConfirmed[doc] || (doc === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet']) ? (
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                       ) : (
                                         isRequired ? (

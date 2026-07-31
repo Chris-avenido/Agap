@@ -71,7 +71,7 @@ export const calculateProfileProgress = (data: {
   if (data.questionnaire && Object.values(data.questionnaire).some(isQuestionnaireAnswered)) steps.push('Legal Questionnaire');
 
   const requiredDocs = [
-    'Personal Data Sheet',
+    'Notarized Personal Data Sheet',
     'Work Experience Sheet',
     'Certificate of Eligibility',
     'Transcript of Records'
@@ -79,11 +79,18 @@ export const calculateProfileProgress = (data: {
 
   // For sidebar: Essential Documents turns green only when all required docs are confirmed
   const isDocConfirmed = (docName: string) => {
-    return Boolean(data.documentsConfirmed && data.documentsConfirmed[docName]);
+    if (Boolean(data.documentsConfirmed && data.documentsConfirmed[docName])) return true;
+    if (docName === 'Notarized Personal Data Sheet' && Boolean(data.documentsConfirmed && data.documentsConfirmed['Personal Data Sheet'])) return true;
+    return false;
   };
   const isDocUploaded = (docName: string) => {
-    return Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls[docName]) ||
-           Boolean(data.documents && data.documents[docName]);
+    if (Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls[docName])) return true;
+    if (Boolean(data.documents && data.documents[docName])) return true;
+    if (docName === 'Notarized Personal Data Sheet') {
+      if (Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls['Personal Data Sheet'])) return true;
+      if (Boolean(data.documents && data.documents['Personal Data Sheet'])) return true;
+    }
+    return false;
   };
 
   // Sidebar turns green ONLY when all 5 required docs are explicitly confirmed
