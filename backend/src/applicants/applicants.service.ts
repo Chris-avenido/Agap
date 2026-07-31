@@ -33,7 +33,7 @@ function calculateTraining(learningList: any[]): number {
   for (const ld of learningList) {
     const fromStr = ld.from || ld.fromDate || ld.date_from;
     const toStr = ld.to || ld.toDate || ld.date_to;
-    
+
     let added = false;
     if (fromStr && toStr && fromStr !== 'N/A' && toStr !== 'N/A') {
       const from = new Date(fromStr);
@@ -231,7 +231,7 @@ class ApplicantsServiceClass {
     const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
     const applicant = result.rows[0];
     if (!applicant) return null;
-    
+
     if (loginMethod === 'passcode') {
       if (applicant.passcode && applicant.passcode === password_raw) {
         return applicant;
@@ -253,7 +253,7 @@ class ApplicantsServiceClass {
     if (!applicant.password_hash) return null;
     const isMatchFallback = await bcrypt.compare(password_raw, applicant.password_hash);
     if (!isMatchFallback) return null;
-    
+
     return applicant;
   }
 
@@ -261,22 +261,22 @@ class ApplicantsServiceClass {
     if (!jobClusterId || jobClusterId === 'null' || jobClusterId === 'undefined' || String(jobClusterId).trim() === '') {
       throw new Error("Invalid job cluster ID provided.");
     }
-    
+
     const applicantRes = await pool.query('SELECT applicant_number, other_information FROM applicants WHERE id = $1', [applicantId]);
     const applicantRow = applicantRes.rows[0];
     const applicantNumber = applicantRow?.applicant_number || null;
-    
+
     let otherInfo = applicantRow?.other_information || {};
     if (typeof otherInfo === 'string') {
       try {
         otherInfo = JSON.parse(otherInfo);
-      } catch (e) {}
+      } catch (e) { }
     }
     const letterOfIntent = otherInfo?.documents?.['Letter of Intent'] || null;
     const swornDocument = otherInfo?.documents?.['Sworn Declaration'] || null;
 
     console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, jobClusterId=${jobClusterId}`);
-    
+
     const checkResult = await pool.query(
       'SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
       [applicantId.toString(), jobClusterId]
@@ -312,7 +312,7 @@ class ApplicantsServiceClass {
     const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
     console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null, letterOfIntent, swornDocument]);
-    
+
     try {
       const result = await pool.query(`
         INSERT INTO applications (id, application_number, applicant_id, job_cluster_id, status, date_applied, created_at, letter_of_intent, sworn_document)
@@ -593,7 +593,7 @@ class ApplicantsServiceClass {
   async forgotPassword(email: string) {
     const result = await pool.query('SELECT id FROM applicants WHERE email_address = $1', [email]);
     if (result.rows.length === 0) {
-      return false; 
+      return false;
     }
 
     const applicantId = result.rows[0].id;
@@ -642,6 +642,86 @@ class ApplicantsServiceClass {
       throw new Error("Applicant not found");
     }
     return true;
+  }
+
+  async replaceApplicantDocument(
+    applicantId: number,
+    docType: 'Letter of Intent' | 'Sworn Declaration',
+    newBlobUrl: string,
+    targetApplicationIds?: string[]
+  ) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Fetch applicant profile
+      const appRes = await client.query('SELECT * FROM applicants WHERE id = $1 FOR UPDATE', [applicantId]);
+      if (appRes.rows.length === 0) {
+        throw new Error('Applicant profile not found');
+      }
+      const applicant = appRes.rows[0];
+
+      let otherInfo = applicant.other_information || {};
+      if (typeof otherInfo === 'string') {
+        try { otherInfo = JSON.parse(otherInfo); } catch {}
+      }
+      if (!otherInfo.documents) otherInfo.documents = {};
+
+      const oldBlobUrl = otherInfo.documents[docType] || null;
+
+      // Update applicant other_information.documents
+      otherInfo.documents[docType] = newBlobUrl;
+      await client.query(
+        'UPDATE applicants SET other_information = $1, updated_at = NOW() WHERE id = $2',
+        [JSON.stringify(otherInfo), applicantId]
+      );
+
+      // 2. Update targeted applications or all active applications
+      let affectedCount = 0;
+      const columnToUpdate = docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
+
+      if (targetApplicationIds && Array.isArray(targetApplicationIds) && targetApplicationIds.length > 0) {
+        const updateRes = await client.query(
+          `UPDATE applications 
+           SET ${columnToUpdate} = $1, updated_at = NOW() 
+           WHERE id = ANY($2::text[]) AND (applicant_id = $3 OR applicant_id = $4) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
+          [newBlobUrl, targetApplicationIds, applicantId, applicantId.toString()]
+        );
+        affectedCount = updateRes.rowCount || 0;
+      } else {
+        const updateRes = await client.query(
+          `UPDATE applications 
+           SET ${columnToUpdate} = $1, updated_at = NOW() 
+           WHERE (applicant_id = $2 OR applicant_id = $3) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
+          [newBlobUrl, applicantId, applicantId.toString()]
+        );
+        affectedCount = updateRes.rowCount || 0;
+      }
+
+      // 3. Create audit log record
+      const appIdsStr = targetApplicationIds && targetApplicationIds.length > 0 ? targetApplicationIds.join(',') : null;
+      await client.query(
+        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [applicantId.toString(), docType, oldBlobUrl, newBlobUrl, affectedCount, appIdsStr]
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        newUrl: newBlobUrl,
+        oldUrl: oldBlobUrl,
+        affectedApplications: affectedCount,
+        targetApplicationIds: targetApplicationIds || [],
+        documents: otherInfo.documents
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

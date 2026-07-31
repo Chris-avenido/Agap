@@ -148,7 +148,7 @@ router.get('/:id', async (req, res, next) => {
   }
   const id = Number(req.params.id);
   if (isNaN(id)) return next();
-  
+
   try {
     const applicant = await ApplicantsService.findOne(id);
     if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
@@ -271,14 +271,14 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
     if (typeof otherInfo === 'string') {
       otherInfo = JSON.parse(otherInfo);
     }
-    
+
     if (!otherInfo.documents) {
       otherInfo.documents = {};
     }
 
     const uploadPromises = files.map(async (file, index) => {
       const docName = documentNames[index];
-      
+
       // Delete existing blob if replacing
       if (otherInfo.documents[docName]) {
         await deleteFromAzure(otherInfo.documents[docName]);
@@ -289,14 +289,14 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       const surname = (applicant.surname || 'Applicant').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       const docTypeSlug = docName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
       const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
-      
+
       let safeName = `${surname}_${docTypeSlug}_${Date.now()}_${appNumber}`;
       if ((docName === 'Letter of Intent' || docName === 'Sworn Declaration') && req.body.jobClusterId) {
         const jId = String(req.body.jobClusterId).replace(/[^a-zA-Z0-9-]/g, '_');
         safeName += `_${jId}`;
       }
       safeName += `.${ext}`;
-      
+
       // Store documents per applicant and per document type
       const folderPath = `applicant-${applicantId}/${docTypeSlug}`;
       const fullBlobPath = `${folderPath}/${safeName}`;
@@ -305,7 +305,7 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       if (file.mimetype === 'application/pdf') {
         finalBuffer = await compressPdf(file.buffer, 150);
       }
-      
+
       const url = await uploadToAzure(finalBuffer, fullBlobPath, file.mimetype);
       otherInfo.documents[docName] = url;
     });
@@ -324,6 +324,90 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
   } catch (error: any) {
     console.error("Error uploading documents:", error);
     res.status(500).json({ message: error.message || 'Error uploading documents' });
+  }
+});
+
+router.post('/:id/replace-document', upload.single('file'), async (req: any, res: any) => {
+  try {
+    const applicantId = parseInt(req.params.id);
+    if (isNaN(applicantId)) {
+      return res.status(400).json({ message: 'Invalid applicant ID' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const { docType, applicationId, applicationIds } = req.body;
+    if (docType !== 'Letter of Intent' && docType !== 'Sworn Declaration') {
+      return res.status(400).json({ message: 'Invalid document type. Must be Letter of Intent or Sworn Declaration.' });
+    }
+
+    let parsedAppIds: string[] | undefined = undefined;
+    if (applicationIds) {
+      if (Array.isArray(applicationIds)) {
+        parsedAppIds = applicationIds;
+      } else if (typeof applicationIds === 'string') {
+        try {
+          const jsonParsed = JSON.parse(applicationIds);
+          if (Array.isArray(jsonParsed)) parsedAppIds = jsonParsed;
+          else parsedAppIds = applicationIds.split(',').map(s => s.trim()).filter(Boolean);
+        } catch {
+          parsedAppIds = applicationIds.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+    } else if (applicationId) {
+      parsedAppIds = [applicationId];
+    }
+
+    const applicant = await ApplicantsService.findOne(applicantId);
+    if (!applicant) {
+      return res.status(404).json({ message: 'Applicant not found' });
+    }
+
+    const applicantNumber = applicant.applicant_number || `AGAP-${String(applicantId).padStart(4, '0')}`;
+    const ext = req.file.originalname.split('.').pop() || 'pdf';
+    const surname = (applicant.surname || 'Applicant').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const docTypeSlug = docType.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    const appNumber = applicantNumber.replace(/[^a-zA-Z0-9-]/g, '_');
+
+    let safeName = `${surname}_${docTypeSlug}_${Date.now()}_${appNumber}`;
+    if (parsedAppIds && parsedAppIds.length === 1) {
+      const cleanAppId = String(parsedAppIds[0]).replace(/[^a-zA-Z0-9-]/g, '_');
+      safeName += `_${cleanAppId}`;
+    }
+    safeName += `.${ext}`;
+
+    const folderPath = `applicant-${applicantId}/${docTypeSlug}`;
+    const fullBlobPath = `${folderPath}/${safeName}`;
+
+    let finalBuffer = req.file.buffer;
+    if (req.file.mimetype === 'application/pdf') {
+      finalBuffer = await compressPdf(req.file.buffer, 150);
+    }
+
+    // Upload new Blob to Azure Storage (WITHOUT deleting the previous Blob)
+    const newBlobUrl = await uploadToAzure(finalBuffer, fullBlobPath, req.file.mimetype);
+
+    // Update applicant profile & targeted applications in DB transaction with audit logging
+    const result = await ApplicantsService.replaceApplicantDocument(
+      applicantId,
+      docType as 'Letter of Intent' | 'Sworn Declaration',
+      newBlobUrl,
+      parsedAppIds
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${docType} across ${result.affectedApplications} selected application(s).`,
+      newUrl: result.newUrl,
+      affectedApplications: result.affectedApplications,
+      targetApplicationIds: result.targetApplicationIds,
+      documents: result.documents
+    });
+  } catch (error: any) {
+    console.error("Error replacing document:", error);
+    res.status(500).json({ message: error.message || 'Error replacing document' });
   }
 });
 
@@ -354,7 +438,7 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
     const ext = file.originalname.split('.').pop();
     const applicantNumber = applicant.applicant_number || `ID-${applicantId}`;
     const safeName = `${applicantNumber}_ProfilePhoto_${Date.now()}.${ext}`;
-    
+
     // Store profile photo per applicant
     const folderPath = `applicant-${applicantId}/profile-photo`;
     const fullBlobPath = `${folderPath}/${safeName}`;
@@ -377,22 +461,22 @@ router.get('/proxy-blob', async (req, res) => {
     if (!url || typeof url !== 'string') {
       return res.status(400).send('URL is required');
     }
-    
+
     // Use getBlobNameFromUrl to properly handle folders in the URL
     const { getBlobNameFromUrl } = require('../utils/azureStorage');
     const containerName = process.env.AZURE_FOLDER_NAME as string;
     const blobName = getBlobNameFromUrl(url, containerName);
-    
+
     if (!blobName) {
       return res.status(400).send('Invalid blob URL');
     }
 
     const { stream, contentType } = await downloadFromAzure(blobName);
-    
+
     if (contentType) {
       res.setHeader('Content-Type', contentType);
     }
-    
+
     if (stream) {
       stream.pipe(res);
     } else {
@@ -410,11 +494,11 @@ router.get('/get-sas-url', async (req, res) => {
     if (!url || typeof url !== 'string') {
       return res.status(400).send('URL is required');
     }
-    
+
     // Import dynamically if needed or it's already exported from azureStorage
     const { getBlobSasUrl } = require('../utils/azureStorage');
     const sasUrl = await getBlobSasUrl(url);
-    
+
     // Redirect the browser to the secure SAS URL
     res.redirect(sasUrl);
   } catch (error: any) {
@@ -443,7 +527,7 @@ router.post('/convert-pds-to-pdf', upload.single('file'), async (req, res) => {
     }
 
     const pdfBuf = await convertToPdf(file.buffer, '.pdf');
-    
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=PDS.pdf');
     res.send(pdfBuf);
@@ -467,7 +551,7 @@ router.post('/convert-pds-v2', async (req, res) => {
 
     // Generate XLSX buffer using xlsx-populate
     const { buffer, logs } = await generatePDSBackend(applicantData);
-    
+
     // Log validation metrics to console instead of writing to disk (fixes EROFS on Vercel)
     console.log("PDS Validation Report:", JSON.stringify(logs, null, 2));
 
@@ -490,7 +574,7 @@ router.post('/convert-experience', async (req, res) => {
     }
 
     const { buffer } = await generateExperienceBackend(applicantData);
-    
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=experience.xlsx');
     res.send(buffer);
@@ -509,20 +593,20 @@ router.get('/:id/print-pds', async (req, res, next) => {
     if (!applicant) {
       return res.status(404).send('Applicant not found');
     }
-    
+
     const path = require('path');
     const fs = require('fs');
     // Go up from dist/applicants/applicants.routes.js to frontend/src/assets
     const templatePath = path.join(__dirname, '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx');
-    
+
     if (!fs.existsSync(templatePath)) {
-       return res.status(500).send("Excel template not found at: " + templatePath);
+      return res.status(500).send("Excel template not found at: " + templatePath);
     }
-    
+
     const cleanFirstName = (applicant.first_name || 'Applicant').replace(/[^a-zA-Z0-9]/g, '');
     const cleanLastName = (applicant.surname || applicant.last_name || 'Name').replace(/[^a-zA-Z0-9]/g, '');
     const fileName = `PDS_${cleanFirstName}_${cleanLastName}.xlsx`;
-    
+
     res.download(templatePath, fileName);
   } catch (error: any) {
     console.error("Error generating PDS:", error);

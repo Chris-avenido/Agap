@@ -292,6 +292,7 @@ export default function ApplicationModal({
 
         const docMapping: Record<string, string> = {
           "doc_loi": "Letter of Intent",
+          "doc_sworn": "Sworn Declaration",
           "doc_pds": "Notarized Personal Data Sheet",
           "doc_work_exp": "Work Experience Sheet",
           "doc_eligibility": "Certificate of Eligibility",
@@ -467,6 +468,271 @@ export default function ApplicationModal({
       console.error(err);
       Swal.fire("Error", "Failed to upload photo", "error");
     }
+  };
+
+  const handleDirectReplace = async (docType: 'Letter of Intent' | 'Sworn Declaration', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Error', 'File size must be less than 5MB', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) return;
+    const session = JSON.parse(sessionStr);
+
+    Swal.fire({
+      title: 'Loading your applied jobs...',
+      text: 'Please wait...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    let userApplications: any[] = [];
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        userApplications = data.data;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    const activeApps = userApplications.filter(app => {
+      const status = app.status || '';
+      return !['Hired', 'Archived', 'Cancelled', 'Rejected'].includes(status);
+    });
+
+    let selectedIds: string[] = [];
+
+    if (activeApps.length > 0) {
+      const appCheckboxesHtml = activeApps.map(app => {
+        const positionTitle = app.job_title || app.position || 'Position Applied';
+        const divisionName = app.division || app.office || 'Department of Education';
+        const dateApplied = app.date_applied || app.created_at;
+        const formattedDate = dateApplied ? new Date(dateApplied).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
+
+        return `
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
+            <input type="checkbox" class="swal-app-checkbox" value="${app.id}" checked style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0;" />
+            <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span style="font-weight: 700; font-size: 13.5px; color: #022851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${positionTitle}</span>
+                <span style="font-size: 10px; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">${app.status || 'Pending'}</span>
+              </div>
+              <span style="font-size: 11px; color: #64748b; margin-top: 2px;">${divisionName} &bull; Applied: ${formattedDate}</span>
+            </div>
+          </label>
+        `;
+      }).join('');
+
+      const htmlContent = `
+        <div style="font-family: inherit; font-size: 14px; text-align: left; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+          <p style="margin-bottom: 12px; font-size: 13px; color: #475569; font-weight: 500;">
+            Select the applied job position(s) where you want to update your <strong>${docType}</strong>:
+          </p>
+
+          <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 8px 12px; border-radius: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #2563eb; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="swal-toggle-all" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;" />
+              Select / Deselect All Applied Jobs (${activeApps.length})
+            </label>
+          </div>
+
+          <div id="swal-app-list" style="display: flex; flex-direction: column;">
+            ${appCheckboxesHtml}
+          </div>
+        </div>
+      `;
+
+      const confirmResult = await Swal.fire({
+        title: `Confirm Update for ${docType}`,
+        html: htmlContent,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Confirm & Update Selected',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#2563eb',
+        focusConfirm: false,
+        didOpen: () => {
+          const toggleAll = document.getElementById('swal-toggle-all') as HTMLInputElement;
+          const checkboxes = document.querySelectorAll('.swal-app-checkbox') as NodeListOf<HTMLInputElement>;
+          if (toggleAll) {
+            toggleAll.addEventListener('change', () => {
+              checkboxes.forEach(cb => { cb.checked = toggleAll.checked; });
+            });
+          }
+        },
+        preConfirm: () => {
+          const checkboxes = document.querySelectorAll('.swal-app-checkbox:checked') as NodeListOf<HTMLInputElement>;
+          const ids = Array.from(checkboxes).map(cb => cb.value);
+          if (ids.length === 0) {
+            Swal.showValidationMessage('Please select at least one applied job position to update!');
+            return false;
+          }
+          return ids;
+        }
+      });
+
+      if (!confirmResult.isConfirmed || !confirmResult.value) {
+        e.target.value = '';
+        return;
+      }
+
+      selectedIds = confirmResult.value;
+    }
+
+    Swal.fire({
+      title: `Uploading new ${docType}...`,
+      text: 'Please wait...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docType', docType);
+      if (selectedIds.length > 0) {
+        formData.append('applicationIds', JSON.stringify(selectedIds));
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/replace-document`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (otherInfo) {
+          otherInfo.documents = data.documents;
+        }
+        if (userData && userData.other_information) {
+          userData.other_information.documents = data.documents;
+        }
+        Swal.fire({
+          icon: 'success',
+          title: 'Document Updated!',
+          text: `Your ${docType} has been updated across ${data.affectedApplications} applied job position(s).`,
+          timer: 3500
+        });
+      } else {
+        Swal.fire('Error', data.message || 'Failed to replace document.', 'error');
+      }
+    } catch (err) {
+      Swal.fire('Error', 'An error occurred while uploading.', 'error');
+    }
+  };
+
+  const handleDirectView = async (docType: 'Letter of Intent' | 'Sworn Declaration') => {
+    const sessionStr = localStorage.getItem('session_data');
+    const defaultUrl = getDocUrl(docType);
+    if (!sessionStr) {
+      if (defaultUrl) {
+        const sasUrl = defaultUrl.startsWith('http')
+          ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
+          : defaultUrl;
+        window.open(sasUrl, '_blank');
+      }
+      return;
+    }
+    const session = JSON.parse(sessionStr);
+
+    Swal.fire({
+      title: 'Loading your applied jobs...',
+      text: 'Please wait...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    let userApplications: any[] = [];
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        userApplications = data.data;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const fieldKey = docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
+    const appsWithDoc = userApplications.filter(app => Boolean(app[fieldKey]));
+
+    if (appsWithDoc.length === 0) {
+      if (defaultUrl) {
+        const sasUrl = defaultUrl.startsWith('http')
+          ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
+          : defaultUrl;
+        window.open(sasUrl, '_blank');
+        Swal.close();
+        return;
+      }
+      Swal.fire('No Document Found', `No ${docType} has been attached to any of your applications yet.`, 'info');
+      return;
+    }
+
+    const appRadioHtml = appsWithDoc.map((app, index) => {
+      const positionTitle = app.job_title || app.position || 'Position Applied';
+      const divisionName = app.division || app.office || 'Department of Education';
+      const dateApplied = app.date_applied || app.created_at;
+      const formattedDate = dateApplied ? new Date(dateApplied).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
+      const docUrl = app[fieldKey];
+
+      return `
+        <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
+          <input type="radio" name="swal-view-doc" class="swal-view-radio" value="${encodeURIComponent(docUrl)}" ${index === 0 ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0;" />
+          <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span style="font-weight: 700; font-size: 13.5px; color: #022851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${positionTitle}</span>
+              <span style="font-size: 10px; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">${app.status || 'Applied'}</span>
+            </div>
+            <span style="font-size: 11px; color: #64748b; margin-top: 2px;">${divisionName} &bull; Applied: ${formattedDate}</span>
+          </div>
+        </label>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <div style="font-family: inherit; font-size: 14px; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+        <p style="margin-bottom: 12px; font-size: 13px; color: #475569; font-weight: 500;">
+          Select which job application's <strong>${docType}</strong> you want to view:
+        </p>
+
+        <div id="swal-view-list" style="display: flex; flex-direction: column;">
+          ${appRadioHtml}
+        </div>
+      </div>
+    `;
+
+    const { value: selectedDocUrl } = await Swal.fire({
+      title: `View ${docType}`,
+      html: htmlContent,
+      showCancelButton: true,
+      confirmButtonText: 'View Selected Document',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#2563eb',
+      focusConfirm: false,
+      preConfirm: () => {
+        const checkedRadio = document.querySelector('.swal-view-radio:checked') as HTMLInputElement;
+        if (!checkedRadio) {
+          Swal.showValidationMessage('Please select an applied position to view its document!');
+          return false;
+        }
+        return decodeURIComponent(checkedRadio.value);
+      }
+    });
+
+    if (!selectedDocUrl) return;
+
+    const sasUrl = selectedDocUrl.startsWith('http')
+      ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(selectedDocUrl)}`
+      : selectedDocUrl;
+    window.open(sasUrl, '_blank');
   };
 
   // ─── API-driven cascading address data ───
@@ -782,7 +1048,6 @@ export default function ApplicationModal({
 
 
   const storedDocuments = isRegistrationFlow ? {} : { ...(otherInfo?.documents || {}) };
-  delete storedDocuments['Letter of Intent'];
 
   const getDocUrl = (docName: string) => {
     let url = storedDocuments?.[docName];
@@ -821,6 +1086,7 @@ export default function ApplicationModal({
     ];
     if (!isRegistrationFlow) {
       docs.push({ label: 'Letter of Intent', inputName: 'doc_loi' });
+      docs.push({ label: 'Sworn Declaration', inputName: 'doc_sworn' });
     }
     return docs;
   }, [isRegistrationFlow]);
@@ -876,7 +1142,8 @@ export default function ApplicationModal({
       'Certificate of Eligibility': Boolean(selectedFiles['Certificate of Eligibility'] || hasSelectedFile('doc_eligibility')),
       'Transcript of Records': Boolean(selectedFiles['Transcript of Records'] || hasSelectedFile('doc_tor')),
       'Updated PRC License/ID': Boolean(selectedFiles['Updated PRC License/ID'] || hasSelectedFile('doc_prc')),
-      'Letter of Intent': Boolean(selectedFiles['Letter of Intent'] || hasSelectedFile('doc_loi'))
+      'Letter of Intent': Boolean(selectedFiles['Letter of Intent'] || hasSelectedFile('doc_loi')),
+      'Sworn Declaration': Boolean(selectedFiles['Sworn Declaration'] || hasSelectedFile('doc_sworn'))
     };
 
     const data = {
@@ -3731,6 +3998,92 @@ export default function ApplicationModal({
                         <input type="file" name="doc_outstanding_accomplishments" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
+
+                    {!isRegistrationFlow && (
+                      <>
+                        {/* Item 13 - Letter of Intent */}
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-700">Letter of Intent <span className="text-gray-400 font-normal italic text-[10px]"><br />(Uploaded / Replaced across active applications)</span></span>
+                          </div>
+                          {getDocUrl("Letter of Intent") ? (
+                            <div className="flex flex-col gap-2 w-full mt-2">
+                              {selectedDocumentNames["Letter of Intent"] ? (
+                                <span className="text-[12px] text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded text-center border border-blue-200 flex items-center justify-center gap-1.5 max-w-full overflow-hidden animate-pop">
+                                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                                  </svg>
+                                  <span className="shrink-0">Selected:</span>
+                                  <span className="truncate max-w-[120px] sm:max-w-[220px] md:max-w-[280px] text-left" title={selectedDocumentNames["Letter of Intent"]}>
+                                    {selectedDocumentNames["Letter of Intent"]}
+                                  </span>
+                                  <span className="shrink-0 font-normal opacity-90">(Ready to replace)</span>
+                                </span>
+                              ) : (
+                                <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 flex items-center justify-center gap-1.5 animate-pop">
+                                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                                  </svg>
+                                  <span>Uploaded</span>
+                                </span>
+                              )}
+                              <div className="flex gap-2 w-full">
+                                <button type="button" onClick={() => handleDirectView("Letter of Intent")} className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
+                                  View File
+                                </button>
+                                <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                                  Replace File
+                                  <input type="file" name="doc_loi" accept=".pdf" onChange={(e) => handleDirectReplace("Letter of Intent", e)} className="hidden" />
+                                </label>
+                              </div>
+                            </div>
+                          ) : (
+                            <input type="file" name="doc_loi" accept=".pdf" onChange={(e) => handleDirectReplace("Letter of Intent", e)} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                          )}
+                        </div>
+
+                        {/* Item 14 - Sworn Declaration / CAV */}
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-700">CAV / Sworn Declaration <span className="text-gray-400 font-normal italic text-[10px]"><br />(Uploaded / Replaced across active applications)</span></span>
+                          </div>
+                          {getDocUrl("Sworn Declaration") ? (
+                            <div className="flex flex-col gap-2 w-full mt-2">
+                              {selectedDocumentNames["Sworn Declaration"] ? (
+                                <span className="text-[12px] text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded text-center border border-blue-200 flex items-center justify-center gap-1.5 max-w-full overflow-hidden animate-pop">
+                                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                                  </svg>
+                                  <span className="shrink-0">Selected:</span>
+                                  <span className="truncate max-w-[120px] sm:max-w-[220px] md:max-w-[280px] text-left" title={selectedDocumentNames["Sworn Declaration"]}>
+                                    {selectedDocumentNames["Sworn Declaration"]}
+                                  </span>
+                                  <span className="shrink-0 font-normal opacity-90">(Ready to replace)</span>
+                                </span>
+                              ) : (
+                                <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 flex items-center justify-center gap-1.5 animate-pop">
+                                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                                  </svg>
+                                  <span>Uploaded</span>
+                                </span>
+                              )}
+                              <div className="flex gap-2 w-full">
+                                <button type="button" onClick={() => handleDirectView("Sworn Declaration")} className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
+                                  View File
+                                </button>
+                                <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                                  Replace File
+                                  <input type="file" name="doc_sworn" accept=".pdf" onChange={(e) => handleDirectReplace("Sworn Declaration", e)} className="hidden" />
+                                </label>
+                              </div>
+                            </div>
+                          ) : (
+                            <input type="file" name="doc_sworn" accept=".pdf" onChange={(e) => handleDirectReplace("Sworn Declaration", e)} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
