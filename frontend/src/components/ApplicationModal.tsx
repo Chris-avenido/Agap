@@ -12,8 +12,7 @@ import {
   Plus,
   Save
 } from "lucide-react";
-// @ts-ignore
-import { regions, provinces, city_mun, barangays } from "phil-reg-prov-mun-brgy";
+const ADDRESS_API = `${import.meta.env.VITE_API_URL}/api/address`;
 // @ts-ignore
 import ModernDatePicker from "./ModernDatePicker";
 import { calculateProfileProgress, parseProfileToState } from "../utils/profileProgress";
@@ -470,31 +469,69 @@ export default function ApplicationModal({
     }
   };
 
-  const resProvincesList = useMemo(
-    () => (resRegion ? provinces.filter((p: any) => p.reg_code === resRegion) : []),
-    [resRegion],
-  );
-  const resCitiesList = useMemo(
-    () => (resProvince ? city_mun.filter((c: any) => c.prov_code === resProvince) : []),
-    [resProvince],
-  );
-  const resBarangaysList = useMemo(
-    () => (resCity ? barangays.filter((b: any) => b.mun_code === resCity) : []),
-    [resCity],
-  );
+  // ─── API-driven cascading address data ───
+  const [regionsList, setRegionsList] = useState<any[]>([]);
+  const [resProvincesList, setResProvincesList] = useState<any[]>([]);
+  const [resCitiesList, setResCitiesList] = useState<any[]>([]);
+  const [resBarangaysList, setResBarangaysList] = useState<any[]>([]);
+  const [permProvincesList, setPermProvincesList] = useState<any[]>([]);
+  const [permCitiesList, setPermCitiesList] = useState<any[]>([]);
+  const [permBarangaysList, setPermBarangaysList] = useState<any[]>([]);
 
-  const permProvincesList = useMemo(
-    () => (permRegion ? provinces.filter((p: any) => p.reg_code === permRegion) : []),
-    [permRegion],
-  );
-  const permCitiesList = useMemo(
-    () => (permProvince ? city_mun.filter((c: any) => c.prov_code === permProvince) : []),
-    [permProvince],
-  );
-  const permBarangaysList = useMemo(
-    () => (permCity ? barangays.filter((b: any) => b.mun_code === permCity) : []),
-    [permCity],
-  );
+  // Fetch regions on mount
+  useEffect(() => {
+    fetch(`${ADDRESS_API}/regions`).then(r => r.json()).then(d => {
+      if (d.success) setRegionsList(d.data);
+    }).catch(console.error);
+  }, []);
+
+  // Residential: fetch provinces when region changes
+  useEffect(() => {
+    if (!resRegion) { setResProvincesList([]); return; }
+    fetch(`${ADDRESS_API}/provinces?region=${encodeURIComponent(resRegion)}`).then(r => r.json()).then(d => {
+      if (d.success) setResProvincesList(d.data);
+    }).catch(console.error);
+  }, [resRegion]);
+
+  // Residential: fetch cities when province changes
+  useEffect(() => {
+    if (!resProvince) { setResCitiesList([]); return; }
+    fetch(`${ADDRESS_API}/municipalities?province=${encodeURIComponent(resProvince)}&region=${encodeURIComponent(resRegion)}`).then(r => r.json()).then(d => {
+      if (d.success) setResCitiesList(d.data);
+    }).catch(console.error);
+  }, [resProvince, resRegion]);
+
+  // Residential: fetch barangays when city changes
+  useEffect(() => {
+    if (!resCity) { setResBarangaysList([]); return; }
+    fetch(`${ADDRESS_API}/barangays?municipality=${encodeURIComponent(resCity)}&province=${encodeURIComponent(resProvince)}`).then(r => r.json()).then(d => {
+      if (d.success) setResBarangaysList(d.data);
+    }).catch(console.error);
+  }, [resCity, resProvince]);
+
+  // Permanent: fetch provinces when region changes
+  useEffect(() => {
+    if (!permRegion) { setPermProvincesList([]); return; }
+    fetch(`${ADDRESS_API}/provinces?region=${encodeURIComponent(permRegion)}`).then(r => r.json()).then(d => {
+      if (d.success) setPermProvincesList(d.data);
+    }).catch(console.error);
+  }, [permRegion]);
+
+  // Permanent: fetch cities when province changes
+  useEffect(() => {
+    if (!permProvince) { setPermCitiesList([]); return; }
+    fetch(`${ADDRESS_API}/municipalities?province=${encodeURIComponent(permProvince)}&region=${encodeURIComponent(permRegion)}`).then(r => r.json()).then(d => {
+      if (d.success) setPermCitiesList(d.data);
+    }).catch(console.error);
+  }, [permProvince, permRegion]);
+
+  // Permanent: fetch barangays when city changes
+  useEffect(() => {
+    if (!permCity) { setPermBarangaysList([]); return; }
+    fetch(`${ADDRESS_API}/barangays?municipality=${encodeURIComponent(permCity)}&province=${encodeURIComponent(permProvince)}`).then(r => r.json()).then(d => {
+      if (d.success) setPermBarangaysList(d.data);
+    }).catch(console.error);
+  }, [permCity, permProvince]);
 
   const isResBarangayOther = resBarangay === 'OTHER' || (resBarangay && resBarangaysList.length > 0 && !resBarangaysList.some((b: any) => b.name.toUpperCase() === resBarangay.toUpperCase()));
   const isPermBarangayOther = permBarangay === 'OTHER' || (permBarangay && permBarangaysList.length > 0 && !permBarangaysList.some((b: any) => b.name.toUpperCase() === permBarangay.toUpperCase()));
@@ -1460,15 +1497,16 @@ export default function ApplicationModal({
                               setResRegion(e.target.value);
                               setResProvince("");
                               setResCity("");
+                              setResBarangay("");
                             }}
                             required
                             className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"
                           >
                             <option value="">Select region</option>
-                            {regions.map((r: any, idx: number) => (
+                            {regionsList.map((r: any, idx: number) => (
                               <option
-                                key={`${r.reg_code}-${idx}`}
-                                value={r.reg_code}
+                                key={`${r.name}-${idx}`}
+                                value={r.name}
                               >
                                 {r.name}
                               </option>
@@ -1485,6 +1523,7 @@ export default function ApplicationModal({
                             onChange={(e: any) => {
                               setResProvince(e.target.value);
                               setResCity("");
+                              setResBarangay("");
                             }}
                             required
                             className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
@@ -1493,8 +1532,8 @@ export default function ApplicationModal({
                             <option value="">Select province</option>
                             {resProvincesList.map((p: any, idx: number) => (
                               <option
-                                key={`${p.prov_code}-${idx}`}
-                                value={p.prov_code}
+                                key={`${p.name}-${idx}`}
+                                value={p.name}
                               >
                                 {p.name}
                               </option>
@@ -1519,8 +1558,8 @@ export default function ApplicationModal({
                             <option value="">Select city / municipality</option>
                             {resCitiesList.map((c: any, idx: number) => (
                               <option
-                                key={`${c.mun_code}-${idx}`}
-                                value={c.mun_code}
+                                key={`${c.name}-${idx}`}
+                                value={c.name}
                               >
                                 {c.name}
                               </option>
@@ -1650,15 +1689,16 @@ export default function ApplicationModal({
                                 setPermRegion(e.target.value);
                                 setPermProvince("");
                                 setPermCity("");
+                                setPermBarangay("");
                               }}
                               required
                               className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none h-[42px] w-full"
                             >
                               <option value="">Select region</option>
-                              {regions.map((r: any, idx: number) => (
+                              {regionsList.map((r: any, idx: number) => (
                                 <option
-                                  key={`${r.reg_code}-${idx}`}
-                                  value={r.reg_code}
+                                  key={`${r.name}-${idx}`}
+                                  value={r.name}
                                 >
                                   {r.name}
                                 </option>
@@ -1675,6 +1715,7 @@ export default function ApplicationModal({
                               onChange={(e: any) => {
                                 setPermProvince(e.target.value);
                                 setPermCity("");
+                                setPermBarangay("");
                               }}
                               required
                               className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 bg-gray-50/50 appearance-none disabled:opacity-50 h-[42px] w-full"
@@ -1683,8 +1724,8 @@ export default function ApplicationModal({
                               <option value="">Select province</option>
                               {permProvincesList.map((p: any, idx: number) => (
                                 <option
-                                  key={`${p.prov_code}-${idx}`}
-                                  value={p.prov_code}
+                                  key={`${p.name}-${idx}`}
+                                  value={p.name}
                                 >
                                   {p.name}
                                 </option>
@@ -1711,8 +1752,8 @@ export default function ApplicationModal({
                               </option>
                               {permCitiesList.map((c: any, idx: number) => (
                                 <option
-                                  key={`${c.mun_code}-${idx}`}
-                                  value={c.mun_code}
+                                  key={`${c.name}-${idx}`}
+                                  value={c.name}
                                 >
                                   {c.name}
                                 </option>

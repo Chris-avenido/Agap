@@ -6,6 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { pool } from './database';
 import applicantsRouter from './applicants/applicants.routes';
 import vacanciesRouter from './vacancies/vacancies.routes';
+import addressRouter from './address/address.routes';
 import { setupVacanciesCron } from './vacancies/vacancies.cron';
 
 const app = express();
@@ -46,6 +47,9 @@ app.use('/api/vacancies', vacanciesRouter);
 
 // Applicants Module Routes
 app.use('/api/applicants', applicantsRouter);
+
+// Address Module Routes
+app.use('/api/address', addressRouter);
 
 // Initialize Cron Jobs
 setupVacanciesCron();
