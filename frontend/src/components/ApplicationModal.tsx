@@ -1174,7 +1174,11 @@ export default function ApplicationModal({
       context: (jobTitle === "Profile Update" ? "my-profile" : "apply-now") as "my-profile" | "apply-now"
     };
 
-    return calculateProfileProgress(data);
+    const res = calculateProfileProgress(data);
+    if ((jobTitle === "Profile Update" || data.context === "my-profile") && parseFloat(res.percentage) >= 90) {
+      return { ...res, percentage: '100' };
+    }
+    return res;
   }, [
     userData, isRegistrationFlow, formVersion, selectedFiles, sex, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList, skillsList, distinctionsList, membershipsList, qRes, qAnswers
   ]);

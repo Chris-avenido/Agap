@@ -430,11 +430,12 @@ export default function ApplicantDashboard() {
     photoUrl = otherInfo.photoUrl;
   }
 
-  const { percentage: progressPercentage } = calculateProfileProgress({
+  const { percentage: rawProgressPercentage } = calculateProfileProgress({
     ...parseProfileToState(profile),
     isSubsequentApplication: applications.length > 0,
     context: 'my-profile'
   });
+  const progressPercentage = parseFloat(rawProgressPercentage) >= 90 ? 100 : parseFloat(rawProgressPercentage);
 
   return (
     <div
