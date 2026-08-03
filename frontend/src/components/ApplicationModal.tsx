@@ -1176,7 +1176,10 @@ export default function ApplicationModal({
 
     const res = calculateProfileProgress(data);
     if ((jobTitle === "Profile Update" || data.context === "my-profile") && parseFloat(res.percentage) >= 90) {
-      return { ...res, percentage: '100' };
+      const forcedSteps = res.steps.includes('Essential Documents')
+        ? res.steps
+        : [...res.steps, 'Essential Documents'];
+      return { ...res, steps: forcedSteps, percentage: '100' };
     }
     return res;
   }, [
