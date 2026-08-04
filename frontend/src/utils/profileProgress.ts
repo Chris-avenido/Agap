@@ -37,13 +37,14 @@ export const calculateProfileProgress = (data: {
   const ed = data.educationalDates || {};
   const isGeneralProfile = data.context === 'my-profile' && !data.jobPosition;
   if (isGeneralProfile) {
-    if (Object.values(ed).some((item: any) => item?.school?.trim() !== '')) {
+    // Boolean() treats both undefined and '' as false — requires an actual school name
+    if (Object.values(ed).some((item: any) => Boolean(item?.school?.trim()))) {
       steps.push('Educational Background');
     }
   } else {
-    // For job applications, require secondary and college entries
-    const hasSecondary = ed.secondary?.school?.trim() !== '';
-    const hasCollege = ed.college?.school?.trim() !== '';
+    // For job applications, require secondary AND college entries with actual school names
+    const hasSecondary = Boolean(ed.secondary?.school?.trim());
+    const hasCollege = Boolean(ed.college?.school?.trim());
     if (hasSecondary && hasCollege) {
       steps.push('Educational Background');
     }
