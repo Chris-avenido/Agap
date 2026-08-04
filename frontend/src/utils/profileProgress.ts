@@ -78,7 +78,10 @@ export const calculateProfileProgress = (data: {
   if (sList.some(hasItemVal) || dList.some(hasItemVal) || mList.some(hasItemVal)) steps.push('Other Information');
 
   // Legal Questionnaire Validation
-  const qIds = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40b_ethnic', '40c'];
+  // '40b_ethnic' (Indigenous Cultural Community) is an informational/demographic field, not a
+  // disqualifying questionnaire item — exclude it from the completion gate so it cannot
+  // auto-mark the Legal Questionnaire as done based on a database-default 'No' value.
+  const qIds = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40c'];
   const q = data.questionnaire || {};
   const allQAnswered = qIds.every(id => {
     const item = q[id];
@@ -109,23 +112,20 @@ export const calculateProfileProgress = (data: {
     'Transcript of Records'
   ];
 
-  const isDocConfirmed = (docName: string) => {
+  const isDocDone = (docName: string) => {
     if (Boolean(data.documentsConfirmed && data.documentsConfirmed[docName])) return true;
-    if (docName === 'Notarized Personal Data Sheet' && Boolean(data.documentsConfirmed && data.documentsConfirmed['Personal Data Sheet'])) return true;
-    return false;
-  };
-  const isDocUploaded = (docName: string) => {
     if (Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls[docName])) return true;
     if (Boolean(data.documents && data.documents[docName])) return true;
     if (docName === 'Notarized Personal Data Sheet') {
+      if (Boolean(data.documentsConfirmed && data.documentsConfirmed['Personal Data Sheet'])) return true;
       if (Boolean(data.uploadedDocumentUrls && data.uploadedDocumentUrls['Personal Data Sheet'])) return true;
       if (Boolean(data.documents && data.documents['Personal Data Sheet'])) return true;
     }
     return false;
   };
 
-  // Sidebar turns green ONLY when all 4 required docs are uploaded AND confirmed
-  const allRequiredDocsDone = requiredDocs.every(d => isDocUploaded(d) && isDocConfirmed(d));
+  // Sidebar turns green when all 4 required docs are uploaded or confirmed
+  const allRequiredDocsDone = requiredDocs.every(d => isDocDone(d));
 
   if (allRequiredDocsDone) {
     steps.push('Essential Documents');

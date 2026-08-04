@@ -515,8 +515,14 @@ export default function ApplicantJobList() {
       'Certificate of Eligibility',
       'Transcript of Records'
     ];
-    const isConfirmed = (doc: string) => documentsConfirmed[doc] || (doc === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet']);
-    const allDocumentsConfirmed = REQUIRED_DOCS.every(doc => isConfirmed(doc));
+    const isDocDone = (doc: string) =>
+      Boolean(documentsConfirmed[doc]) ||
+      (doc === 'Notarized Personal Data Sheet' && Boolean(documentsConfirmed['Personal Data Sheet'])) ||
+      Boolean(documents[doc]) ||
+      (doc === 'Notarized Personal Data Sheet' && Boolean(documents['Personal Data Sheet'])) ||
+      Boolean(uploadedDocumentUrls[doc]) ||
+      (doc === 'Notarized Personal Data Sheet' && Boolean(uploadedDocumentUrls['Personal Data Sheet']));
+    const allDocumentsConfirmed = REQUIRED_DOCS.every(isDocDone);
     if (!allDocumentsConfirmed) {
       Swal.fire(
         'Documents Not Confirmed',
@@ -1168,8 +1174,17 @@ export default function ApplicantJobList() {
               let mapKey = k;
               if (mapKey.startsWith('q')) mapKey = mapKey.substring(1);
 
+              const normalizedAns = String(ans).toUpperCase() === 'YES' ? 'Yes' : (String(ans).toUpperCase() === 'NO' ? 'No' : ans);
+
+              // Do NOT auto-populate '40b_ethnic' with a database-default 'No'.
+              // It is an informational demographic field that must only be set by explicit user input.
+              // The guard below (ethnic_group fallback) will restore it when the user previously answered 'Yes'.
+              if (mapKey === '40b_ethnic' && normalizedAns === 'No') {
+                continue;
+              }
+
               normalizedQ[mapKey] = {
-                answer: String(ans).toUpperCase() === 'YES' ? 'Yes' : (String(ans).toUpperCase() === 'NO' ? 'No' : ans),
+                answer: normalizedAns,
                 details: details
               };
             }
@@ -3467,7 +3482,14 @@ export default function ApplicantJobList() {
 
                         {(() => {
                           const REQUIRED_DOCS = ['Notarized Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records'];
-                          const confirmedCount = REQUIRED_DOCS.filter(d => documentsConfirmed[d] || (d === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet'])).length;
+                          const isDocDone = (d: string) =>
+                            Boolean(documentsConfirmed[d]) ||
+                            (d === 'Notarized Personal Data Sheet' && Boolean(documentsConfirmed['Personal Data Sheet'])) ||
+                            Boolean(documents[d]) ||
+                            (d === 'Notarized Personal Data Sheet' && Boolean(documents['Personal Data Sheet'])) ||
+                            Boolean(uploadedDocumentUrls[d]) ||
+                            (d === 'Notarized Personal Data Sheet' && Boolean(uploadedDocumentUrls['Personal Data Sheet']));
+                          const confirmedCount = REQUIRED_DOCS.filter(isDocDone).length;
                           const docsPct = Math.round((confirmedCount / REQUIRED_DOCS.length) * 100);
                           const docsAllDone = confirmedCount === REQUIRED_DOCS.length;
                           return (
