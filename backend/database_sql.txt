@@ -130,3 +130,18 @@ ADD COLUMN father_name_extension VARCHAR(50),
 ADD COLUMN mother_first_name VARCHAR(100),
 ADD COLUMN mother_middle_name VARCHAR(100),
 ADD COLUMN children_details JSONB DEFAULT '[]'::jsonb;
+
+-- ==========================================
+-- DOCUMENT AUDIT LOGS
+-- Tracks document replacements made by applicants
+-- ==========================================
+CREATE TABLE document_audit_logs (
+    id SERIAL PRIMARY KEY,
+    applicant_id VARCHAR(50) NOT NULL,
+    document_type VARCHAR(100) NOT NULL,
+    old_blob_url TEXT,
+    new_blob_url TEXT NOT NULL,
+    affected_applications_count INTEGER DEFAULT 0,
+    application_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -41,7 +41,7 @@ function calculateTraining(learningList: any[]): number {
       if (!isNaN(from.getTime()) && !isNaN(to.getTime()) && to >= from) {
         const diffTime = Math.abs(to.getTime() - from.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        totalHours += (diffDays * 8);
+        totalHours += diffDays * 8;
         added = true;
       }
     }
@@ -57,7 +57,11 @@ function calculateTraining(learningList: any[]): number {
 function extractBachelorsDegree(educationalList: any[]): string | null {
   if (!Array.isArray(educationalList)) return null;
   for (const ed of educationalList) {
-    if (ed.level && (ed.level.toLowerCase() === 'college' || ed.level.toLowerCase() === 'bachelor')) {
+    if (
+      ed.level &&
+      (ed.level.toLowerCase() === 'college' ||
+        ed.level.toLowerCase() === 'bachelor')
+    ) {
       return ed.degree || ed.course || ed.basic_education_degree || null;
     }
   }
@@ -67,7 +71,7 @@ function extractBachelorsDegree(educationalList: any[]): string | null {
 function extractEligibility(eligibilityList: any[]): string | null {
   if (!Array.isArray(eligibilityList)) return null;
   const eligibilities = eligibilityList
-    .map(e => e.eligibility || e.career_service || e.title)
+    .map((e) => e.eligibility || e.career_service || e.title)
     .filter(Boolean);
   return eligibilities.length > 0 ? eligibilities.join(', ') : null;
 }
@@ -86,14 +90,17 @@ function calculateAge(dob: string | Date | null): number | null {
 }
 
 class ApplicantsServiceClass {
-
   async parseResume(file: any) {
     try {
       let rawText = '';
       if (file.mimetype === 'application/pdf') {
         const data = await pdfParse(file.buffer);
         rawText = data.text;
-      } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.mimetype === 'application/msword') {
+      } else if (
+        file.mimetype ===
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.mimetype === 'application/msword'
+      ) {
         const result = await mammoth.extractRawText({ buffer: file.buffer });
         rawText = result.value;
       } else {
@@ -112,11 +119,13 @@ class ApplicantsServiceClass {
         mobile_no: '',
         residential_address: '',
         sex: '',
-        work_experience: [] as any[]
+        work_experience: [] as any[],
       };
 
       // 1. Extract Email Address
-      const emailMatch = rawText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+      const emailMatch = rawText.match(
+        /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/,
+      );
       if (emailMatch) parsedData.email_address = emailMatch[1];
 
       // 2. Extract Mobile Number (Philippine formats like 0917-123-4567, +63917...)
@@ -129,15 +138,21 @@ class ApplicantsServiceClass {
 
       // 4. Basic Name Heuristics
       // We assume the very first non-empty line of the resume contains the name
-      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const lines = rawText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       if (lines.length > 0) {
         // Strip out common title prefixes like "Resume" or "CV"
         let topNameLine = lines[0];
-        if (/resume|curriculum vitae|cv/i.test(topNameLine) && lines.length > 1) {
+        if (
+          /resume|curriculum vitae|cv/i.test(topNameLine) &&
+          lines.length > 1
+        ) {
           topNameLine = lines[1];
         }
 
-        const nameParts = topNameLine.split(' ').filter(n => n.length > 0);
+        const nameParts = topNameLine.split(' ').filter((n) => n.length > 0);
         if (nameParts.length >= 3) {
           parsedData.first_name = nameParts[0];
           parsedData.middle_name = nameParts[1];
@@ -151,18 +166,24 @@ class ApplicantsServiceClass {
       }
 
       // 5. Basic Address Heuristics
-      const addressMatch = rawText.match(/(?:address|location|residence)[\s:]*([A-Za-z0-9\s,.-]+(?:City|Province|St|Street|Ave|Subdivision|Village))/i);
+      const addressMatch = rawText.match(
+        /(?:address|location|residence)[\s:]*([A-Za-z0-9\s,.-]+(?:City|Province|St|Street|Ave|Subdivision|Village))/i,
+      );
       if (addressMatch) {
         parsedData.residential_address = addressMatch[1].trim();
       }
 
       // 6. Work Experience Heuristics
       // Try to find a section titled "Experience", "Employment", or "Work History"
-      const workExpRegex = /(?:experience|employment|work history|professional experience)[\s\S]*?(?:education|skills|references|projects|certifications|$)/i;
+      const workExpRegex =
+        /(?:experience|employment|work history|professional experience)[\s\S]*?(?:education|skills|references|projects|certifications|$)/i;
       const workExpMatch = rawText.match(workExpRegex);
       if (workExpMatch) {
         const workText = workExpMatch[0];
-        const workLines = workText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const workLines = workText
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
 
         let currentWork = { company: '', position: '' };
         let jobCount = 0;
@@ -170,7 +191,9 @@ class ApplicantsServiceClass {
         for (let i = 1; i < workLines.length; i++) {
           const line = workLines[i];
           // Look for lines containing years/dates indicating a job duration (e.g. 2018 - 2020)
-          if (/(?:19|20)\d{2}.*(?:19|20)\d{2}|present|now|current/i.test(line)) {
+          if (
+            /(?:19|20)\d{2}.*(?:19|20)\d{2}|present|now|current/i.test(line)
+          ) {
             if (currentWork.company || currentWork.position) {
               parsedData.work_experience.push({ ...currentWork });
               jobCount++;
@@ -193,13 +216,15 @@ class ApplicantsServiceClass {
 
       return parsedData;
     } catch (error: any) {
-      console.error("Resume Parsing Error:", error);
+      console.error('Resume Parsing Error:', error);
       throw new Error();
     }
   }
 
   async findOne(id: number) {
-    const result = await pool.query('SELECT * FROM applicants WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM applicants WHERE id = $1', [
+      id,
+    ]);
     return result.rows[0];
   }
 
@@ -227,8 +252,15 @@ class ApplicantsServiceClass {
     return result.rows;
   }
 
-  async login(email_address: string, password_raw: string, loginMethod?: string) {
-    const result = await pool.query('SELECT * FROM applicants WHERE email_address = $1', [email_address]);
+  async login(
+    email_address: string,
+    password_raw: string,
+    loginMethod?: string,
+  ) {
+    const result = await pool.query(
+      'SELECT * FROM applicants WHERE email_address = $1',
+      [email_address],
+    );
     const applicant = result.rows[0];
     if (!applicant) return null;
 
@@ -241,7 +273,10 @@ class ApplicantsServiceClass {
 
     if (loginMethod === 'password') {
       if (!applicant.password_hash) return null;
-      const isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
+      const isMatch = await bcrypt.compare(
+        password_raw,
+        applicant.password_hash,
+      );
       return isMatch ? applicant : null;
     }
 
@@ -251,18 +286,29 @@ class ApplicantsServiceClass {
     }
 
     if (!applicant.password_hash) return null;
-    const isMatchFallback = await bcrypt.compare(password_raw, applicant.password_hash);
+    const isMatchFallback = await bcrypt.compare(
+      password_raw,
+      applicant.password_hash,
+    );
     if (!isMatchFallback) return null;
 
     return applicant;
   }
 
   async applyJob(applicantId: number, jobTitle: string, jobClusterId?: string) {
-    if (!jobClusterId || jobClusterId === 'null' || jobClusterId === 'undefined' || String(jobClusterId).trim() === '') {
-      throw new Error("Invalid job cluster ID provided.");
+    if (
+      !jobClusterId ||
+      jobClusterId === 'null' ||
+      jobClusterId === 'undefined' ||
+      String(jobClusterId).trim() === ''
+    ) {
+      throw new Error('Invalid job cluster ID provided.');
     }
 
-    const applicantRes = await pool.query('SELECT applicant_number, other_information FROM applicants WHERE id = $1', [applicantId]);
+    const applicantRes = await pool.query(
+      'SELECT applicant_number, other_information FROM applicants WHERE id = $1',
+      [applicantId],
+    );
     const applicantRow = applicantRes.rows[0];
     const applicantNumber = applicantRow?.applicant_number || null;
 
@@ -270,19 +316,21 @@ class ApplicantsServiceClass {
     if (typeof otherInfo === 'string') {
       try {
         otherInfo = JSON.parse(otherInfo);
-      } catch (e) { }
+      } catch (e) {}
     }
     const letterOfIntent = otherInfo?.documents?.['Letter of Intent'] || null;
     const swornDocument = otherInfo?.documents?.['Sworn Declaration'] || null;
 
-    console.log(`[DEBUG] applyJob started for applicantId=${applicantId}, jobClusterId=${jobClusterId}`);
+    console.log(
+      `[DEBUG] applyJob started for applicantId=${applicantId}, jobClusterId=${jobClusterId}`,
+    );
 
     const checkResult = await pool.query(
       'SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
-      [applicantId.toString(), jobClusterId]
+      [applicantId.toString(), jobClusterId],
     );
     if (checkResult.rows.length > 0) {
-      throw new Error("You have already applied for this job cluster.");
+      throw new Error('You have already applied for this job cluster.');
     }
 
     const appId = require('crypto').randomUUID();
@@ -296,11 +344,14 @@ class ApplicantsServiceClass {
     const dd = String(today.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}${mm}${dd}`;
 
-    const lastApp = await pool.query(`
+    const lastApp = await pool.query(
+      `
       SELECT application_number FROM applications 
       WHERE application_number LIKE $1 
       ORDER BY application_number DESC LIMIT 1
-    `, [`${dateStr}-%`]);
+    `,
+      [`${dateStr}-%`],
+    );
 
     let nextAppNum = 1;
     if (lastApp.rows.length > 0 && lastApp.rows[0].application_number) {
@@ -311,16 +362,36 @@ class ApplicantsServiceClass {
     }
     const uniqueApplicationNumber = `${dateStr}-${String(nextAppNum).padStart(5, '0')}`;
 
-    console.log(`[DEBUG] applyJob executing INSERT with args:`, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null, letterOfIntent, swornDocument]);
+    console.log(`[DEBUG] applyJob executing INSERT with args:`, [
+      appId,
+      uniqueApplicationNumber,
+      applicantId.toString(),
+      jobClusterId || null,
+      letterOfIntent,
+      swornDocument,
+    ]);
 
     try {
-      const result = await pool.query(`
+      const result = await pool.query(
+        `
         INSERT INTO applications (id, application_number, applicant_id, job_cluster_id, status, date_applied, created_at, letter_of_intent, sworn_document)
         VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW(), $5, $6)
         RETURNING *
-      `, [appId, uniqueApplicationNumber, applicantId.toString(), jobClusterId || null, letterOfIntent, swornDocument]);
+      `,
+        [
+          appId,
+          uniqueApplicationNumber,
+          applicantId.toString(),
+          jobClusterId || null,
+          letterOfIntent,
+          swornDocument,
+        ],
+      );
 
-      console.log(`[DEBUG] applyJob INSERT successful. Returning row:`, result.rows[0]);
+      console.log(
+        `[DEBUG] applyJob INSERT successful. Returning row:`,
+        result.rows[0],
+      );
       return result.rows[0];
     } catch (dbError) {
       console.error(`[DEBUG] applyJob INSERT failed:`, dbError);
@@ -329,7 +400,8 @@ class ApplicantsServiceClass {
   }
 
   async findApplications(applicantId: number) {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT a.*, p.title as job_title, c.region as region, c.division as division, qe.overall_fit,
              (SELECT v.status FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as vacancy_status,
              (SELECT MIN(v.posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_start,
@@ -345,42 +417,63 @@ class ApplicantsServiceClass {
         GROUP BY application_id
       ) qe ON a.id = qe.application_id
       WHERE a.applicant_id = $1
-    `, [applicantId.toString()]);
-    return result.rows.map(r => ({ ...r, position_id: r.job_cluster_id }));
+    `,
+      [applicantId.toString()],
+    );
+    return result.rows.map((r) => ({ ...r, position_id: r.job_cluster_id }));
   }
 
   async toggleSavedJob(applicantId: number, jobClusterId: string) {
-    const checkResult = await pool.query('SELECT * FROM saved_clusters WHERE applicant_id = $1 AND job_cluster_id = $2', [applicantId, jobClusterId]);
+    const checkResult = await pool.query(
+      'SELECT * FROM saved_clusters WHERE applicant_id = $1 AND job_cluster_id = $2',
+      [applicantId, jobClusterId],
+    );
     const existing = checkResult.rows[0];
 
     if (existing) {
       const newStatus = !existing.is_saved;
-      await pool.query('UPDATE saved_clusters SET is_saved = $1 WHERE id = $2', [newStatus, existing.id]);
+      await pool.query(
+        'UPDATE saved_clusters SET is_saved = $1 WHERE id = $2',
+        [newStatus, existing.id],
+      );
       return { status: newStatus ? 'added' : 'removed' };
     } else {
-      await pool.query(`
+      await pool.query(
+        `
         INSERT INTO saved_clusters (applicant_id, job_cluster_id, is_saved)
         VALUES ($1, $2, true)
-      `, [applicantId, jobClusterId]);
+      `,
+        [applicantId, jobClusterId],
+      );
       return { status: 'added' };
     }
   }
 
   async findSavedJobs(applicantId: number) {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT job_cluster_id as position_id
       FROM saved_clusters 
       WHERE applicant_id = $1 AND is_saved = true
-    `, [applicantId]);
+    `,
+      [applicantId],
+    );
     return result.rows;
   }
 
   async create(data: any) {
-    console.log("==== CREATE PAYLOAD ====\n", JSON.stringify(data, null, 2), "\n========================");
+    console.log(
+      '==== CREATE PAYLOAD ====\n',
+      JSON.stringify(data, null, 2),
+      '\n========================',
+    );
     const email = data.email_address || `no-email-${Date.now()}@test.com`;
 
     if (data.email_address) {
-      const existing = await pool.query('SELECT id FROM applicants WHERE email_address = $1', [data.email_address]);
+      const existing = await pool.query(
+        'SELECT id FROM applicants WHERE email_address = $1',
+        [data.email_address],
+      );
       if (existing.rows.length > 0) {
         throw new Error('Email address already exists');
       }
@@ -391,12 +484,19 @@ class ApplicantsServiceClass {
       passwordHash = await bcrypt.hash(data.password, 10);
     }
 
-    const questionnaire_responses = JSON.stringify(data.questionnaire_responses || {});
+    const questionnaire_responses = JSON.stringify(
+      data.questionnaire_responses || {},
+    );
 
     // Generate AGAP-0001 format for applicant_number
-    const lastApplicant = await pool.query(`SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY applicant_number DESC LIMIT 1`);
+    const lastApplicant = await pool.query(
+      `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY applicant_number DESC LIMIT 1`,
+    );
     let nextApplicantNum = 1;
-    if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
+    if (
+      lastApplicant.rows.length > 0 &&
+      lastApplicant.rows[0].applicant_number
+    ) {
       const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
       if (match) {
         nextApplicantNum = parseInt(match[1], 10) + 1;
@@ -404,7 +504,8 @@ class ApplicantsServiceClass {
     }
     const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
 
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       INSERT INTO applicants (
         applicant_number, password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
         sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
@@ -424,82 +525,98 @@ class ApplicantsServiceClass {
         $37, $38, $39, $40, $41, $42, $43, $44, $45,
         $46, $47, $48, $49, $50, $51, $52, $53
       ) RETURNING *
-    `, [
-      newApplicantNumber,
-      passwordHash,
-      data.surname || 'UNKNOWN',
-      data.first_name || 'UNKNOWN',
-      data.middle_name || null,
-      data.date_of_birth ? new Date(data.date_of_birth) : null,
-      data.place_of_birth || null,
-      data.sex || null,
-      data.civil_status || null,
-      data.citizenship || null,
-      data.blood_type || null,
-      data.gsis_id_no || null,
-      data.pag_ibig_id_no || null,
-      data.philhealth_no || null,
-      data.sss_no || null,
-      data.residential_address ? JSON.stringify(data.residential_address) : null,
-      data.permanent_address ? JSON.stringify(data.permanent_address) : null,
-      data.telephone_no || null,
-      data.mobile_no || null,
-      email,
-      JSON.stringify(data.educational_background || []),
-      JSON.stringify(data.civil_service_eligibility || []),
-      JSON.stringify(data.work_experience || []),
-      JSON.stringify(data.voluntary_work || []),
-      JSON.stringify(data.learning_and_development || []),
-      JSON.stringify(data.other_information || {}),
-      questionnaire_responses,
-      data.family_background ? JSON.stringify(data.family_background) : null,
-      data.family_background?.spouse?.surname || null,
-      data.family_background?.spouse?.first_name || null,
-      data.family_background?.spouse?.middle_name || null,
-      data.family_background?.spouse?.name_extension || null,
-      data.family_background?.spouse?.occupation || null,
-      data.family_background?.spouse?.employer_business_name || null,
-      data.family_background?.spouse?.business_address || null,
-      data.family_background?.spouse?.telephone_no || null,
-      data.family_background?.father?.surname || null,
-      data.family_background?.father?.first_name || null,
-      data.family_background?.father?.middle_name || null,
-      data.family_background?.father?.name_extension || null,
-      data.family_background?.mother?.maiden_surname || null,
-      data.family_background?.mother?.first_name || null,
-      data.family_background?.mother?.middle_name || null,
-      data.family_background?.children ? JSON.stringify(data.family_background.children) : null,
-      data.alternate_email || null,
-      calculateExperience(data.work_experience || []),
-      calculateTraining(data.learning_and_development || []),
-      extractBachelorsDegree(data.educational_background || []),
-      extractEligibility(data.civil_service_eligibility || []),
-      calculateAge(data.date_of_birth),
-      data.religion || null,
-      data.disability || null,
-      data.ethnic_group || null
-    ]);
+    `,
+      [
+        newApplicantNumber,
+        passwordHash,
+        data.surname || 'UNKNOWN',
+        data.first_name || 'UNKNOWN',
+        data.middle_name || null,
+        data.date_of_birth ? new Date(data.date_of_birth) : null,
+        data.place_of_birth || null,
+        data.sex || null,
+        data.civil_status || null,
+        data.citizenship || null,
+        data.blood_type || null,
+        data.gsis_id_no || null,
+        data.pag_ibig_id_no || null,
+        data.philhealth_no || null,
+        data.sss_no || null,
+        data.residential_address
+          ? JSON.stringify(data.residential_address)
+          : null,
+        data.permanent_address ? JSON.stringify(data.permanent_address) : null,
+        data.telephone_no || null,
+        data.mobile_no || null,
+        email,
+        JSON.stringify(data.educational_background || []),
+        JSON.stringify(data.civil_service_eligibility || []),
+        JSON.stringify(data.work_experience || []),
+        JSON.stringify(data.voluntary_work || []),
+        JSON.stringify(data.learning_and_development || []),
+        JSON.stringify(data.other_information || {}),
+        questionnaire_responses,
+        data.family_background ? JSON.stringify(data.family_background) : null,
+        data.family_background?.spouse?.surname || null,
+        data.family_background?.spouse?.first_name || null,
+        data.family_background?.spouse?.middle_name || null,
+        data.family_background?.spouse?.name_extension || null,
+        data.family_background?.spouse?.occupation || null,
+        data.family_background?.spouse?.employer_business_name || null,
+        data.family_background?.spouse?.business_address || null,
+        data.family_background?.spouse?.telephone_no || null,
+        data.family_background?.father?.surname || null,
+        data.family_background?.father?.first_name || null,
+        data.family_background?.father?.middle_name || null,
+        data.family_background?.father?.name_extension || null,
+        data.family_background?.mother?.maiden_surname || null,
+        data.family_background?.mother?.first_name || null,
+        data.family_background?.mother?.middle_name || null,
+        data.family_background?.children
+          ? JSON.stringify(data.family_background.children)
+          : null,
+        data.alternate_email || null,
+        calculateExperience(data.work_experience || []),
+        calculateTraining(data.learning_and_development || []),
+        extractBachelorsDegree(data.educational_background || []),
+        extractEligibility(data.civil_service_eligibility || []),
+        calculateAge(data.date_of_birth),
+        data.religion || null,
+        data.disability || null,
+        data.ethnic_group || null,
+      ],
+    );
 
     const applicant = result.rows[0];
-
-
 
     return applicant;
   }
 
-
-  async changePassword(applicantId: number, currentPasswordRaw: string, newPasswordRaw: string) {
-    const result = await pool.query('SELECT password_hash FROM applicants WHERE id = $1', [applicantId]);
+  async changePassword(
+    applicantId: number,
+    currentPasswordRaw: string,
+    newPasswordRaw: string,
+  ) {
+    const result = await pool.query(
+      'SELECT password_hash FROM applicants WHERE id = $1',
+      [applicantId],
+    );
     const applicant = result.rows[0];
     if (!applicant || !applicant.password_hash) {
       throw new Error('User not found or no password set');
     }
-    const isMatch = await bcrypt.compare(currentPasswordRaw, applicant.password_hash);
+    const isMatch = await bcrypt.compare(
+      currentPasswordRaw,
+      applicant.password_hash,
+    );
     if (!isMatch) {
       throw new Error('Incorrect current password');
     }
     const newPasswordHash = await bcrypt.hash(newPasswordRaw, 10);
-    await pool.query('UPDATE applicants SET password_hash = $1 WHERE id = $2', [newPasswordHash, applicantId]);
+    await pool.query('UPDATE applicants SET password_hash = $1 WHERE id = $2', [
+      newPasswordHash,
+      applicantId,
+    ]);
     return true;
   }
 
@@ -520,7 +637,10 @@ class ApplicantsServiceClass {
     addField('first_name', data.first_name);
     addField('middle_name', data.middle_name);
     if (data.date_of_birth !== undefined) {
-      addField('date_of_birth', data.date_of_birth ? new Date(data.date_of_birth) : null);
+      addField(
+        'date_of_birth',
+        data.date_of_birth ? new Date(data.date_of_birth) : null,
+      );
       addField('age', calculateAge(data.date_of_birth));
     }
     addField('place_of_birth', data.place_of_birth);
@@ -543,31 +663,61 @@ class ApplicantsServiceClass {
 
     addField('educational_background', data.educational_background, true);
     if (data.educational_background !== undefined) {
-      addField('bachelors_degree', extractBachelorsDegree(data.educational_background));
+      addField(
+        'bachelors_degree',
+        extractBachelorsDegree(data.educational_background),
+      );
     }
     addField('family_background', data.family_background, true);
     if (data.family_background) {
       addField('spouse_surname', data.family_background.spouse?.surname);
       addField('spouse_first_name', data.family_background.spouse?.first_name);
-      addField('spouse_middle_name', data.family_background.spouse?.middle_name);
-      addField('spouse_name_extension', data.family_background.spouse?.name_extension);
+      addField(
+        'spouse_middle_name',
+        data.family_background.spouse?.middle_name,
+      );
+      addField(
+        'spouse_name_extension',
+        data.family_background.spouse?.name_extension,
+      );
       addField('spouse_occupation', data.family_background.spouse?.occupation);
-      addField('spouse_employer_business', data.family_background.spouse?.employer_business_name);
-      addField('spouse_business_address', data.family_background.spouse?.business_address);
+      addField(
+        'spouse_employer_business',
+        data.family_background.spouse?.employer_business_name,
+      );
+      addField(
+        'spouse_business_address',
+        data.family_background.spouse?.business_address,
+      );
       addField('spouse_telephone', data.family_background.spouse?.telephone_no);
       addField('father_surname', data.family_background.father?.surname);
       addField('father_first_name', data.family_background.father?.first_name);
-      addField('father_middle_name', data.family_background.father?.middle_name);
-      addField('father_name_extension', data.family_background.father?.name_extension);
-      addField('mother_maiden_surname', data.family_background.mother?.maiden_surname);
+      addField(
+        'father_middle_name',
+        data.family_background.father?.middle_name,
+      );
+      addField(
+        'father_name_extension',
+        data.family_background.father?.name_extension,
+      );
+      addField(
+        'mother_maiden_surname',
+        data.family_background.mother?.maiden_surname,
+      );
       addField('mother_first_name', data.family_background.mother?.first_name);
-      addField('mother_middle_name', data.family_background.mother?.middle_name);
+      addField(
+        'mother_middle_name',
+        data.family_background.mother?.middle_name,
+      );
       addField('children_details', data.family_background.children, true);
     }
 
     addField('civil_service_eligibility', data.civil_service_eligibility, true);
     if (data.civil_service_eligibility !== undefined) {
-      addField('eligibility', extractEligibility(data.civil_service_eligibility));
+      addField(
+        'eligibility',
+        extractEligibility(data.civil_service_eligibility),
+      );
     }
     addField('work_experience', data.work_experience, true);
     if (data.work_experience !== undefined) {
@@ -576,7 +726,10 @@ class ApplicantsServiceClass {
     addField('voluntary_work', data.voluntary_work, true);
     addField('learning_and_development', data.learning_and_development, true);
     if (data.learning_and_development !== undefined) {
-      addField('training_hours', calculateTraining(data.learning_and_development));
+      addField(
+        'training_hours',
+        calculateTraining(data.learning_and_development),
+      );
     }
     addField('other_information', data.other_information, true);
     addField('questionnaire_responses', data.questionnaire_responses, true);
@@ -591,7 +744,10 @@ class ApplicantsServiceClass {
   }
 
   async forgotPassword(email: string) {
-    const result = await pool.query('SELECT id FROM applicants WHERE email_address = $1', [email]);
+    const result = await pool.query(
+      'SELECT id FROM applicants WHERE email_address = $1',
+      [email],
+    );
     if (result.rows.length === 0) {
       return false;
     }
@@ -618,7 +774,7 @@ class ApplicantsServiceClass {
 
       const result = await pool.query(
         'UPDATE applicants SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
-        [passwordHash, applicantId]
+        [passwordHash, applicantId],
       );
 
       if (result.rows.length === 0) {
@@ -632,14 +788,14 @@ class ApplicantsServiceClass {
 
   async setPasscode(applicantId: number, passcode: string) {
     if (!/^\d{6}$/.test(passcode)) {
-      throw new Error("Passcode must be exactly 6 digits.");
+      throw new Error('Passcode must be exactly 6 digits.');
     }
     const result = await pool.query(
       'UPDATE applicants SET passcode = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
-      [passcode, applicantId]
+      [passcode, applicantId],
     );
     if (result.rows.length === 0) {
-      throw new Error("Applicant not found");
+      throw new Error('Applicant not found');
     }
     return true;
   }
@@ -648,14 +804,17 @@ class ApplicantsServiceClass {
     applicantId: number,
     docType: 'Letter of Intent' | 'Sworn Declaration',
     newBlobUrl: string,
-    targetApplicationIds?: string[]
+    targetApplicationIds?: string[],
   ) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
       // 1. Fetch applicant profile
-      const appRes = await client.query('SELECT * FROM applicants WHERE id = $1 FOR UPDATE', [applicantId]);
+      const appRes = await client.query(
+        'SELECT * FROM applicants WHERE id = $1 FOR UPDATE',
+        [applicantId],
+      );
       if (appRes.rows.length === 0) {
         throw new Error('Applicant profile not found');
       }
@@ -663,7 +822,9 @@ class ApplicantsServiceClass {
 
       let otherInfo = applicant.other_information || {};
       if (typeof otherInfo === 'string') {
-        try { otherInfo = JSON.parse(otherInfo); } catch {}
+        try {
+          otherInfo = JSON.parse(otherInfo);
+        } catch {}
       }
       if (!otherInfo.documents) otherInfo.documents = {};
 
@@ -673,19 +834,29 @@ class ApplicantsServiceClass {
       otherInfo.documents[docType] = newBlobUrl;
       await client.query(
         'UPDATE applicants SET other_information = $1, updated_at = NOW() WHERE id = $2',
-        [JSON.stringify(otherInfo), applicantId]
+        [JSON.stringify(otherInfo), applicantId],
       );
 
       // 2. Update targeted applications or all active applications
       let affectedCount = 0;
-      const columnToUpdate = docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
+      const columnToUpdate =
+        docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
 
-      if (targetApplicationIds && Array.isArray(targetApplicationIds) && targetApplicationIds.length > 0) {
+      if (
+        targetApplicationIds &&
+        Array.isArray(targetApplicationIds) &&
+        targetApplicationIds.length > 0
+      ) {
         const updateRes = await client.query(
           `UPDATE applications 
            SET ${columnToUpdate} = $1, updated_at = NOW() 
            WHERE id = ANY($2::text[]) AND (applicant_id = $3 OR applicant_id = $4) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
-          [newBlobUrl, targetApplicationIds, applicantId, applicantId.toString()]
+          [
+            newBlobUrl,
+            targetApplicationIds,
+            applicantId,
+            applicantId.toString(),
+          ],
         );
         affectedCount = updateRes.rowCount || 0;
       } else {
@@ -693,17 +864,27 @@ class ApplicantsServiceClass {
           `UPDATE applications 
            SET ${columnToUpdate} = $1, updated_at = NOW() 
            WHERE (applicant_id = $2 OR applicant_id = $3) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
-          [newBlobUrl, applicantId, applicantId.toString()]
+          [newBlobUrl, applicantId, applicantId.toString()],
         );
         affectedCount = updateRes.rowCount || 0;
       }
 
       // 3. Create audit log record
-      const appIdsStr = targetApplicationIds && targetApplicationIds.length > 0 ? targetApplicationIds.join(',') : null;
+      const appIdsStr =
+        targetApplicationIds && targetApplicationIds.length > 0
+          ? targetApplicationIds.join(',')
+          : null;
       await client.query(
         `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [applicantId.toString(), docType, oldBlobUrl, newBlobUrl, affectedCount, appIdsStr]
+        [
+          applicantId.toString(),
+          docType,
+          oldBlobUrl,
+          newBlobUrl,
+          affectedCount,
+          appIdsStr,
+        ],
       );
 
       await client.query('COMMIT');
@@ -714,7 +895,7 @@ class ApplicantsServiceClass {
         oldUrl: oldBlobUrl,
         affectedApplications: affectedCount,
         targetApplicationIds: targetApplicationIds || [],
-        documents: otherInfo.documents
+        documents: otherInfo.documents,
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -724,6 +905,5 @@ class ApplicantsServiceClass {
     }
   }
 }
-
 
 export const ApplicantsService = new ApplicantsServiceClass();

@@ -2,14 +2,21 @@ import './config/env';
 import { Pool } from 'pg';
 
 const connectionString = process.env.DATABASE_URL;
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString,
-  ssl: connectionString?.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined
+  ssl: connectionString?.includes('sslmode=require')
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
-pool.connect()
+pool
+  .connect()
   .then((client) => {
-    console.log('✅ Successfully connected to Azure PostgreSQL Database natively!');
+    console.log(
+      '✅ Successfully connected to Azure PostgreSQL Database natively!',
+    );
     client.release();
   })
-  .catch((error) => console.error('❌ Failed to connect to the database:', error));
+  .catch((error) =>
+    console.error('❌ Failed to connect to the database:', error),
+  );

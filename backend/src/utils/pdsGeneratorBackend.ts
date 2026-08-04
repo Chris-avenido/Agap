@@ -3,23 +3,27 @@ import fs from 'fs';
 import path from 'path';
 
 // Helper to check native Form Controls via zip XML modification
-const toggleFormControl = async (workbook: any, ctrlPropId: number, isChecked: boolean) => {
+const toggleFormControl = async (
+  workbook: any,
+  ctrlPropId: number,
+  isChecked: boolean,
+) => {
   const xmlPath = `xl/ctrlProps/ctrlProp${ctrlPropId}.xml`;
   const file = workbook._zip.file(xmlPath);
   if (!file) return;
   let xml = await file.async('string');
-  
+
   if (isChecked) {
-      if (xml.includes('checked=')) {
-          xml = xml.replace(/checked="[^"]*"/, 'checked="Checked"');
-      } else {
-          xml = xml.replace('<formControlPr ', '<formControlPr checked="Checked" ');
-      }
+    if (xml.includes('checked=')) {
+      xml = xml.replace(/checked="[^"]*"/, 'checked="Checked"');
+    } else {
+      xml = xml.replace('<formControlPr ', '<formControlPr checked="Checked" ');
+    }
   } else {
-      // To prevent XML schema corruption, remove the attribute completely for unchecked state
-      if (xml.includes('checked=')) {
-          xml = xml.replace(/\s?checked="[^"]*"/, '');
-      }
+    // To prevent XML schema corruption, remove the attribute completely for unchecked state
+    if (xml.includes('checked=')) {
+      xml = xml.replace(/\s?checked="[^"]*"/, '');
+    }
   }
   workbook._zip.file(xmlPath, xml);
 };
@@ -30,16 +34,19 @@ const parseAddress = (addressStr: string | any) => {
   try {
     const parsed = JSON.parse(addressStr);
     return typeof parsed === 'object' ? parsed : {};
-  } catch(e) {
-    return { house: addressStr }; 
+  } catch (e) {
+    return { house: addressStr };
   }
 };
 
 export const generatePDSBackend = async (applicantData: any) => {
-  const templatePath = path.join(__dirname, '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx');
+  const templatePath = path.join(
+    __dirname,
+    '../../../frontend/src/assets/ANNEX H-1 - CS Form No. 212 Revised 2025 - Personal Data Sheet (2).xlsx',
+  );
 
   if (!fs.existsSync(templatePath)) {
-    throw new Error("Excel template not found at: " + templatePath);
+    throw new Error('Excel template not found at: ' + templatePath);
   }
 
   const workbook = await XlsxPopulate.fromFileAsync(templatePath);
@@ -66,17 +73,30 @@ export const generatePDSBackend = async (applicantData: any) => {
   write(sheetC1, 'D10', applicantData.surname || applicantData.last_name);
   write(sheetC1, 'D11', applicantData.firstName || applicantData.first_name);
   write(sheetC1, 'D12', applicantData.middleName || applicantData.middle_name);
-  write(sheetC1, 'N11', applicantData.nameExtension || applicantData.name_extension);
-  write(sheetC1, 'D13', applicantData.dateOfBirth || applicantData.date_of_birth);
-  write(sheetC1, 'D15', applicantData.placeOfBirth || applicantData.place_of_birth);
-  
+  write(
+    sheetC1,
+    'N11',
+    applicantData.nameExtension || applicantData.name_extension,
+  );
+  write(
+    sheetC1,
+    'D13',
+    applicantData.dateOfBirth || applicantData.date_of_birth,
+  );
+  write(
+    sheetC1,
+    'D15',
+    applicantData.placeOfBirth || applicantData.place_of_birth,
+  );
+
   // Sex Form Controls
   const sex = (applicantData.sex || '').toUpperCase();
   await toggleFormControl(workbook, 4, sex === 'MALE');
   await toggleFormControl(workbook, 5, sex === 'FEMALE');
 
   // Civil Status Form Controls
-  const civilStatus = applicantData.civilStatus || applicantData.civil_status || '';
+  const civilStatus =
+    applicantData.civilStatus || applicantData.civil_status || '';
   await toggleFormControl(workbook, 6, civilStatus === 'Single');
   await toggleFormControl(workbook, 7, civilStatus === 'Married');
   await toggleFormControl(workbook, 8, civilStatus === 'Widowed');
@@ -85,26 +105,68 @@ export const generatePDSBackend = async (applicantData: any) => {
 
   // Citizenship
   const citizenship = applicantData.citizenship || '';
-  const citType = applicantData.citizenshipType || (applicantData.other_information && applicantData.other_information.citizenshipType) || '';
+  const citType =
+    applicantData.citizenshipType ||
+    (applicantData.other_information &&
+      applicantData.other_information.citizenshipType) ||
+    '';
   await toggleFormControl(workbook, 2, citizenship === 'Filipino');
   await toggleFormControl(workbook, 3, citizenship === 'Dual Citizenship');
   await toggleFormControl(workbook, 11, citType === 'by birth');
   await toggleFormControl(workbook, 12, citType === 'by naturalization');
-  
-  write(sheetC1, 'D17', applicantData.civilStatus || applicantData.civil_status);
+
+  write(
+    sheetC1,
+    'D17',
+    applicantData.civilStatus || applicantData.civil_status,
+  );
   const otherInfo = applicantData.other_information || {};
   write(sheetC1, 'D22', otherInfo.height || applicantData.height);
   write(sheetC1, 'D24', otherInfo.weight || applicantData.weight);
-  write(sheetC1, 'D25', otherInfo.bloodType || applicantData.blood_type || applicantData.bloodType);
-  
-  write(sheetC1, 'D27', otherInfo.gsis || applicantData.gsis_id_no || applicantData.gsis);
-  write(sheetC1, 'D29', otherInfo.pagibig || applicantData.pag_ibig_id_no || applicantData.pagibig);
-  write(sheetC1, 'D31', otherInfo.philhealth || applicantData.philhealth_no || applicantData.philhealth);
-  write(sheetC1, 'D32', otherInfo.sss || applicantData.sss_no || applicantData.sss);
-  write(sheetC1, 'D33', otherInfo.tin || applicantData.tin_no || applicantData.tin);
-  write(sheetC1, 'D34', otherInfo.agencyEmployeeNo || applicantData.agency_employee_no || applicantData.agencyEmployeeNo);
+  write(
+    sheetC1,
+    'D25',
+    otherInfo.bloodType || applicantData.blood_type || applicantData.bloodType,
+  );
 
-  const resAddr = parseAddress(applicantData.residential_address || applicantData.resAddress);
+  write(
+    sheetC1,
+    'D27',
+    otherInfo.gsis || applicantData.gsis_id_no || applicantData.gsis,
+  );
+  write(
+    sheetC1,
+    'D29',
+    otherInfo.pagibig || applicantData.pag_ibig_id_no || applicantData.pagibig,
+  );
+  write(
+    sheetC1,
+    'D31',
+    otherInfo.philhealth ||
+      applicantData.philhealth_no ||
+      applicantData.philhealth,
+  );
+  write(
+    sheetC1,
+    'D32',
+    otherInfo.sss || applicantData.sss_no || applicantData.sss,
+  );
+  write(
+    sheetC1,
+    'D33',
+    otherInfo.tin || applicantData.tin_no || applicantData.tin,
+  );
+  write(
+    sheetC1,
+    'D34',
+    otherInfo.agencyEmployeeNo ||
+      applicantData.agency_employee_no ||
+      applicantData.agencyEmployeeNo,
+  );
+
+  const resAddr = parseAddress(
+    applicantData.residential_address || applicantData.resAddress,
+  );
   write(sheetC1, 'I17', resAddr.house);
   write(sheetC1, 'L17', resAddr.street);
   write(sheetC1, 'I19', resAddr.subdivision);
@@ -113,7 +175,9 @@ export const generatePDSBackend = async (applicantData: any) => {
   write(sheetC1, 'L22', resAddr.province);
   write(sheetC1, 'I24', resAddr.zip);
 
-  const permAddr = parseAddress(applicantData.permanent_address || applicantData.permAddress);
+  const permAddr = parseAddress(
+    applicantData.permanent_address || applicantData.permAddress,
+  );
   write(sheetC1, 'I25', permAddr.house);
   write(sheetC1, 'L25', permAddr.street);
   write(sheetC1, 'I27', permAddr.subdivision);
@@ -129,27 +193,100 @@ export const generatePDSBackend = async (applicantData: any) => {
   // Family Background
   const family = applicantData.family_background || {};
   write(sheetC1, 'D36', family.spouse?.surname || family.spouseSurname);
-  write(sheetC1, 'D37', family.spouse?.first_name || family.spouse?.firstName || family.spouseFirst);
-  write(sheetC1, 'D38', family.spouse?.middle_name || family.spouse?.middleName || family.spouseMiddle);
-  write(sheetC1, 'N37', family.spouse?.name_extension || family.spouse?.nameExtension || family.spouseExt);
+  write(
+    sheetC1,
+    'D37',
+    family.spouse?.first_name || family.spouse?.firstName || family.spouseFirst,
+  );
+  write(
+    sheetC1,
+    'D38',
+    family.spouse?.middle_name ||
+      family.spouse?.middleName ||
+      family.spouseMiddle,
+  );
+  write(
+    sheetC1,
+    'N37',
+    family.spouse?.name_extension ||
+      family.spouse?.nameExtension ||
+      family.spouseExt,
+  );
   write(sheetC1, 'D39', family.spouse?.occupation || family.spouseOccupation);
-  write(sheetC1, 'D40', applicantData.spouse_employer_business || family.spouse?.employer_business_name || family.spouse?.employer || family.spouse?.employer_business || family.spouseEmployer);
-  write(sheetC1, 'D41', family.spouse?.business_address || family.spouseBusAddress);
-  write(sheetC1, 'D42', applicantData.spouse_telephone || family.spouse?.telephone_no || family.spouse?.telephone || family.spouseTelephone);
-  
+  write(
+    sheetC1,
+    'D40',
+    applicantData.spouse_employer_business ||
+      family.spouse?.employer_business_name ||
+      family.spouse?.employer ||
+      family.spouse?.employer_business ||
+      family.spouseEmployer,
+  );
+  write(
+    sheetC1,
+    'D41',
+    family.spouse?.business_address || family.spouseBusAddress,
+  );
+  write(
+    sheetC1,
+    'D42',
+    applicantData.spouse_telephone ||
+      family.spouse?.telephone_no ||
+      family.spouse?.telephone ||
+      family.spouseTelephone,
+  );
+
   write(sheetC1, 'D43', family.father?.surname || family.fatherSurname);
-  write(sheetC1, 'D44', family.father?.first_name || family.father?.firstName || family.fatherFirst);
-  write(sheetC1, 'D45', family.father?.middle_name || family.father?.middleName || family.fatherMiddle);
-  write(sheetC1, 'N44', family.father?.name_extension || family.father?.nameExtension || family.fatherExt);
-  
-  write(sheetC1, 'D47', applicantData.mother_maiden_surname || family.mother?.maiden_surname || family.mother?.surname || family.motherSurname);
-  write(sheetC1, 'D48', family.mother?.first_name || family.mother?.firstName || family.motherFirst);
-  write(sheetC1, 'D49', family.mother?.middle_name || family.mother?.middleName || family.motherMiddle);
+  write(
+    sheetC1,
+    'D44',
+    family.father?.first_name || family.father?.firstName || family.fatherFirst,
+  );
+  write(
+    sheetC1,
+    'D45',
+    family.father?.middle_name ||
+      family.father?.middleName ||
+      family.fatherMiddle,
+  );
+  write(
+    sheetC1,
+    'N44',
+    family.father?.name_extension ||
+      family.father?.nameExtension ||
+      family.fatherExt,
+  );
+
+  write(
+    sheetC1,
+    'D47',
+    applicantData.mother_maiden_surname ||
+      family.mother?.maiden_surname ||
+      family.mother?.surname ||
+      family.motherSurname,
+  );
+  write(
+    sheetC1,
+    'D48',
+    family.mother?.first_name || family.mother?.firstName || family.motherFirst,
+  );
+  write(
+    sheetC1,
+    'D49',
+    family.mother?.middle_name ||
+      family.mother?.middleName ||
+      family.motherMiddle,
+  );
 
   // Educational Background
   let eduArray = applicantData.educational_background;
   if (!Array.isArray(eduArray)) eduArray = [];
-  const getEdu = (lvl: string) => eduArray.find((e: any) => e.level && e.level.toUpperCase() === lvl) || (applicantData.educationalDates ? applicantData.educationalDates[lvl.toLowerCase()] : {}) || {};
+  const getEdu = (lvl: string) =>
+    eduArray.find((e: any) => e.level && e.level.toUpperCase() === lvl) ||
+    (applicantData.educationalDates
+      ? applicantData.educationalDates[lvl.toLowerCase()]
+      : {}) ||
+    {};
 
   const mapEdu = (level: string, row: number) => {
     const data = getEdu(level);
@@ -180,35 +317,100 @@ export const generatePDSBackend = async (applicantData: any) => {
   };
 
   // Children
-  const children = applicantData.children_details ? (typeof applicantData.children_details === 'string' ? JSON.parse(applicantData.children_details) : applicantData.children_details) : ((applicantData.other_information && applicantData.other_information.children) || applicantData.children || []);
+  const children = applicantData.children_details
+    ? typeof applicantData.children_details === 'string'
+      ? JSON.parse(applicantData.children_details)
+      : applicantData.children_details
+    : (applicantData.other_information &&
+        applicantData.other_information.children) ||
+      applicantData.children ||
+      [];
   populateArray(sheetC1, children, {
-    startRow: 37, endRow: 48, columns: { name: 'I', dateOfBirth: 'M' }
+    startRow: 37,
+    endRow: 48,
+    columns: { name: 'I', dateOfBirth: 'M' },
   });
 
   // --- SHEET C2 ---
-  populateArray(sheetC2, applicantData.civil_service_eligibility || applicantData.civilServiceList, {
-    startRow: 5, endRow: 11, columns: { eligibility: 'A', rating: 'F', date: 'G', place: 'I', licenseNo: 'J', licenseDate: 'K' }
-  });
+  populateArray(
+    sheetC2,
+    applicantData.civil_service_eligibility || applicantData.civilServiceList,
+    {
+      startRow: 5,
+      endRow: 11,
+      columns: {
+        eligibility: 'A',
+        rating: 'F',
+        date: 'G',
+        place: 'I',
+        licenseNo: 'J',
+        licenseDate: 'K',
+      },
+    },
+  );
 
   // NOTE: Salary Grade and Monthly Salary are omitted per instruction (and because the 2025 template shifted Status to J and Govt to K)
-  populateArray(sheetC2, applicantData.work_experience || applicantData.workExperienceList, {
-    startRow: 18, endRow: 45, columns: { fromDate: 'A', toDate: 'C', positionTitle: 'D', company: 'G', statusOfAppointment: 'J', govtService: 'K' }
-  });
+  populateArray(
+    sheetC2,
+    applicantData.work_experience || applicantData.workExperienceList,
+    {
+      startRow: 18,
+      endRow: 45,
+      columns: {
+        fromDate: 'A',
+        toDate: 'C',
+        positionTitle: 'D',
+        company: 'G',
+        statusOfAppointment: 'J',
+        govtService: 'K',
+      },
+    },
+  );
 
   // --- SHEET C3 ---
-  populateArray(sheetC3, applicantData.voluntary_work || applicantData.voluntaryWorkList, {
-    startRow: 6, endRow: 12, columns: { nameAddress: 'A', fromDate: 'E', toDate: 'F', hours: 'G', position: 'H' }
-  });
+  populateArray(
+    sheetC3,
+    applicantData.voluntary_work || applicantData.voluntaryWorkList,
+    {
+      startRow: 6,
+      endRow: 12,
+      columns: {
+        nameAddress: 'A',
+        fromDate: 'E',
+        toDate: 'F',
+        hours: 'G',
+        position: 'H',
+      },
+    },
+  );
 
-  populateArray(sheetC3, applicantData.learning_and_development || applicantData.learningDevelopmentList, {
-    startRow: 18, endRow: 38, columns: { title: 'A', fromDate: 'E', toDate: 'F', hours: 'G', type: 'H', sponsor: 'I' }
-  });
+  populateArray(
+    sheetC3,
+    applicantData.learning_and_development ||
+      applicantData.learningDevelopmentList,
+    {
+      startRow: 18,
+      endRow: 38,
+      columns: {
+        title: 'A',
+        fromDate: 'E',
+        toDate: 'F',
+        hours: 'G',
+        type: 'H',
+        sponsor: 'I',
+      },
+    },
+  );
 
   const normalizeStringList = (raw: any) => {
     if (!raw) return [];
     let list = raw;
     if (typeof list === 'string') {
-      try { list = JSON.parse(list); } catch { list = [raw]; }
+      try {
+        list = JSON.parse(list);
+      } catch {
+        list = [raw];
+      }
     }
     if (!Array.isArray(list)) list = [list];
     return list.map((item: any) => {
@@ -217,9 +419,18 @@ export const generatePDSBackend = async (applicantData: any) => {
     });
   };
 
-  const skills = normalizeStringList(otherInfo.special_skills || otherInfo.skills || applicantData.skillsList || applicantData.special_skills);
-  const distinctions = normalizeStringList(otherInfo.distinctions || applicantData.distinctionsList);
-  const memberships = normalizeStringList(otherInfo.memberships || applicantData.membershipsList);
+  const skills = normalizeStringList(
+    otherInfo.special_skills ||
+      otherInfo.skills ||
+      applicantData.skillsList ||
+      applicantData.special_skills,
+  );
+  const distinctions = normalizeStringList(
+    otherInfo.distinctions || applicantData.distinctionsList,
+  );
+  const memberships = normalizeStringList(
+    otherInfo.memberships || applicantData.membershipsList,
+  );
 
   // Clear rows 42..48 in sheetC3 to remove hardcoded template example text like "Playing mobile legend"
   for (let r = 42; r <= 48; r++) {
@@ -228,38 +439,80 @@ export const generatePDSBackend = async (applicantData: any) => {
     sheetC3.cell(`J${r}`).value('');
   }
 
-  populateArray(sheetC3, skills, { startRow: 42, endRow: 48, columns: { value: 'A' } });
-  populateArray(sheetC3, distinctions, { startRow: 42, endRow: 48, columns: { value: 'D' } });
-  populateArray(sheetC3, memberships, { startRow: 42, endRow: 48, columns: { value: 'J' } });
+  populateArray(sheetC3, skills, {
+    startRow: 42,
+    endRow: 48,
+    columns: { value: 'A' },
+  });
+  populateArray(sheetC3, distinctions, {
+    startRow: 42,
+    endRow: 48,
+    columns: { value: 'D' },
+  });
+  populateArray(sheetC3, memberships, {
+    startRow: 42,
+    endRow: 48,
+    columns: { value: 'J' },
+  });
 
   // --- SHEET C4 ---
   // Questionnaire Form Controls & Fallback Data
-  let q = applicantData.questionnaire_responses || applicantData.questionnaire || {};
-  if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = {}; } }
+  let q =
+    applicantData.questionnaire_responses || applicantData.questionnaire || {};
+  if (typeof q === 'string') {
+    try {
+      q = JSON.parse(q);
+    } catch (e) {
+      q = {};
+    }
+  }
 
   const fallbackReferences: any[] = [];
-  if (q.ref1_name) fallbackReferences.push({ name: q.ref1_name, address: q.ref1_address, telephone: q.ref1_tel });
-  if (q.ref2_name) fallbackReferences.push({ name: q.ref2_name, address: q.ref2_address, telephone: q.ref2_tel });
-  if (q.ref3_name) fallbackReferences.push({ name: q.ref3_name, address: q.ref3_address, telephone: q.ref3_tel });
+  if (q.ref1_name)
+    fallbackReferences.push({
+      name: q.ref1_name,
+      address: q.ref1_address,
+      telephone: q.ref1_tel,
+    });
+  if (q.ref2_name)
+    fallbackReferences.push({
+      name: q.ref2_name,
+      address: q.ref2_address,
+      telephone: q.ref2_tel,
+    });
+  if (q.ref3_name)
+    fallbackReferences.push({
+      name: q.ref3_name,
+      address: q.ref3_address,
+      telephone: q.ref3_tel,
+    });
 
-  const referencesToUse = (otherInfo.references && otherInfo.references.length > 0) 
-    ? otherInfo.references 
-    : (applicantData.referencesList && applicantData.referencesList.length > 0 ? applicantData.referencesList : fallbackReferences);
+  const referencesToUse =
+    otherInfo.references && otherInfo.references.length > 0
+      ? otherInfo.references
+      : applicantData.referencesList && applicantData.referencesList.length > 0
+        ? applicantData.referencesList
+        : fallbackReferences;
 
   populateArray(sheetC4, referencesToUse, {
-    startRow: 52, endRow: 54, columns: { name: 'A', address: 'F', telephone: 'G' }
+    startRow: 52,
+    endRow: 54,
+    columns: { name: 'A', address: 'F', telephone: 'G' },
   });
 
   // Government ID
-  const govId = Object.keys(otherInfo.governmentId || {}).length > 0 ? otherInfo.governmentId : {
-    type: q.gov_id_type,
-    idNo: q.gov_id_no,
-    datePlace: q.gov_id_issuance
-  };
+  const govId =
+    Object.keys(otherInfo.governmentId || {}).length > 0
+      ? otherInfo.governmentId
+      : {
+          type: q.gov_id_type,
+          idNo: q.gov_id_no,
+          datePlace: q.gov_id_issuance,
+        };
   write(sheetC4, 'D61', govId.type || '');
   write(sheetC4, 'D62', govId.idNo || '');
   write(sheetC4, 'D64', govId.datePlace || '');
-  
+
   const isYes = (val: any) => {
     if (val && typeof val === 'object') val = val.answer;
     if (typeof val === 'string') {
@@ -329,10 +582,13 @@ export const generatePDSBackend = async (applicantData: any) => {
 };
 
 export const generateExperienceBackend = async (applicantData: any) => {
-  const templatePath = path.join(__dirname, '../../../frontend/src/assets/experience.xlsx');
+  const templatePath = path.join(
+    __dirname,
+    '../../../frontend/src/assets/experience.xlsx',
+  );
 
   if (!fs.existsSync(templatePath)) {
-    throw new Error("Excel template not found at: " + templatePath);
+    throw new Error('Excel template not found at: ' + templatePath);
   }
 
   const workbook = await XlsxPopulate.fromFileAsync(templatePath);
@@ -360,11 +616,23 @@ export const generateExperienceBackend = async (applicantData: any) => {
     }
   };
 
-  populateArray(sheet, applicantData.work_experience || applicantData.workExperienceList, {
-    startRow: 8, endRow: 35, columns: { fromDate: 'A', toDate: 'C', positionTitle: 'D', company: 'G', statusOfAppointment: 'J', govtService: 'K' }
-  });
+  populateArray(
+    sheet,
+    applicantData.work_experience || applicantData.workExperienceList,
+    {
+      startRow: 8,
+      endRow: 35,
+      columns: {
+        fromDate: 'A',
+        toDate: 'C',
+        positionTitle: 'D',
+        company: 'G',
+        statusOfAppointment: 'J',
+        govtService: 'K',
+      },
+    },
+  );
 
   const outBuffer = await workbook.outputAsync();
   return { buffer: outBuffer };
 };
-

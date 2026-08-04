@@ -20,18 +20,35 @@ export const calculateProfileProgress = (data: {
   distinctionsList?: any[];
   membershipsList?: any[];
   questionnaire?: any;
+  referencesList?: any[];
+  governmentId?: any;
   documentsConfirmed?: Record<string, boolean>;
   isSubsequentApplication?: boolean;
   uploadedDocumentUrls?: Record<string, string>;
   documents?: Record<string, any>;
   context?: 'my-profile' | 'apply-now';
+  jobPosition?: any;
 }) => {
   const steps: string[] = [];
 
   if (data.firstName?.trim() && data.lastName?.trim() && data.placeOfBirth?.trim() && data.sex && data.civilStatus && data.citizenship) steps.push('Personal Information');
   if (data.motherSurname?.trim() || data.motherFirst?.trim() || data.fatherSurname?.trim() || data.fatherFirst?.trim() || data.spouseSurname?.trim() || data.spouseFirst?.trim()) steps.push('Family Background');
   
-  if (data.educationalDates && Object.values(data.educationalDates).some((ed: any) => ed?.school?.trim() !== '')) steps.push('Educational Background');
+  const ed = data.educationalDates || {};
+  const isGeneralProfile = data.context === 'my-profile' && !data.jobPosition;
+  if (isGeneralProfile) {
+    if (Object.values(ed).some((item: any) => item?.school?.trim() !== '')) {
+      steps.push('Educational Background');
+    }
+  } else {
+    // For job applications, require secondary and college entries
+    const hasSecondary = ed.secondary?.school?.trim() !== '';
+    const hasCollege = ed.college?.school?.trim() !== '';
+    if (hasSecondary && hasCollege) {
+      steps.push('Educational Background');
+    }
+  }
+
   if (data.civilServiceList?.some((cs: any) => (cs?.eligibility && String(cs.eligibility).trim() !== '') || (cs?.name && String(cs.name).trim() !== ''))) steps.push('Eligibility');
   if (data.workExperienceList?.some((we: any) => (we?.company && String(we.company).trim() !== '') || (we?.positionTitle && String(we.positionTitle).trim() !== '') || (we?.position && String(we.position).trim() !== ''))) steps.push('Work Experience');
   if (data.voluntaryWorkList?.some((vw: any) => (vw?.nameAddress && String(vw.nameAddress).trim() !== '') || (vw?.organization && String(vw.organization).trim() !== ''))) steps.push('Voluntary Work');
@@ -59,16 +76,31 @@ export const calculateProfileProgress = (data: {
   const dList = parseList(data.distinctionsList);
   const mList = parseList(data.membershipsList);
   if (sList.some(hasItemVal) || dList.some(hasItemVal) || mList.some(hasItemVal)) steps.push('Other Information');
-  const isQuestionnaireAnswered = (val: any) => {
-    if (!val) return false;
-    if (typeof val === 'string') return val.trim() !== '';
-    if (typeof val === 'object') {
-      const ans = val.answer || val.value || '';
-      return typeof ans === 'string' && ans.trim() !== '';
+
+  // Legal Questionnaire Validation
+  const qIds = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40b_ethnic', '40c'];
+  const q = data.questionnaire || {};
+  const allQAnswered = qIds.every(id => {
+    const item = q[id];
+    if (!item) return false;
+    const ans = typeof item === 'string' ? item : item.answer;
+    if (!ans || (ans !== 'Yes' && ans !== 'No' && ans !== 'yes' && ans !== 'no')) return false;
+    if ((ans === 'Yes' || ans === 'yes') && id !== '34a' && id !== '34b') {
+      const details = typeof item === 'object' ? item.details : '';
+      if (!details || details.trim() === '') return false;
     }
-    return false;
-  };
-  if (data.questionnaire && Object.values(data.questionnaire).some(isQuestionnaireAnswered)) steps.push('Legal Questionnaire');
+    return true;
+  });
+
+  const refs = data.referencesList || [];
+  const validRefs = Array.isArray(refs) && refs.length >= 3 && refs.slice(0, 3).every(r => r?.name?.trim() && r?.address?.trim() && (r?.telephone?.trim() || r?.contact?.trim() || r?.phone?.trim()));
+
+  const gov = data.governmentId || {};
+  const validGovId = Boolean((gov.type || gov.idType)?.trim() && (gov.idNo || gov.number)?.trim() && (gov.datePlace || gov.datePlaceOfIssuance)?.trim());
+
+  if (allQAnswered && validRefs && validGovId) {
+    steps.push('Legal Questionnaire');
+  }
 
   const requiredDocs = [
     'Notarized Personal Data Sheet',
@@ -77,7 +109,6 @@ export const calculateProfileProgress = (data: {
     'Transcript of Records'
   ];
 
-  // For sidebar: Essential Documents turns green only when all required docs are confirmed
   const isDocConfirmed = (docName: string) => {
     if (Boolean(data.documentsConfirmed && data.documentsConfirmed[docName])) return true;
     if (docName === 'Notarized Personal Data Sheet' && Boolean(data.documentsConfirmed && data.documentsConfirmed['Personal Data Sheet'])) return true;
@@ -93,10 +124,10 @@ export const calculateProfileProgress = (data: {
     return false;
   };
 
-  // Sidebar turns green ONLY when all 5 required docs are explicitly confirmed
-  const allRequiredDocsConfirmed = requiredDocs.every(d => isDocConfirmed(d));
+  // Sidebar turns green ONLY when all 4 required docs are uploaded AND confirmed
+  const allRequiredDocsDone = requiredDocs.every(d => isDocUploaded(d) && isDocConfirmed(d));
 
-  if (allRequiredDocsConfirmed) {
+  if (allRequiredDocsDone) {
     steps.push('Essential Documents');
   }
 
@@ -147,8 +178,26 @@ export const parseProfileToState = (profile: any) => {
     // Exact mapping for questionnaire as Job Board (excluding refs and gov_id)
     const parsedQ = parseJSON(profile.questionnaire_responses, {});
     const normalizedQ: any = {};
+    const refs: any[] = [];
+    const govId = { type: '', idNo: '', datePlace: '' };
+
     for (const k in parsedQ) {
-      if (k.startsWith('ref') || k.startsWith('gov_id')) continue;
+      if (k.startsWith('ref')) {
+        const match = k.match(/ref(\d+)_(name|address|tel)/);
+        if (match) {
+          const idx = parseInt(match[1]) - 1;
+          const field = match[2] === 'tel' ? 'telephone' : match[2];
+          while (refs.length <= idx) refs.push({ name: '', address: '', telephone: '' });
+          refs[idx][field] = parsedQ[k] || '';
+        }
+        continue;
+      }
+      if (k.startsWith('gov_id')) {
+        if (k === 'gov_id_type') govId.type = parsedQ[k] || '';
+        if (k === 'gov_id_no') govId.idNo = parsedQ[k] || '';
+        if (k === 'gov_id_issuance') govId.datePlace = parsedQ[k] || '';
+        continue;
+      }
       normalizedQ[k] = parsedQ[k];
     }
 
@@ -165,6 +214,9 @@ export const parseProfileToState = (profile: any) => {
     const formattedMem = other.memberships 
       ? (Array.isArray(other.memberships) ? other.memberships.map((m: any) => typeof m === 'string' ? { value: m } : m) : [{ value: String(other.memberships) }])
       : [];
+
+    const finalRefs = (other.references && Array.isArray(other.references) && other.references.length >= 3) ? other.references : refs;
+    const finalGovId = (other.governmentId && other.governmentId.type) ? other.governmentId : govId;
 
     return {
       firstName: profile.first_name,
@@ -188,6 +240,8 @@ export const parseProfileToState = (profile: any) => {
       distinctionsList: formattedDist,
       membershipsList: formattedMem,
       questionnaire: normalizedQ,
+      referencesList: finalRefs,
+      governmentId: finalGovId,
       documentsConfirmed: {},
       uploadedDocumentUrls: other.documents || {},
       documents: {}

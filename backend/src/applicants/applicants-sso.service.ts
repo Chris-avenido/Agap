@@ -38,8 +38,6 @@ export function verifyApplicantSsoToken(
   token: string,
   now = Math.floor(Date.now() / 1000),
 ): ApplicantSsoClaims {
-
-
   let decoded: JwtPayload | string;
 
   try {
@@ -57,7 +55,8 @@ export function verifyApplicantSsoToken(
   }
 
   const emailValue = decoded.email ?? decoded.email_address;
-  const claimedEmail = typeof emailValue === 'string' ? emailValue.trim().toLowerCase() : '';
+  const claimedEmail =
+    typeof emailValue === 'string' ? emailValue.trim().toLowerCase() : '';
   const isCurrentHandoff =
     decoded.iss === 'insighted-hq' &&
     decoded.aud === 'agap-applicants' &&

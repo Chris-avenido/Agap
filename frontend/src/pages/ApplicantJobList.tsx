@@ -451,14 +451,14 @@ export default function ApplicantJobList() {
       firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
       motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
       educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
-      skillsList, distinctionsList, membershipsList, questionnaire, documentsConfirmed,
-      isSubsequentApplication, uploadedDocumentUrls, documents
+      skillsList, distinctionsList, membershipsList, questionnaire, referencesList, governmentId, documentsConfirmed,
+      isSubsequentApplication, uploadedDocumentUrls, documents, context: 'apply-now'
     });
   }, [
     firstName, lastName, placeOfBirth, sex, civilStatus, citizenship,
     motherSurname, motherFirst, fatherSurname, fatherFirst, spouseSurname, spouseFirst,
     educationalDates, civilServiceList, workExperienceList, voluntaryWorkList, learningDevelopmentList,
-    skillsList, distinctionsList, membershipsList, questionnaire, isSubsequentApplication, documentsConfirmed,
+    skillsList, distinctionsList, membershipsList, questionnaire, referencesList, governmentId, isSubsequentApplication, documentsConfirmed,
     uploadedDocumentUrls, documents
   ]);
 
@@ -509,25 +509,22 @@ export default function ApplicantJobList() {
   const handleEssentialDocumentsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isSubsequentApplication) {
-      const requiredDocs = [
-        'Notarized Personal Data Sheet',
-        'Work Experience Sheet',
-        'Certificate of Eligibility',
-        'Transcript of Records',
-        'Updated PRC License/ID'
-      ];
-      const isConfirmed = (doc: string) => documentsConfirmed[doc] || (doc === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet']);
-      const allDocumentsConfirmed = requiredDocs.every(doc => isConfirmed(doc));
-      if (!allDocumentsConfirmed) {
-        Swal.fire(
-          'Documents Not Confirmed',
-          'Please review and check the confirmation box for each required document before submitting.',
-          'warning'
-        );
-        setCurrentStep('Essential Documents');
-        return;
-      }
+    const REQUIRED_DOCS = [
+      'Notarized Personal Data Sheet',
+      'Work Experience Sheet',
+      'Certificate of Eligibility',
+      'Transcript of Records'
+    ];
+    const isConfirmed = (doc: string) => documentsConfirmed[doc] || (doc === 'Notarized Personal Data Sheet' && documentsConfirmed['Personal Data Sheet']);
+    const allDocumentsConfirmed = REQUIRED_DOCS.every(doc => isConfirmed(doc));
+    if (!allDocumentsConfirmed) {
+      Swal.fire(
+        'Documents Not Confirmed',
+        'Please review and check the confirmation box for each required document before submitting.',
+        'warning'
+      );
+      setCurrentStep('Essential Documents');
+      return;
     }
 
     // 1. Global Validation: Check all tabs for required fields before submitting
@@ -1177,10 +1174,10 @@ export default function ApplicantJobList() {
               };
             }
 
-            if (!normalizedQ['40b_ethnic'] && p.ethnic_group) {
+            if (!normalizedQ['40b_ethnic'] && p.ethnic_group && p.ethnic_group !== 'No') {
               normalizedQ['40b_ethnic'] = {
-                answer: p.ethnic_group !== 'No' ? 'Yes' : 'No',
-                details: p.ethnic_group !== 'No' ? p.ethnic_group : ''
+                answer: 'Yes',
+                details: p.ethnic_group
               };
             }
 
@@ -1840,8 +1837,8 @@ export default function ApplicantJobList() {
                           className={`flex items-center justify-between px-5 py-3.5 text-left border-b border-gray-50 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-50/30' : ''}`}
                         >
                           <div className="flex items-center gap-3.5">
-                            <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center ${isActive || isCompleted ? 'bg-[#34a853]' : 'bg-gray-100'}`}>
-                              <Icon className={`w-4 h-4 ${isActive || isCompleted ? 'text-white' : 'text-gray-300'}`} />
+                            <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center ${isCompleted ? 'bg-[#34a853]' : (isActive ? 'bg-[#1a73e8]' : 'bg-gray-100')}`}>
+                              <Icon className={`w-4 h-4 ${isCompleted || isActive ? 'text-white' : 'text-gray-300'}`} />
                             </div>
                             <span className={`text-[14px] font-semibold tracking-wide ${isActive ? 'text-[#1a73e8]' : 'text-[#8599ad]'}`}>{item.name}</span>
                           </div>
@@ -3486,13 +3483,27 @@ export default function ApplicantJobList() {
                                 }`}>
                                 Essential Documents {highlightDocs && <span className="text-red-500 lowercase normal-case font-normal ml-2">(Action Required)</span>}
                               </h3>
-                              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[12px] font-bold border transition-all duration-300 ${
-                                docsAllDone
-                                  ? 'bg-green-50 border-green-200 text-green-700'
-                                  : 'bg-gray-50 border-gray-200 text-gray-500'
-                              }`}>
-                                <div className={`w-2 h-2 rounded-full ${ docsAllDone ? 'bg-green-500' : 'bg-gray-300' }`} />
-                                {confirmedCount}/{REQUIRED_DOCS.length} confirmed &nbsp;·&nbsp; {docsPct}%
+                              <div className="flex items-center gap-3">
+                                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[12px] font-bold border transition-all duration-300 ${
+                                  docsAllDone
+                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                    : 'bg-gray-50 border-gray-200 text-gray-500'
+                                }`}>
+                                  <div className={`w-2 h-2 rounded-full ${ docsAllDone ? 'bg-green-500' : 'bg-gray-300' }`} />
+                                  {confirmedCount}/{REQUIRED_DOCS.length} confirmed &nbsp;·&nbsp; {docsPct}%
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={!docsAllDone}
+                                  onClick={(e) => { e.preventDefault(); if (docsAllDone) setShowLoiModal(true); }}
+                                  className={`font-bold py-1.5 px-5 rounded flex items-center gap-2 transition-colors text-sm ${
+                                    docsAllDone
+                                      ? 'bg-[#3b82f6] hover:bg-blue-600 text-white cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  Submit Application <FileText className="w-4 h-4 ml-1" />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -3629,17 +3640,10 @@ export default function ApplicantJobList() {
                         })()}
 
 
-                        {/* Submit Button */}
-                        <div className="flex justify-end pt-6 mt-4 border-t border-gray-100 gap-4">
+                        {/* Navigation / Back Button */}
+                        <div className="flex justify-start pt-6 mt-4 border-t border-gray-100">
                           <button type="button" onClick={() => setCurrentStep('Legal Questionnaire')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors">
                             <ChevronLeft className="w-4 h-4" /> Back
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); setShowLoiModal(true); }}
-                            className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-2.5 px-8 rounded flex items-center gap-2 transition-colors"
-                          >
-                            Submit Application <FileText className="w-4 h-4 ml-1" />
                           </button>
                         </div>
                       </form>

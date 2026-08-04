@@ -10,7 +10,10 @@ const transporter = nodemailer.createTransport({
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   // Try to use VITE_API_URL or FRONTEND_URL environment variables, or default to standard frontend dev server
-  const rawUrl = process.env.VITE_API_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const rawUrl =
+    process.env.VITE_API_URL ||
+    process.env.FRONTEND_URL ||
+    'http://localhost:5173';
   const frontendUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 

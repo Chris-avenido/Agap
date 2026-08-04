@@ -1018,9 +1018,9 @@ export default function ApplicationModal({
         let a = getA(id);
         let d = getD(id);
         
-        if (id === '40b_ethnic' && !a && userData?.ethnic_group) {
-          a = userData.ethnic_group !== 'No' ? 'yes' : 'no';
-          d = userData.ethnic_group !== 'No' ? userData.ethnic_group : '';
+        if (id === '40b_ethnic' && !a && userData?.ethnic_group && userData.ethnic_group !== 'No') {
+          a = 'yes';
+          d = userData.ethnic_group;
         }
 
         qRes[`q${id}`] = a;
@@ -1343,10 +1343,10 @@ export default function ApplicationModal({
                 >
                   <div className="flex items-center gap-2 md:gap-3.5">
                     <div
-                      className={`w-[24px] h-[24px] md:w-[30px] md:h-[30px] rounded-full flex items-center justify-center shrink-0 ${isActive || isCompleted ? "bg-[#34a853]" : "bg-gray-100"}`}
+                      className={`w-[24px] h-[24px] md:w-[30px] md:h-[30px] rounded-full flex items-center justify-center shrink-0 ${isCompleted ? "bg-[#34a853]" : isActive ? "bg-[#1a73e8]" : "bg-gray-100"}`}
                     >
                       <Icon
-                        className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isActive || isCompleted ? "text-white" : "text-gray-300"}`}
+                        className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isCompleted || isActive ? "text-white" : "text-gray-300"}`}
                       />
                     </div>
                     <span

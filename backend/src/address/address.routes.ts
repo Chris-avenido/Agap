@@ -10,12 +10,14 @@ const router = Router();
 router.get('/regions', async (_req, res) => {
   try {
     const result = await pool.query(
-      'SELECT DISTINCT region AS name FROM all_address ORDER BY name'
+      'SELECT DISTINCT region AS name FROM all_address ORDER BY name',
     );
     res.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error('Error fetching regions:', error);
-    res.status(500).json({ message: error.message || 'Error fetching regions' });
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching regions' });
   }
 });
 
@@ -31,12 +33,14 @@ router.get('/provinces', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT DISTINCT province AS name FROM all_address WHERE region = $1 ORDER BY name',
-      [region]
+      [region],
     );
     res.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error('Error fetching provinces:', error);
-    res.status(500).json({ message: error.message || 'Error fetching provinces' });
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching provinces' });
   }
 });
 
@@ -50,7 +54,8 @@ router.get('/municipalities', async (req, res) => {
     return res.status(400).json({ message: 'province is required' });
   }
   try {
-    let query = 'SELECT DISTINCT municipality AS name FROM all_address WHERE province = $1';
+    let query =
+      'SELECT DISTINCT municipality AS name FROM all_address WHERE province = $1';
     const params: any[] = [province];
 
     if (region) {
@@ -63,7 +68,9 @@ router.get('/municipalities', async (req, res) => {
     res.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error('Error fetching municipalities:', error);
-    res.status(500).json({ message: error.message || 'Error fetching municipalities' });
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching municipalities' });
   }
 });
 
@@ -77,7 +84,8 @@ router.get('/barangays', async (req, res) => {
     return res.status(400).json({ message: 'municipality is required' });
   }
   try {
-    let query = 'SELECT DISTINCT barangay AS name FROM all_address WHERE municipality = $1';
+    let query =
+      'SELECT DISTINCT barangay AS name FROM all_address WHERE municipality = $1';
     const params: any[] = [municipality];
 
     if (province) {
@@ -90,7 +98,9 @@ router.get('/barangays', async (req, res) => {
     res.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error('Error fetching barangays:', error);
-    res.status(500).json({ message: error.message || 'Error fetching barangays' });
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching barangays' });
   }
 });
 

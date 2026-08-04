@@ -8,7 +8,9 @@ export function setupVacanciesCron() {
     try {
       const updatedCount = await VacanciesService.markExpiredVacancies();
       if (updatedCount && updatedCount > 0) {
-        console.log(`[Cron] Updated ${updatedCount} expired vacancies to 'EXPIRED'.`);
+        console.log(
+          `[Cron] Updated ${updatedCount} expired vacancies to 'EXPIRED'.`,
+        );
       }
     } catch (error) {
       console.error('[Cron] Error updating expired vacancies:', error);

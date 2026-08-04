@@ -1,4 +1,4 @@
-export const pdsMapping: Record<string, { sheet: string, cell: string }> = {
+export const pdsMapping: Record<string, { sheet: string; cell: string }> = {
   // Personal Information (Sheet C1)
   surname: { sheet: 'C1', cell: 'D10' },
   firstName: { sheet: 'C1', cell: 'D11' },
@@ -55,7 +55,7 @@ export const pdsMapping: Record<string, { sheet: string, cell: string }> = {
   fatherFirst: { sheet: 'C1', cell: 'D44' },
   fatherMiddle: { sheet: 'C1', cell: 'D45' },
   fatherExt: { sheet: 'C1', cell: 'N44' },
-  
+
   motherSurname: { sheet: 'C1', cell: 'D47' },
   motherFirst: { sheet: 'C1', cell: 'D48' },
   motherMiddle: { sheet: 'C1', cell: 'D49' },
@@ -124,8 +124,8 @@ export const pdsRepeatingConfig = {
       date: 'G',
       place: 'I',
       licenseNumber: 'L',
-      licenseDate: 'M'
-    }
+      licenseDate: 'M',
+    },
   },
   workExperience: {
     sheet: 'C2',
@@ -139,8 +139,8 @@ export const pdsRepeatingConfig = {
       monthlySalary: 'J',
       salaryGrade: 'K',
       statusOfAppointment: 'L',
-      govtService: 'M'
-    }
+      govtService: 'M',
+    },
   },
   voluntaryWork: {
     sheet: 'C3',
@@ -151,8 +151,8 @@ export const pdsRepeatingConfig = {
       fromDate: 'E',
       toDate: 'F',
       hours: 'G',
-      position: 'H'
-    }
+      position: 'H',
+    },
   },
   learningAndDevelopment: {
     sheet: 'C3',
@@ -164,37 +164,37 @@ export const pdsRepeatingConfig = {
       toDate: 'F',
       hours: 'G',
       type: 'H',
-      sponsor: 'I'
-    }
+      sponsor: 'I',
+    },
   },
   children: {
     sheet: 'C1',
     startRow: 37,
     maxRows: 12,
-    columns: { name: 'I', dateOfBirth: 'M' }
+    columns: { name: 'I', dateOfBirth: 'M' },
   },
   skills: {
     sheet: 'C3',
     startRow: 29,
     maxRows: 7,
-    columns: { value: 'A' }
+    columns: { value: 'A' },
   },
   distinctions: {
     sheet: 'C3',
     startRow: 29,
     maxRows: 7,
-    columns: { value: 'C' }
+    columns: { value: 'C' },
   },
   memberships: {
     sheet: 'C3',
     startRow: 29,
     maxRows: 7,
-    columns: { value: 'I' }
+    columns: { value: 'I' },
   },
   references: {
     sheet: 'C4',
     startRow: 53,
     maxRows: 3,
-    columns: { name: 'A', address: 'F', telephone: 'G' }
-  }
+    columns: { name: 'A', address: 'F', telephone: 'G' },
+  },
 };
