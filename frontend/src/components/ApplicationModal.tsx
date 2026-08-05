@@ -1148,6 +1148,17 @@ export default function ApplicationModal({
       'Sworn Declaration': Boolean(selectedFiles['Sworn Declaration'] || hasSelectedFile('doc_sworn'))
     };
 
+    const liveRefs = [
+      { name: getVal('ref1_name', parsedData.referencesList?.[0]?.name || ''), address: getVal('ref1_address', parsedData.referencesList?.[0]?.address || ''), telephone: getVal('ref1_tel', parsedData.referencesList?.[0]?.telephone || '') },
+      { name: getVal('ref2_name', parsedData.referencesList?.[1]?.name || ''), address: getVal('ref2_address', parsedData.referencesList?.[1]?.address || ''), telephone: getVal('ref2_tel', parsedData.referencesList?.[1]?.telephone || '') },
+      { name: getVal('ref3_name', parsedData.referencesList?.[2]?.name || ''), address: getVal('ref3_address', parsedData.referencesList?.[2]?.address || ''), telephone: getVal('ref3_tel', parsedData.referencesList?.[2]?.telephone || '') }
+    ];
+    const liveGovId = {
+      type: getVal('gov_id_type', parsedData.governmentId?.type || ''),
+      idNo: getVal('gov_id_no', parsedData.governmentId?.idNo || ''),
+      datePlace: getVal('gov_id_issuance', parsedData.governmentId?.datePlace || '')
+    };
+
     const data = {
       ...parsedData,
       firstName: liveFirstName,
@@ -1171,6 +1182,8 @@ export default function ApplicationModal({
       distinctionsList: (distinctionsList && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : Boolean(d?.value))) ? distinctionsList : parsedData.distinctionsList,
       membershipsList: (membershipsList && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : Boolean(m?.value))) ? membershipsList : parsedData.membershipsList,
       questionnaire: (qAnswers && Object.values(qAnswers).some((v: any) => typeof v === 'string' && v.trim() !== '')) ? qAnswers : (qRes || parsedData.questionnaire),
+      referencesList: liveRefs.some(r => r.name.length > 0) ? liveRefs : parsedData.referencesList,
+      governmentId: liveGovId.type.length > 0 || liveGovId.idNo.length > 0 ? liveGovId : parsedData.governmentId,
       documents: localDocs,
       isSubsequentApplication: !isRegistrationFlow,
       context: (jobTitle === "Profile Update" ? "my-profile" : "apply-now") as "my-profile" | "apply-now"

@@ -21,6 +21,7 @@ export const calculateProfileProgress = (data: {
   membershipsList?: any[];
   questionnaire?: any;
   referencesList?: any[];
+  references?: any[];
   governmentId?: any;
   documentsConfirmed?: Record<string, boolean>;
   isSubsequentApplication?: boolean;
@@ -79,28 +80,27 @@ export const calculateProfileProgress = (data: {
   if (sList.some(hasItemVal) || dList.some(hasItemVal) || mList.some(hasItemVal)) steps.push('Other Information');
 
   // Legal Questionnaire Validation
-  // '40b_ethnic' (Indigenous Cultural Community) is an informational/demographic field, not a
-  // disqualifying questionnaire item — exclude it from the completion gate so it cannot
-  // auto-mark the Legal Questionnaire as done based on a database-default 'No' value.
   const qIds = ['34a', '34b', '35a', '35b', '36', '37', '38a', '38b', '39', '40a', '40b', '40c'];
   const q = data.questionnaire || {};
   const allQAnswered = qIds.every(id => {
-    const item = q[id];
-    if (!item) return false;
-    const ans = typeof item === 'string' ? item : item.answer;
+    const item = q[id] !== undefined ? q[id] : q[`q${id}`];
+    if (item === undefined || item === null || item === '') return false;
+    const ans = typeof item === 'string' ? item : (typeof item === 'object' ? (item.answer || item.ans) : '');
     if (!ans || (ans !== 'Yes' && ans !== 'No' && ans !== 'yes' && ans !== 'no')) return false;
     if ((ans === 'Yes' || ans === 'yes') && id !== '34a' && id !== '34b') {
-      const details = typeof item === 'object' ? item.details : '';
+      const details = typeof item === 'object' && item?.details 
+        ? item.details 
+        : (q[`q${id}_details`] || q[`${id}_details`] || '');
       if (!details || details.trim() === '') return false;
     }
     return true;
   });
 
-  const refs = data.referencesList || [];
-  const validRefs = Array.isArray(refs) && refs.length >= 3 && refs.slice(0, 3).every(r => r?.name?.trim() && r?.address?.trim() && (r?.telephone?.trim() || r?.contact?.trim() || r?.phone?.trim()));
+  const refs = data.referencesList || data.references || [];
+  const validRefs = Array.isArray(refs) && refs.length >= 3 && refs.slice(0, 3).every(r => r?.name?.trim() && r?.address?.trim() && (r?.telephone?.trim() || r?.contact?.trim() || r?.phone?.trim() || r?.tel?.trim()));
 
   const gov = data.governmentId || {};
-  const validGovId = Boolean((gov.type || gov.idType)?.trim() && (gov.idNo || gov.number)?.trim() && (gov.datePlace || gov.datePlaceOfIssuance)?.trim());
+  const validGovId = Boolean((gov.type || gov.idType || gov.gov_id_type)?.trim() && (gov.idNo || gov.number || gov.gov_id_no)?.trim() && (gov.datePlace || gov.datePlaceOfIssuance || gov.gov_id_issuance)?.trim());
 
   if (allQAnswered && validRefs && validGovId) {
     steps.push('Legal Questionnaire');
