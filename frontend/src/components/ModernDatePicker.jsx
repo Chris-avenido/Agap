@@ -59,6 +59,12 @@ const ModernDatePicker = ({ name, value, defaultValue, onChange, placeholder, ma
             <DatePicker
                 selected={selectedDate}
                 onChange={handleChange}
+                onKeyDown={(e) => {
+                    if (e.key !== 'Tab' && e.key !== 'Escape' && e.key !== 'Enter') {
+                        e.preventDefault();
+                    }
+                }}
+                onChangeRaw={(e) => e.preventDefault()}
                 maxDate={maxDate}
                 placeholderText={placeholder || "Select a date"}
                 showMonthDropdown={!(isMonthPicker || isYearPicker)}
