@@ -5,20 +5,43 @@ import * as mammoth from 'mammoth';
 import * as jwt from 'jsonwebtoken';
 import { sendPasswordResetEmail } from '../utils/mailer';
 
+function parseAndSanitizeDate(dateInput: any): Date | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) return dateInput;
+  if (typeof dateInput !== 'string') return null;
+  
+  let str = dateInput.trim();
+  if (!str || str.toLowerCase() === 'n/a') return null;
+
+  // Auto-correct 3-digit years like "198-11-20" -> "1998-11-20"
+  if (/^\d{3}-\d{2}-\d{2}/.test(str)) {
+    str = '19' + str;
+  }
+
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return null;
+  if (d.getFullYear() < 1900 || d.getFullYear() > new Date().getFullYear() + 1) return null;
+  return d;
+}
+
 function calculateExperience(workExpList: any[]): number {
   if (!Array.isArray(workExpList)) return 0;
   let totalDays = 0;
   for (const exp of workExpList) {
-    const fromStr = exp.from || exp.fromDate || exp.date_from;
-    const toStr = exp.to || exp.toDate || exp.date_to;
-    if (fromStr && toStr) {
-      const from = new Date(fromStr);
-      let to = new Date();
-      if (toStr.toLowerCase() !== 'present') {
-        to = new Date(toStr);
+    const fromRaw = exp.from || exp.fromDate || exp.date_from;
+    const toRaw = exp.to || exp.toDate || exp.date_to;
+    if (fromRaw && toRaw) {
+      const from = parseAndSanitizeDate(fromRaw);
+      let to: Date | null = null;
+      if (typeof toRaw === 'string' && toRaw.trim().toLowerCase() === 'present') {
+        to = new Date();
+      } else {
+        to = parseAndSanitizeDate(toRaw);
       }
-      if (!isNaN(from.getTime()) && !isNaN(to.getTime()) && to >= from) {
-        const diffTime = Math.abs(to.getTime() - from.getTime());
+      if (from && to && to >= from) {
+        const now = new Date();
+        const effectiveTo = to > now ? now : to;
+        const diffTime = Math.abs(effectiveTo.getTime() - from.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         totalDays += diffDays;
       }
@@ -31,14 +54,14 @@ function calculateTraining(learningList: any[]): number {
   if (!Array.isArray(learningList)) return 0;
   let totalHours = 0;
   for (const ld of learningList) {
-    const fromStr = ld.from || ld.fromDate || ld.date_from;
-    const toStr = ld.to || ld.toDate || ld.date_to;
+    const fromRaw = ld.from || ld.fromDate || ld.date_from;
+    const toRaw = ld.to || ld.toDate || ld.date_to;
 
     let added = false;
-    if (fromStr && toStr && fromStr !== 'N/A' && toStr !== 'N/A') {
-      const from = new Date(fromStr);
-      const to = new Date(toStr);
-      if (!isNaN(from.getTime()) && !isNaN(to.getTime()) && to >= from) {
+    if (fromRaw && toRaw) {
+      const from = parseAndSanitizeDate(fromRaw);
+      const to = parseAndSanitizeDate(toRaw);
+      if (from && to && to >= from) {
         const diffTime = Math.abs(to.getTime() - from.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         totalHours += diffDays * 8;
@@ -48,7 +71,7 @@ function calculateTraining(learningList: any[]): number {
 
     if (!added && ld.hours && ld.hours !== 'N/A') {
       const hrs = Number(ld.hours);
-      if (!isNaN(hrs)) totalHours += hrs;
+      if (!isNaN(hrs) && hrs > 0 && hrs < 100000) totalHours += hrs;
     }
   }
   return totalHours;
