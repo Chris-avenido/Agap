@@ -17,6 +17,14 @@ function parseAndSanitizeDate(dateInput: any): Date | null {
   if (/^\d{3}-\d{2}-\d{2}/.test(str)) {
     str = '19' + str;
   }
+  // Auto-correct leading-zero year typos like "0217-07-03" -> "2017-07-03"
+  if (/^021(\d-\d{2}-\d{2})/.test(str)) {
+    str = str.replace(/^021/, '201');
+  } else if (/^019(\d-\d{2}-\d{2})/.test(str)) {
+    str = str.replace(/^019/, '199');
+  } else if (/^020(\d-\d{2}-\d{2})/.test(str)) {
+    str = str.replace(/^020/, '200');
+  }
 
   const d = new Date(str);
   if (isNaN(d.getTime())) return null;
@@ -31,14 +39,20 @@ function calculateExperience(workExpList: any[]): number {
     const fromRaw = exp.from || exp.fromDate || exp.date_from;
     const toRaw = exp.to || exp.toDate || exp.date_to;
     if (fromRaw && toRaw) {
-      const from = parseAndSanitizeDate(fromRaw);
+      let from = parseAndSanitizeDate(fromRaw);
       let to: Date | null = null;
       if (typeof toRaw === 'string' && toRaw.trim().toLowerCase() === 'present') {
         to = new Date();
       } else {
         to = parseAndSanitizeDate(toRaw);
       }
-      if (from && to && to >= from) {
+      if (from && to) {
+        // Handle reversed start/end dates gracefully
+        if (from > to) {
+          const temp = from;
+          from = to;
+          to = temp;
+        }
         const now = new Date();
         const effectiveTo = to > now ? now : to;
         const diffTime = Math.abs(effectiveTo.getTime() - from.getTime());
