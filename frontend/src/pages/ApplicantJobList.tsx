@@ -3530,7 +3530,7 @@ export default function ApplicantJobList() {
                             </div>
                           </div>
                           <div className="p-5 flex flex-col gap-6">
-                            {([ 'Notarized Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc] || (doc === 'Notarized Personal Data Sheet' ? uploadedDocumentUrls['Personal Data Sheet'] : undefined); const isEditing = editingDocs[doc] || false; const isOptionalList = ['Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc] || (doc === 'Notarized Personal Data Sheet' && !!documents['Personal Data Sheet']);
+                            {([ 'Notarized Personal Data Sheet', 'Work Experience Sheet', 'Certificate of Eligibility', 'Transcript of Records', 'Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments', 'Service Record / Certificate of Employment' ]).map(doc => { const existingUrl = uploadedDocumentUrls[doc] || (doc === 'Notarized Personal Data Sheet' ? uploadedDocumentUrls['Personal Data Sheet'] : undefined); const isEditing = editingDocs[doc] || false; const isOptionalList = ['Updated PRC License/ID', 'Diploma (optional)', 'Resume', 'Performance Rating', 'Training Certificates', 'Application of Education', 'Application of Learning and Development', 'Outstanding Accomplishments', 'Service Record / Certificate of Employment']; const isRequired = !isOptionalList.includes(doc); const isComplete = !!existingUrl || !!documents[doc] || (doc === 'Notarized Personal Data Sheet' && !!documents['Personal Data Sheet']);
 
                               return (
                                 <div key={doc} className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
@@ -3552,6 +3552,8 @@ export default function ApplicantJobList() {
                                           <span>Performance Rating <span className="text-gray-400 font-normal italic text-[10px]">(Mandatory for positions with experience requirement)</span></span>
                                         ) : doc === 'Outstanding Accomplishments' ? (
                                           <span>Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
+                                        ) : doc === 'Service Record / Certificate of Employment' ? (
+                                          <span>Service Record / Certificate of Employment <span className="text-gray-400 font-normal italic text-[10px]">(Optional)</span></span>
                                         ) : doc === 'Transcript of Records' ? (
                                           <span className="flex flex-col">
                                             <span>Transcript of Records {isRequired && <span className="text-red-500">*</span>}</span>

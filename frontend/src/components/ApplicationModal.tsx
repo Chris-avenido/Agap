@@ -305,6 +305,7 @@ export default function ApplicationModal({
           "doc_application_of_education": "Application of Education",
           "doc_application_of_learning": "Application of Learning and Development",
           "doc_outstanding_accomplishments": "Outstanding Accomplishments",
+          "doc_service_record": "Service Record / Certificate of Employment",
           "profile_photo": "profile_photo"
         };
 
@@ -1142,6 +1143,7 @@ export default function ApplicationModal({
       'Certificate of Eligibility': Boolean(selectedFiles['Certificate of Eligibility'] || hasSelectedFile('doc_eligibility')),
       'Transcript of Records': Boolean(selectedFiles['Transcript of Records'] || hasSelectedFile('doc_tor')),
       'Updated PRC License/ID': Boolean(selectedFiles['Updated PRC License/ID'] || hasSelectedFile('doc_prc')),
+      'Service Record / Certificate of Employment': Boolean(selectedFiles['Service Record / Certificate of Employment'] || hasSelectedFile('doc_service_record')),
       'Letter of Intent': Boolean(selectedFiles['Letter of Intent'] || hasSelectedFile('doc_loi')),
       'Sworn Declaration': Boolean(selectedFiles['Sworn Declaration'] || hasSelectedFile('doc_sworn'))
     };
@@ -4006,6 +4008,47 @@ export default function ApplicationModal({
                       )}
                     </div>
 
+                    {/* Item 13 - Service Record / Certificate of Employment */}
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700">Service Record / Certificate of Employment <span className="text-gray-400 font-normal italic text-[10px]"><br />(Optional)</span></span>
+                      </div>
+                      {getDocUrl("Service Record / Certificate of Employment") ? (
+                        <div className="flex flex-col gap-2 w-full mt-2">
+                          {selectedDocumentNames["Service Record / Certificate of Employment"] ? (
+                            <span className="text-[12px] text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded text-center border border-blue-200 flex items-center justify-center gap-1.5 max-w-full overflow-hidden animate-pop">
+                              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                              </svg>
+                              <span className="shrink-0">Selected:</span>
+                              <span className="truncate max-w-[120px] sm:max-w-[220px] md:max-w-[280px] text-left" title={selectedDocumentNames["Service Record / Certificate of Employment"]}>
+                                {selectedDocumentNames["Service Record / Certificate of Employment"]}
+                              </span>
+                              <span className="shrink-0 font-normal opacity-90">(Ready to replace)</span>
+                            </span>
+                          ) : (
+                            <span className="text-[12px] text-green-600 font-bold bg-green-50 px-3 py-1.5 rounded text-center border border-green-200 flex items-center justify-center gap-1.5 animate-pop">
+                              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" className="animate-checkmark" />
+                              </svg>
+                              <span>Uploaded</span>
+                            </span>
+                          )}
+                          <div className="flex gap-2 w-full">
+                            <a href={(selectedDocumentUrls["Service Record / Certificate of Employment"] || getDocUrl("Service Record / Certificate of Employment")) as string} target="_blank" rel="noreferrer" className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
+                              View File
+                            </a>
+                            <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                              Replace File
+                              <input type="file" name="doc_service_record" accept=".pdf" onChange={handleDocumentSelection("Service Record / Certificate of Employment")} className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <input type="file" name="doc_service_record" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                      )}
+                    </div>
+
                     {!isRegistrationFlow && (
                       <>
                         {/* Item 13 - Letter of Intent */}
@@ -4356,6 +4399,7 @@ export default function ApplicationModal({
                               "doc_application_of_education": "Application of Education",
                               "doc_application_of_learning": "Application of Learning and Development",
                               "doc_outstanding_accomplishments": "Outstanding Accomplishments",
+                              "doc_service_record": "Service Record / Certificate of Employment",
                               "profile_photo": "profile_photo"
                             };
 
