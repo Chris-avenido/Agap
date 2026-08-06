@@ -85,9 +85,11 @@ export const calculateProfileProgress = (data: {
   const allQAnswered = qIds.every(id => {
     const item = q[id] !== undefined ? q[id] : q[`q${id}`];
     if (item === undefined || item === null || item === '') return false;
-    const ans = typeof item === 'string' ? item : (typeof item === 'object' ? (item.answer || item.ans) : '');
-    if (!ans || (ans !== 'Yes' && ans !== 'No' && ans !== 'yes' && ans !== 'no')) return false;
-    if ((ans === 'Yes' || ans === 'yes') && id !== '34a' && id !== '34b') {
+    const rawAns = typeof item === 'string' ? item : (typeof item === 'object' ? (item.answer || item.ans) : '');
+    if (!rawAns) return false;
+    const ans = String(rawAns).trim().toLowerCase();
+    if (ans !== 'yes' && ans !== 'no') return false;
+    if (ans === 'yes' && id !== '34a' && id !== '34b') {
       const details = typeof item === 'object' && item?.details 
         ? item.details 
         : (q[`q${id}_details`] || q[`${id}_details`] || '');
@@ -183,23 +185,43 @@ export const parseProfileToState = (profile: any) => {
     const govId = { type: '', idNo: '', datePlace: '' };
 
     for (const k in parsedQ) {
+      const val = parsedQ[k];
       if (k.startsWith('ref')) {
-        const match = k.match(/ref(\d+)_(name|address|tel)/);
+        const match = k.match(/ref(\d+)_(name|address|tel|telephone|contact|phone|mobile|no)/i);
         if (match) {
           const idx = parseInt(match[1]) - 1;
-          const field = match[2] === 'tel' ? 'telephone' : match[2];
+          const fieldType = match[2].toLowerCase();
+          const field = (fieldType === 'name' || fieldType === 'address') ? fieldType : 'telephone';
           while (refs.length <= idx) refs.push({ name: '', address: '', telephone: '' });
-          refs[idx][field] = parsedQ[k] || '';
+          refs[idx][field] = val || '';
         }
         continue;
       }
       if (k.startsWith('gov_id')) {
-        if (k === 'gov_id_type') govId.type = parsedQ[k] || '';
-        if (k === 'gov_id_no') govId.idNo = parsedQ[k] || '';
-        if (k === 'gov_id_issuance') govId.datePlace = parsedQ[k] || '';
+        if (k === 'gov_id_type') govId.type = val || '';
+        if (k === 'gov_id_no') govId.idNo = val || '';
+        if (k === 'gov_id_issuance') govId.datePlace = val || '';
         continue;
       }
-      normalizedQ[k] = parsedQ[k];
+
+      let mapKey = k;
+      if (mapKey.startsWith('q')) mapKey = mapKey.substring(1);
+
+      let normalizedVal = val;
+      if (typeof val === 'string') {
+        const upper = val.trim().toUpperCase();
+        if (upper === 'YES') normalizedVal = 'Yes';
+        else if (upper === 'NO') normalizedVal = 'No';
+      } else if (val && typeof val === 'object' && val.answer) {
+        const upper = String(val.answer).trim().toUpperCase();
+        normalizedVal = {
+          ...val,
+          answer: upper === 'YES' ? 'Yes' : (upper === 'NO' ? 'No' : val.answer)
+        };
+      }
+
+      normalizedQ[mapKey] = normalizedVal;
+      normalizedQ[k] = normalizedVal;
     }
 
     // Exact mapping for skills

@@ -34,18 +34,18 @@ const formatCurrencyValue = (val: any) => {
   if (val === null || val === undefined) return '';
   const strVal = String(val);
   if (!strVal) return '';
-  
+
   const clean = strVal.replace(/[^0-9.]/g, '');
   if (!clean) return '';
-  
+
   const parts = clean.split('.');
   const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  
+
   if (parts.length > 1) {
     const decimalPart = parts[1].slice(0, 2);
     return `${integerPart}.${decimalPart}`;
   }
-  
+
   return integerPart;
 };
 
@@ -322,7 +322,7 @@ export default function ApplicationModal({
             await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}/documents`, {
               method: 'POST',
               body: singleUploadFormData
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
 
@@ -884,30 +884,30 @@ export default function ApplicationModal({
     : [];
 
   const eduBg = new Array(5).fill({});
-  
+
   rawEduBg.forEach((eb: any, idx: number) => {
-     let targetIdx = idx;
-     if (eb.level) {
-       const lvl = eb.level.toLowerCase();
-       if (lvl.includes('elementary')) targetIdx = 0;
-       else if (lvl.includes('secondary')) targetIdx = 1;
-       else if (lvl.includes('vocational')) targetIdx = 2;
-       else if (lvl.includes('college')) targetIdx = 3;
-       else if (lvl.includes('graduate')) targetIdx = 4;
-     }
-     
-     if (targetIdx >= 0 && targetIdx < 5) {
-       eduBg[targetIdx] = {
-          ...eb,
-          school_name: eb.school_name || eb.school || '',
-          degree_course: eb.degree_course || eb.degree || '',
-          period_from: eb.period_from || eb.from || '',
-          period_to: eb.period_to || eb.to || '',
-          highest_level: eb.highest_level || eb.units || '',
-          year_graduated: eb.year_graduated || eb.year || '',
-          honors_received: eb.honors_received || eb.honors || ''
-       };
-     }
+    let targetIdx = idx;
+    if (eb.level) {
+      const lvl = eb.level.toLowerCase();
+      if (lvl.includes('elementary')) targetIdx = 0;
+      else if (lvl.includes('secondary')) targetIdx = 1;
+      else if (lvl.includes('vocational')) targetIdx = 2;
+      else if (lvl.includes('college')) targetIdx = 3;
+      else if (lvl.includes('graduate')) targetIdx = 4;
+    }
+
+    if (targetIdx >= 0 && targetIdx < 5) {
+      eduBg[targetIdx] = {
+        ...eb,
+        school_name: eb.school_name || eb.school || '',
+        degree_course: eb.degree_course || eb.degree || '',
+        period_from: eb.period_from || eb.from || '',
+        period_to: eb.period_to || eb.to || '',
+        highest_level: eb.highest_level || eb.units || '',
+        year_graduated: eb.year_graduated || eb.year || '',
+        honors_received: eb.honors_received || eb.honors || ''
+      };
+    }
   });
 
   const [civilServiceList, setCivilServiceList] = useState<any[]>([{ eligibility: '', rating: '', date: null, place: '', licenseNo: '', licenseDate: null }]);
@@ -998,12 +998,12 @@ export default function ApplicationModal({
       const getA = (id: string) => {
         const keyWithQ = `q${id}`;
         const flatVal = qRes[keyWithQ] || qRes[id];
-        if (typeof flatVal === 'string') return flatVal.toLowerCase();
-        if (qRes[id] && qRes[id].answer) return qRes[id].answer.toLowerCase();
-        if (qRes[keyWithQ] && qRes[keyWithQ].answer) return qRes[keyWithQ].answer.toLowerCase();
-        return '';
+        if (typeof flatVal === 'string' && flatVal.trim() !== '') return flatVal.toLowerCase();
+        if (qRes[id] && qRes[id].answer && String(qRes[id].answer).trim() !== '') return String(qRes[id].answer).toLowerCase();
+        if (qRes[keyWithQ] && qRes[keyWithQ].answer && String(qRes[keyWithQ].answer).trim() !== '') return String(qRes[keyWithQ].answer).toLowerCase();
+        return 'no';
       };
-      
+
       const getD = (id: string) => {
         const detailsKey = `q${id}_details`;
         if (qRes[detailsKey]) return qRes[detailsKey];
@@ -1018,7 +1018,7 @@ export default function ApplicationModal({
       ids.forEach(id => {
         let a = getA(id);
         let d = getD(id);
-        
+
         if (id === '40b_ethnic' && !a && userData?.ethnic_group && userData.ethnic_group !== 'No') {
           a = 'yes';
           d = userData.ethnic_group;
@@ -1181,7 +1181,7 @@ export default function ApplicationModal({
       skillsList: (skillsList && skillsList.some((s: any) => typeof s === 'string' ? s.trim() !== '' : Boolean(s?.value))) ? skillsList : parsedData.skillsList,
       distinctionsList: (distinctionsList && distinctionsList.some((d: any) => typeof d === 'string' ? d.trim() !== '' : Boolean(d?.value))) ? distinctionsList : parsedData.distinctionsList,
       membershipsList: (membershipsList && membershipsList.some((m: any) => typeof m === 'string' ? m.trim() !== '' : Boolean(m?.value))) ? membershipsList : parsedData.membershipsList,
-      questionnaire: (qAnswers && Object.values(qAnswers).some((v: any) => typeof v === 'string' && v.trim() !== '')) ? qAnswers : (qRes || parsedData.questionnaire),
+      questionnaire: qRes || parsedData.questionnaire,
       referencesList: liveRefs.some(r => r.name.length > 0) ? liveRefs : parsedData.referencesList,
       governmentId: liveGovId.type.length > 0 || liveGovId.idNo.length > 0 ? liveGovId : parsedData.governmentId,
       documents: localDocs,
@@ -1213,7 +1213,7 @@ export default function ApplicationModal({
           >
             <X className="w-5 h-5" />
           </button>
-          
+
           <div className="p-8 md:p-10 border-b border-gray-100">
             <h2 className="text-[28px] font-bold text-[#3b82f6] tracking-tight leading-tight mb-2">{jobData.title}</h2>
             <div className="text-[15px] text-gray-500 font-medium">
@@ -1225,14 +1225,14 @@ export default function ApplicationModal({
               </div>
             )}
           </div>
-          
+
           <div className="p-8 md:p-10 bg-gray-50/50 flex-1">
             <div className="text-[14px] text-gray-600 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
               Posted on <span className="font-bold text-gray-800">{jobData.posted || 'N/A'}</span> and deadline is on <span className="font-bold text-red-500">{jobData.deadline || 'N/A'}</span>
             </div>
-            
+
             <h3 className="text-[16px] font-bold text-gray-900 mb-6 border-b border-gray-200 pb-2 tracking-wide uppercase">Qualification Standards</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-y-5 text-[14px]">
               {jobData.qsEducation && (
                 <>
@@ -1339,7 +1339,7 @@ export default function ApplicationModal({
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const isMyProfile = jobTitle === "Profile Update";
-              const isCompleted = tab.id === 'C10' 
+              const isCompleted = tab.id === 'C10'
                 ? completedSteps.includes('Essential Documents')
                 : completedSteps.includes(tab.label);
 
@@ -3197,9 +3197,9 @@ export default function ApplicationModal({
                             <input type="text" name="q34a_details" defaultValue={qRes?.q34a_details || ''} placeholder="PLEASE PROVIDE DETAILS" className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" />
                           )}
                         </div>
-                        
+
                         <div className="w-full h-px bg-gray-100 my-2" />
-                        
+
                         <div className="flex flex-col gap-3">
                           <p className="text-[14px] text-gray-700 leading-relaxed">
                             within the fourth degree (for Local Government Unit - Career Employees)?
@@ -3364,14 +3364,14 @@ export default function ApplicationModal({
                           </div>
                           {qAnswers.q40b_ethnic === "yes" && (
                             <>
-                              <input 
-                                type="text" 
-                                name="q40b_ethnic_details" 
+                              <input
+                                type="text"
+                                name="q40b_ethnic_details"
                                 list="modal-ethnic-groups"
                                 required
-                                defaultValue={qRes?.q40b_ethnic_details || ''} 
-                                placeholder="Search or select your ethnic group" 
-                                className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2" 
+                                defaultValue={qRes?.q40b_ethnic_details || ''}
+                                placeholder="Search or select your ethnic group"
+                                className="border border-gray-300 rounded p-2.5 text-[14px] text-gray-700 outline-none focus:border-blue-500 h-[42px] w-full mt-2"
                                 onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Please select your ethnic group.')}
                                 onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                               />
