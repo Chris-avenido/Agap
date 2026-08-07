@@ -9,11 +9,24 @@ import vacanciesRouter from './vacancies/vacancies.routes';
 import addressRouter from './address/address.routes';
 import { setupVacanciesCron } from './vacancies/vacancies.cron';
 
+process.on('uncaughtException', (error) => {
+  console.error('🔥 Uncaught Exception caught safely:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Promise Rejection caught safely:', reason);
+});
+
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Health Check Probe Endpoint for Azure App Service
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Main App Routes
 app.get('/', (req, res) => {
@@ -68,6 +81,23 @@ app.use('/api/address', addressRouter);
 // Initialize Cron Jobs
 setupVacanciesCron();
 
+// Global Express Error Middleware
+app.use(
+  (
+    err: any,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error('Unhandled Express Error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'Internal Server Error',
+    });
+  },
+);
+
 app.listen(port, () => {
   console.log(`🚀 Express server running on http://localhost:${port}`);
 });
+

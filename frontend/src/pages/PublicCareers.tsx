@@ -73,8 +73,16 @@ export default function PublicCareers() {
   const currentJobs = filteredPositions.slice(indexOfFirstJob, indexOfLastJob);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations`)
-      .then(res => res.json())
+    const fetchJson = async (url: string) => {
+      const res = await fetch(url);
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error(`Server returned HTTP ${res.status} (${contentType || 'non-JSON response'})`);
+      }
+      return res.json();
+    };
+
+    fetchJson(`${import.meta.env.VITE_API_URL}/api/vacancies/locations`)
       .then(data => {
         if (data.success && data.data) {
           setAvailableRegions(data.data.regions || []);
@@ -84,8 +92,7 @@ export default function PublicCareers() {
       })
       .catch(err => console.error('Error fetching locations:', err));
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
-      .then(res => res.json())
+    fetchJson(`${import.meta.env.VITE_API_URL}/api/vacancies`)
       .then(data => {
         if (data.success && data.data) {
           const formatted = data.data.map((v: any) => ({

@@ -63,15 +63,17 @@ export class VacanciesService {
   }
 
   static async getAgapLocations() {
-    const regionsResult = await pool.query(
-      'SELECT region FROM agap_schools WHERE region IS NOT NULL GROUP BY region ORDER BY region',
-    );
-    const divisionsResult = await pool.query(
-      'SELECT division FROM agap_schools WHERE division IS NOT NULL GROUP BY division ORDER BY division',
-    );
-    const regdivResult = await pool.query(
-      'SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL ORDER BY region, division',
-    );
+    const [regionsResult, divisionsResult, regdivResult] = await Promise.all([
+      pool.query(
+        'SELECT region FROM agap_schools WHERE region IS NOT NULL GROUP BY region ORDER BY region',
+      ),
+      pool.query(
+        'SELECT division FROM agap_schools WHERE division IS NOT NULL GROUP BY division ORDER BY division',
+      ),
+      pool.query(
+        'SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL ORDER BY region, division',
+      ),
+    ]);
 
     const divisionsByRegion: Record<string, string[]> = {};
     regdivResult.rows.forEach((r) => {
