@@ -201,11 +201,32 @@ export default function ApplicationPage() {
       [1, 2, 3].forEach((_, idx) => {
         const title = rawData[`ld_${idx}_title`];
         if (title) {
+          const fromRaw = rawData[`ld_${idx}_from`] || "";
+          const toRaw = rawData[`ld_${idx}_to`] || "";
+          let hoursVal = rawData[`ld_${idx}_hours`] || "";
+
+          if (fromRaw && toRaw) {
+            const f = new Date(fromRaw);
+            const t = new Date(toRaw);
+            if (!isNaN(f.getTime()) && !isNaN(t.getTime())) {
+              const start = f <= t ? f : t;
+              const end = f <= t ? t : f;
+              const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              const maxHours = diffDays * 8;
+              if (hoursVal && hoursVal !== "N/A") {
+                const numH = Number(hoursVal);
+                if (!isNaN(numH) && numH > maxHours) {
+                  hoursVal = String(maxHours);
+                }
+              }
+            }
+          }
+
           data.learning_and_development.push({
             title: title,
-            from_date: rawData[`ld_${idx}_from`] || "",
-            to_date: rawData[`ld_${idx}_to`] || "",
-            hours: rawData[`ld_${idx}_hours`] || "",
+            from_date: fromRaw,
+            to_date: toRaw,
+            hours: hoursVal,
             type: rawData[`ld_${idx}_type`] || "",
             conducted_by: rawData[`ld_${idx}_conducted`] || "",
           });

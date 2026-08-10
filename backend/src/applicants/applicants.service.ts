@@ -71,22 +71,40 @@ function calculateTraining(learningList: any[]): number {
     const fromRaw = ld.from || ld.fromDate || ld.date_from;
     const toRaw = ld.to || ld.toDate || ld.date_to;
 
-    let added = false;
+    let maxHoursForEntry: number | null = null;
+
     if (fromRaw && toRaw) {
-      const from = parseAndSanitizeDate(fromRaw);
-      const to = parseAndSanitizeDate(toRaw);
-      if (from && to && to >= from) {
+      let from = parseAndSanitizeDate(fromRaw);
+      let to = parseAndSanitizeDate(toRaw);
+      if (from && to) {
+        if (from > to) {
+          const temp = from;
+          from = to;
+          to = temp;
+        }
         const diffTime = Math.abs(to.getTime() - from.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        totalHours += diffDays * 8;
-        added = true;
+        maxHoursForEntry = diffDays * 8;
       }
     }
 
-    if (!added && ld.hours && ld.hours !== 'N/A') {
-      const hrs = Number(ld.hours);
-      if (!isNaN(hrs) && hrs > 0 && hrs < 100000) totalHours += hrs;
+    let hrs = 0;
+    if (ld.hours && ld.hours !== 'N/A') {
+      const parsed = Number(ld.hours);
+      if (!isNaN(parsed) && parsed > 0 && parsed < 100000) {
+        hrs = parsed;
+      }
     }
+
+    if (hrs === 0 && maxHoursForEntry !== null) {
+      hrs = maxHoursForEntry;
+    }
+
+    if (maxHoursForEntry !== null) {
+      hrs = Math.min(hrs, maxHoursForEntry);
+    }
+
+    totalHours += hrs;
   }
   return totalHours;
 }
