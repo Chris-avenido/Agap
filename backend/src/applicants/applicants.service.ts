@@ -527,7 +527,7 @@ class ApplicantsServiceClass {
 
     // Generate AGAP-0001 format for applicant_number
     const lastApplicant = await pool.query(
-      `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY applicant_number DESC LIMIT 1`,
+      `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY CAST(SUBSTRING(applicant_number FROM 6) AS INTEGER) DESC LIMIT 1`,
     );
     let nextApplicantNum = 1;
     if (
