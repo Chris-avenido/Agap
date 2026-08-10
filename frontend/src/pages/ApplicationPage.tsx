@@ -201,9 +201,9 @@ export default function ApplicationPage() {
       [1, 2, 3].forEach((_, idx) => {
         const title = rawData[`ld_${idx}_title`];
         if (title) {
-          const fromRaw = rawData[`ld_${idx}_from`] || "";
-          const toRaw = rawData[`ld_${idx}_to`] || "";
-          let hoursVal = rawData[`ld_${idx}_hours`] || "";
+          const fromRaw = (rawData[`ld_${idx}_from`] as string) || "";
+          const toRaw = (rawData[`ld_${idx}_to`] as string) || "";
+          let hoursVal = (rawData[`ld_${idx}_hours`] as string) || "";
 
           if (fromRaw && toRaw) {
             const f = new Date(fromRaw);
