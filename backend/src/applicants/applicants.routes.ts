@@ -723,16 +723,7 @@ router.get('/proxy-blob', async (req, res) => {
       return res.status(400).send('URL is required');
     }
 
-    // Use getBlobNameFromUrl to properly handle folders in the URL
-    const { getBlobNameFromUrl } = require('../utils/azureStorage');
-    const containerName = process.env.AZURE_FOLDER_NAME as string;
-    const blobName = getBlobNameFromUrl(url, containerName);
-
-    if (!blobName) {
-      return res.status(400).send('Invalid blob URL');
-    }
-
-    const { stream, contentType } = await downloadFromAzure(blobName);
+    const { stream, contentType } = await downloadFromAzure(url);
 
     if (contentType) {
       res.setHeader('Content-Type', contentType);

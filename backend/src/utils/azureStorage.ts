@@ -34,14 +34,53 @@ export const uploadToAzure = async (
   return blockBlobClient.url;
 };
 
-export const downloadFromAzure = async (blobName: string) => {
+export const findLatestBlob = async (
+  targetContainer: string,
+  blobName: string,
+): Promise<string> => {
+  if (!blobServiceClient) return blobName;
+  try {
+    const containerClient = blobServiceClient.getContainerClient(targetContainer);
+    const lastSlashIndex = blobName.lastIndexOf('/');
+    if (lastSlashIndex === -1) return blobName;
+    const prefix = blobName.substring(0, lastSlashIndex + 1);
+
+    let latestBlobName = blobName;
+    let latestModified: Date | null = null;
+
+    for await (const blob of containerClient.listBlobsFlat({ prefix })) {
+      if (
+        !latestModified ||
+        (blob.properties.lastModified && blob.properties.lastModified > latestModified)
+      ) {
+        latestModified = blob.properties.lastModified || null;
+        latestBlobName = blob.name;
+      }
+    }
+    return latestBlobName;
+  } catch {
+    return blobName;
+  }
+};
+
+export const downloadFromAzure = async (blobUrlOrName: string) => {
   if (!blobServiceClient) {
     throw new Error('Azure Storage Connection String is missing.');
   }
 
-  const containerClient = blobServiceClient.getContainerClient(containerName);
-  const blockBlobClient: BlockBlobClient =
+  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
+  let containerClient = blobServiceClient.getContainerClient(targetContainer);
+  let blockBlobClient: BlockBlobClient =
     containerClient.getBlockBlobClient(blobName);
+
+  const exists = await blockBlobClient.exists();
+  if (!exists) {
+    const latestName = await findLatestBlob(targetContainer, blobName);
+    if (latestName !== blobName) {
+      blobName = latestName;
+      blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    }
+  }
 
   const downloadBlockBlobResponse = await blockBlobClient.download();
   return {
@@ -50,32 +89,45 @@ export const downloadFromAzure = async (blobName: string) => {
   };
 };
 
-export const getBlobNameFromUrl = (
+export const parseBlobUrl = (
   blobUrlOrName: string,
-  containerName: string,
-): string => {
+  defaultContainer: string,
+): { targetContainer: string; blobName: string } => {
   try {
     const url = new URL(blobUrlOrName);
-    const path = decodeURIComponent(url.pathname);
-    const prefix = `/${containerName}/`;
-    if (path.startsWith(prefix)) {
-      return path.substring(prefix.length);
+    const pathParts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
+    if (pathParts.length >= 2) {
+      return {
+        targetContainer: pathParts[0],
+        blobName: pathParts.slice(1).join('/'),
+      };
     }
-    // Fallback if URL structure is different
-    return path.substring(1); // remove leading slash
+    return {
+      targetContainer: defaultContainer,
+      blobName: pathParts.join('/'),
+    };
   } catch {
-    // Fallback if it's not a full URL
-    return decodeURIComponent(blobUrlOrName);
+    return {
+      targetContainer: defaultContainer,
+      blobName: decodeURIComponent(blobUrlOrName),
+    };
   }
+};
+
+export const getBlobNameFromUrl = (
+  blobUrlOrName: string,
+  defaultContainer: string,
+): string => {
+  return parseBlobUrl(blobUrlOrName, defaultContainer).blobName;
 };
 
 export const deleteFromAzure = async (blobUrlOrName: string) => {
   try {
     if (!blobServiceClient) return;
-    const blobName = getBlobNameFromUrl(blobUrlOrName, containerName);
+    const { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
     if (!blobName) return;
 
-    const containerClient = blobServiceClient.getContainerClient(containerName);
+    const containerClient = blobServiceClient.getContainerClient(targetContainer);
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
     await blockBlobClient.deleteIfExists();
@@ -88,11 +140,20 @@ export const getBlobSasUrl = async (blobUrlOrName: string) => {
   if (!blobServiceClient)
     throw new Error('Azure Storage Connection String is missing.');
 
-  const blobName = getBlobNameFromUrl(blobUrlOrName, containerName);
+  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
   if (!blobName) throw new Error('Invalid blob URL');
 
-  const containerClient = blobServiceClient.getContainerClient(containerName);
-  const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  let containerClient = blobServiceClient.getContainerClient(targetContainer);
+  let blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+  const exists = await blockBlobClient.exists();
+  if (!exists) {
+    const latestName = await findLatestBlob(targetContainer, blobName);
+    if (latestName !== blobName) {
+      blobName = latestName;
+      blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    }
+  }
 
   // @ts-ignore - generateSasUrl exists if using connection string
   if (blockBlobClient.generateSasUrl) {
