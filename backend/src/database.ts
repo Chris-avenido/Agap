@@ -20,11 +20,19 @@ pool.on('error', (err: Error) => {
 
 pool
   .connect()
-  .then((client) => {
+  .then(async (client) => {
     console.log(
       '✅ Successfully connected to Azure PostgreSQL Database natively!',
     );
-    client.release();
+    try {
+      await client.query('ALTER TABLE vacancies ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
+      await client.query('ALTER TABLE applicants ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
+      console.log('✅ Schema migration: is_test boolean column verified on vacancies and applicants tables.');
+    } catch (migErr) {
+      console.error('⚠️ Schema migration warning for is_test columns:', migErr);
+    } finally {
+      client.release();
+    }
   })
   .catch((error) =>
     console.error('❌ Failed to connect to the database:', error),

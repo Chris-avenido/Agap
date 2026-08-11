@@ -13,6 +13,7 @@
     "start": "tsx src/index.ts",
     "start:dev": "tsx watch src/index.ts",
     "start:prod": "node dist/index.js",
+    "migrate:is_test": "tsx scripts/run_is_test_migration.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

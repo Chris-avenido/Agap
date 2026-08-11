@@ -115,6 +115,7 @@ export default function PublicCareers() {
             qsTraining: v.qualificationStandards?.minTrainingHours || v.training || v.required_training,
             qsEligibility: v.qualificationStandards?.eligibilityRequired || v.eligibility || v.required_eligibility,
             description: 'Details available in the full job posting.',
+            is_test: Boolean(v.is_test || (v.positionTitle || v.title)?.toLowerCase().includes('test') || (v.positionTitle || v.title)?.toLowerCase().includes('do not apply')),
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);

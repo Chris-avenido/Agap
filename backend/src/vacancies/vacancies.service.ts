@@ -2,7 +2,8 @@ import { pool } from '../database';
 
 export class VacanciesService {
   static async getOpenVacancies() {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT 
         c.id as "jobClusterId",
         p.title as "positionTitle",
@@ -16,12 +17,19 @@ export class VacanciesService {
         p.required_degree_keywords,
         p.years_experience as "min_years_experience",
         p.training_hours as "min_training_hours",
-        p.eligibility_required
+        p.eligibility_required,
+        (EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.is_test IS TRUE)) as "is_test"
       FROM job_clusters c
       JOIN positions p ON c.position_id = p.id
-      WHERE EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))
+      WHERE EXISTS (
+        SELECT 1 FROM vacancies v 
+        WHERE v.job_cluster_id = c.id 
+          AND v.status = 'open' 
+          AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+      )
       ORDER BY posting_start DESC
-    `);
+    `,
+    );
 
     // Process response shape and check posting window
     const now = new Date();
@@ -50,6 +58,7 @@ export class VacanciesService {
         // Keep posting_start and end for frontend display if needed
         posting_start: row.posting_start,
         posting_end: row.posting_end,
+        is_test: Boolean(row.is_test),
       }));
   }
 

@@ -19,6 +19,15 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
     <div className={`bg-white rounded-[20px] border-[1.5px] ${borderColor} ${shadowClass} p-6 flex flex-col transition-shadow relative`}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex flex-col gap-1 w-full">
+          {/* Test Data Badge */}
+          {job.is_test && (
+            <div className="mb-1">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
+                NOT TO APPLY (TEST DATA)
+              </span>
+            </div>
+          )}
+
           {/* Title */}
           <h3 className="text-[18px] md:text-[20px] font-bold text-[#2563eb] leading-tight line-clamp-2">
             {title}
@@ -146,7 +155,14 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
                 >
                   {/* Position Title Column */}
                   <td className="px-6 py-5 align-middle">
-                    <span className="text-[15px] font-bold text-[#2563eb] group-hover:text-blue-700 transition-colors">{title}</span>
+                    <div className="flex flex-col gap-1 items-start">
+                      {job.is_test && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
+                          NOT TO APPLY (TEST DATA)
+                        </span>
+                      )}
+                      <span className="text-[15px] font-bold text-[#2563eb] group-hover:text-blue-700 transition-colors">{title}</span>
+                    </div>
                   </td>
 
                   {/* Region Column */}
