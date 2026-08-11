@@ -23,7 +23,7 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
           {job.is_test && (
             <div className="mb-1">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
-                NOT TO APPLY (TEST DATA)
+                DO NOT APPLY (VALIDATION ONLY)
               </span>
             </div>
           )}
@@ -158,7 +158,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
                     <div className="flex flex-col gap-1 items-start">
                       {job.is_test && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
-                          NOT TO APPLY (TEST DATA)
+                          DO NOT APPLY (VALIDATION ONLY)
                         </span>
                       )}
                       <span className="text-[15px] font-bold text-[#2563eb] group-hover:text-blue-700 transition-colors">{title}</span>
