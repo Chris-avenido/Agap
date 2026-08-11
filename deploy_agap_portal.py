@@ -48,13 +48,7 @@ def main():
     
     start_time = time.time()
 
-    # Pre-check: Verify SSH Connection (Optional Key check)
-    print("\n[PRE-CHECK] Checking SSH key authorization...")
-    test_conn = run_ssh("echo connection_ok")
-    if "connection_ok" in test_conn.stdout:
-        print("  [OK] SSH Key authorized. Password-less login active.")
-    else:
-        print("  [INFO] SSH key not found/authorized. You will be prompted for your VM password during upload.")
+    # Pre-check removed to prevent exhausting Azure SSH connection rate limits before the actual upload.
 
 
     # 1. Build local frontend
@@ -100,18 +94,28 @@ def main():
 
     # 3. Create remote folder and upload
     print(f"\n[3/5] UPLOADING archive to {REMOTE_HOST}:{REMOTE_ROOT}...")
-    try:
-        # Prepare remote directory with sudo, then transfer
-        run_ssh(f"sudo mkdir -p {REMOTE_ROOT} && sudo chown -R {REMOTE_USER}:{REMOTE_USER} {REMOTE_ROOT}")
-        scp_cmd = f'scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 {SSH_KEY_OPT} {ARCHIVE_NAME} {REMOTE_USER}@{REMOTE_HOST}:{REMOTE_ROOT}/'
-        subprocess.run(scp_cmd, shell=True, check=True)
-    except subprocess.CalledProcessError:
-        print("  [ERROR] SCP upload failed!")
-        sys.exit(1)
+    # Using ~ as intermediate transfer directory to avoid sudo permission issues during scp
+    scp_cmd = f'scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 {SSH_KEY_OPT} {ARCHIVE_NAME} {REMOTE_USER}@{REMOTE_HOST}:~/'
+    
+    max_scp_retries = 3
+    for attempt in range(1, max_scp_retries + 1):
+        try:
+            print(f"       -> Connecting for upload (Attempt {attempt}/{max_scp_retries})...")
+            subprocess.run(scp_cmd, shell=True, check=True)
+            break
+        except subprocess.CalledProcessError as e:
+            if attempt == max_scp_retries:
+                print("  [ERROR] SCP upload failed after maximum retries!")
+                sys.exit(1)
+            print(f"  [WARN] Upload dropped/timed out. Azure rate-limiting likely active. Retrying in 20 seconds...")
+            time.sleep(20)
 
     # 4. Remote extraction, npm installs, build backend, PM2 launch
     print("\n[4/5] REMOTE extraction, building backend, and launching PM2...")
     remote_script = (
+        f"sudo mkdir -p {REMOTE_ROOT} && "
+        f"sudo chown -R {REMOTE_USER}:{REMOTE_USER} {REMOTE_ROOT} && "
+        f"sudo mv ~/{ARCHIVE_NAME} {REMOTE_ROOT}/ && "
         f"cd {REMOTE_ROOT} && "
         f"pm2 stop {PM2_NAME} 2>/dev/null || true && "
         f"sudo rm -rf backend frontend && "
@@ -124,11 +128,11 @@ def main():
         # Install and build backend
         f"cd backend && "
         f"mkdir -p logs && "
-        f"echo '       → Installing backend dependencies...' && "
+        f"echo '       -> Installing backend dependencies...' && "
         f"npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund 2>&1 | tail -n 5 && "
-        f"echo '       → Generating Prisma client...' && "
+        f"echo '       -> Generating Prisma client...' && "
         f"npx prisma generate --schema=database/schema.prisma 2>&1 | tail -n 5 && "
-        f"echo '       → Building backend TypeScript...' && "
+        f"echo '       -> Building backend TypeScript...' && "
         f"npm run build 2>&1 | tail -n 5 && "
         # Start backend with PM2
         f"cd {REMOTE_ROOT} && "
@@ -137,15 +141,22 @@ def main():
         f"rm -f {ARCHIVE_NAME}"
     )
 
-    ssh_cmd = f'ssh -t -o StrictHostKeyChecking=no {SSH_KEY_OPT} -o ConnectTimeout=10 {REMOTE_USER}@{REMOTE_HOST} "{remote_script}"'
-    try:
-        subprocess.run(ssh_cmd, shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"  [ERROR] Remote execution failed with code {e.returncode}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\n  [WARN] Deployment interrupted by user.")
-        sys.exit(1)
+    ssh_cmd = f'ssh -o StrictHostKeyChecking=no {SSH_KEY_OPT} -o ConnectTimeout=10 {REMOTE_USER}@{REMOTE_HOST} "{remote_script}"'
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"       -> Connecting to execute remote script (Attempt {attempt}/{max_retries})...")
+            subprocess.run(ssh_cmd, shell=True, check=True)
+            break
+        except subprocess.CalledProcessError as e:
+            if attempt == max_retries:
+                print(f"  [ERROR] Remote execution failed with code {e.returncode} after {max_retries} attempts.")
+                sys.exit(1)
+            print(f"  [WARN] SSH dropped/timed out (code {e.returncode}). Azure rate-limiting likely active. Retrying in 15 seconds...")
+            time.sleep(15)
+        except KeyboardInterrupt:
+            print("\n  [WARN] Deployment interrupted by user.")
+            sys.exit(1)
 
     # 5. Final Health Check
     print("\n[5/5] VERIFYING backend health on port 5070...")
