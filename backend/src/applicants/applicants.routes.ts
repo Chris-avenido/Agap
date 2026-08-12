@@ -490,8 +490,12 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
     const uploadPromises = files.map(async (file, index) => {
       const docName = documentNames[index];
 
-      // Delete existing blob if replacing
-      if (otherInfo.documents[docName]) {
+      // Delete existing blob if replacing (except for per-application documents like Letter of Intent or Sworn Declaration)
+      if (
+        otherInfo.documents[docName] &&
+        docName !== 'Letter of Intent' &&
+        docName !== 'Sworn Declaration'
+      ) {
         await deleteFromAzure(otherInfo.documents[docName]);
       }
 
