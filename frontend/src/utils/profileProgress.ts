@@ -90,19 +90,27 @@ export const calculateProfileProgress = (data: {
     const ans = String(rawAns).trim().toLowerCase();
     if (ans !== 'yes' && ans !== 'no') return false;
     if (ans === 'yes' && id !== '34a' && id !== '34b') {
-      const details = typeof item === 'object' && item?.details 
+      const details = typeof item === 'object' && item?.details !== undefined
         ? item.details 
-        : (q[`q${id}_details`] || q[`${id}_details`] || '');
-      if (!details || details.trim() === '') return false;
+        : (q[`q${id}_details`] ?? q[`${id}_details`] ?? '');
+      if (details === null || details === undefined) return false;
+      if (typeof details === 'string') {
+        if (details.trim() === '') return false;
+      } else if (typeof details === 'object') {
+        const hasSomeValue = Object.values(details).some(v => v !== null && v !== undefined && String(v).trim() !== '');
+        if (!hasSomeValue) return false;
+      } else {
+        if (String(details).trim() === '') return false;
+      }
     }
     return true;
   });
 
   const refs = data.referencesList || data.references || [];
-  const validRefs = Array.isArray(refs) && refs.length >= 3 && refs.slice(0, 3).every(r => r?.name?.trim() && r?.address?.trim() && (r?.telephone?.trim() || r?.contact?.trim() || r?.phone?.trim() || r?.tel?.trim()));
+  const validRefs = Array.isArray(refs) && refs.length >= 3 && refs.slice(0, 3).every(r => String(r?.name || '').trim() && String(r?.address || '').trim() && (String(r?.telephone || '').trim() || String(r?.contact || '').trim() || String(r?.phone || '').trim() || String(r?.tel || '').trim()));
 
   const gov = data.governmentId || {};
-  const validGovId = Boolean((gov.type || gov.idType || gov.gov_id_type)?.trim() && (gov.idNo || gov.number || gov.gov_id_no)?.trim() && (gov.datePlace || gov.datePlaceOfIssuance || gov.gov_id_issuance)?.trim());
+  const validGovId = Boolean(String(gov.type || gov.idType || gov.gov_id_type || '').trim() && String(gov.idNo || gov.number || gov.gov_id_no || '').trim() && String(gov.datePlace || gov.datePlaceOfIssuance || gov.gov_id_issuance || '').trim());
 
   if (allQAnswered && validRefs && validGovId) {
     steps.push('Legal Questionnaire');

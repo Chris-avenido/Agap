@@ -543,109 +543,120 @@ class ApplicantsServiceClass {
       data.questionnaire_responses || {},
     );
 
-    // Generate AGAP-0001 format for applicant_number
-    const lastApplicant = await pool.query(
-      `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY CAST(SUBSTRING(applicant_number FROM 6) AS INTEGER) DESC LIMIT 1`,
-    );
-    let nextApplicantNum = 1;
-    if (
-      lastApplicant.rows.length > 0 &&
-      lastApplicant.rows[0].applicant_number
-    ) {
-      const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
-      if (match) {
-        nextApplicantNum = parseInt(match[1], 10) + 1;
+    // Generate AGAP-0001 format for applicant_number using transaction and latest ID
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
+
+      const lastApplicant = await client.query(
+        `SELECT applicant_number FROM public.applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+      );
+      let nextApplicantNum = 1;
+      if (
+        lastApplicant.rows.length > 0 &&
+        lastApplicant.rows[0].applicant_number
+      ) {
+        const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+        if (match) {
+          nextApplicantNum = parseInt(match[1], 10) + 1;
+        }
       }
+      const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+
+      const result = await client.query(
+        `
+        INSERT INTO applicants (
+          applicant_number, password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
+          sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
+          sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
+          educational_background, civil_service_eligibility, work_experience, voluntary_work,
+          learning_and_development, other_information, questionnaire_responses, family_background,
+          spouse_surname, spouse_first_name, spouse_middle_name, spouse_name_extension, spouse_occupation,
+          spouse_employer_business, spouse_business_address, spouse_telephone,
+          father_surname, father_first_name, father_middle_name, father_name_extension,
+          mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email,
+          years_experience, training_hours, bachelors_degree, eligibility, age, religion, disability, ethnic_group, is_test
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+          , $13, $14, $15, $16, $17, $18, $19, $20,
+          $21, $22, $23, $24, $25, $26, $27, $28,
+          $29, $30, $31, $32, $33, $34, $35, $36,
+          $37, $38, $39, $40, $41, $42, $43, $44, $45,
+          $46, $47, $48, $49, $50, $51, $52, $53, $54
+        ) RETURNING *
+      `,
+        [
+          newApplicantNumber,
+          passwordHash,
+          data.surname || 'UNKNOWN',
+          data.first_name || 'UNKNOWN',
+          data.middle_name || null,
+          data.date_of_birth ? new Date(data.date_of_birth) : null,
+          data.place_of_birth || null,
+          data.sex || null,
+          data.civil_status || null,
+          data.citizenship || null,
+          data.blood_type || null,
+          data.gsis_id_no || null,
+          data.pag_ibig_id_no || null,
+          data.philhealth_no || null,
+          data.sss_no || null,
+          data.residential_address
+            ? JSON.stringify(data.residential_address)
+            : null,
+          data.permanent_address ? JSON.stringify(data.permanent_address) : null,
+          data.telephone_no || null,
+          data.mobile_no || null,
+          email,
+          JSON.stringify(data.educational_background || []),
+          JSON.stringify(data.civil_service_eligibility || []),
+          JSON.stringify(data.work_experience || []),
+          JSON.stringify(data.voluntary_work || []),
+          JSON.stringify(data.learning_and_development || []),
+          JSON.stringify(data.other_information || {}),
+          questionnaire_responses,
+          data.family_background ? JSON.stringify(data.family_background) : null,
+          data.family_background?.spouse?.surname || null,
+          data.family_background?.spouse?.first_name || null,
+          data.family_background?.spouse?.middle_name || null,
+          data.family_background?.spouse?.name_extension || null,
+          data.family_background?.spouse?.occupation || null,
+          data.family_background?.spouse?.employer_business_name || null,
+          data.family_background?.spouse?.business_address || null,
+          data.family_background?.spouse?.telephone_no || null,
+          data.family_background?.father?.surname || null,
+          data.family_background?.father?.first_name || null,
+          data.family_background?.father?.middle_name || null,
+          data.family_background?.father?.name_extension || null,
+          data.family_background?.mother?.maiden_surname || null,
+          data.family_background?.mother?.first_name || null,
+          data.family_background?.mother?.middle_name || null,
+          data.family_background?.children
+            ? JSON.stringify(data.family_background.children)
+            : null,
+          data.alternate_email || null,
+          calculateExperience(data.work_experience || []),
+          calculateTraining(data.learning_and_development || []),
+          extractBachelorsDegree(data.educational_background || []),
+          extractEligibility(data.civil_service_eligibility || []),
+          calculateAge(data.date_of_birth),
+          data.religion || null,
+          data.disability || null,
+          data.ethnic_group || null,
+          data.is_test === true || data.is_test === 'true' || false,
+        ],
+      );
+
+      await client.query('COMMIT');
+      const applicant = result.rows[0];
+      return applicant;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
-    const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
-
-    const result = await pool.query(
-      `
-      INSERT INTO applicants (
-        applicant_number, password_hash, surname, first_name, middle_name, date_of_birth, place_of_birth,
-        sex, civil_status, citizenship, blood_type, gsis_id_no, pag_ibig_id_no, philhealth_no,
-        sss_no, residential_address, permanent_address, telephone_no, mobile_no, email_address,
-        educational_background, civil_service_eligibility, work_experience, voluntary_work,
-        learning_and_development, other_information, questionnaire_responses, family_background,
-        spouse_surname, spouse_first_name, spouse_middle_name, spouse_name_extension, spouse_occupation,
-        spouse_employer_business, spouse_business_address, spouse_telephone,
-        father_surname, father_first_name, father_middle_name, father_name_extension,
-        mother_maiden_surname, mother_first_name, mother_middle_name, children_details, alternate_email,
-        years_experience, training_hours, bachelors_degree, eligibility, age, religion, disability, ethnic_group, is_test
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-        , $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26, $27, $28,
-        $29, $30, $31, $32, $33, $34, $35, $36,
-        $37, $38, $39, $40, $41, $42, $43, $44, $45,
-        $46, $47, $48, $49, $50, $51, $52, $53, $54
-      ) RETURNING *
-    `,
-      [
-        newApplicantNumber,
-        passwordHash,
-        data.surname || 'UNKNOWN',
-        data.first_name || 'UNKNOWN',
-        data.middle_name || null,
-        data.date_of_birth ? new Date(data.date_of_birth) : null,
-        data.place_of_birth || null,
-        data.sex || null,
-        data.civil_status || null,
-        data.citizenship || null,
-        data.blood_type || null,
-        data.gsis_id_no || null,
-        data.pag_ibig_id_no || null,
-        data.philhealth_no || null,
-        data.sss_no || null,
-        data.residential_address
-          ? JSON.stringify(data.residential_address)
-          : null,
-        data.permanent_address ? JSON.stringify(data.permanent_address) : null,
-        data.telephone_no || null,
-        data.mobile_no || null,
-        email,
-        JSON.stringify(data.educational_background || []),
-        JSON.stringify(data.civil_service_eligibility || []),
-        JSON.stringify(data.work_experience || []),
-        JSON.stringify(data.voluntary_work || []),
-        JSON.stringify(data.learning_and_development || []),
-        JSON.stringify(data.other_information || {}),
-        questionnaire_responses,
-        data.family_background ? JSON.stringify(data.family_background) : null,
-        data.family_background?.spouse?.surname || null,
-        data.family_background?.spouse?.first_name || null,
-        data.family_background?.spouse?.middle_name || null,
-        data.family_background?.spouse?.name_extension || null,
-        data.family_background?.spouse?.occupation || null,
-        data.family_background?.spouse?.employer_business_name || null,
-        data.family_background?.spouse?.business_address || null,
-        data.family_background?.spouse?.telephone_no || null,
-        data.family_background?.father?.surname || null,
-        data.family_background?.father?.first_name || null,
-        data.family_background?.father?.middle_name || null,
-        data.family_background?.father?.name_extension || null,
-        data.family_background?.mother?.maiden_surname || null,
-        data.family_background?.mother?.first_name || null,
-        data.family_background?.mother?.middle_name || null,
-        data.family_background?.children
-          ? JSON.stringify(data.family_background.children)
-          : null,
-        data.alternate_email || null,
-        calculateExperience(data.work_experience || []),
-        calculateTraining(data.learning_and_development || []),
-        extractBachelorsDegree(data.educational_background || []),
-        extractEligibility(data.civil_service_eligibility || []),
-        calculateAge(data.date_of_birth),
-        data.religion || null,
-        data.disability || null,
-        data.ethnic_group || null,
-        data.is_test === true || data.is_test === 'true' || false,
-      ],
-    );
-
-    const applicant = result.rows[0];
-
-    return applicant;
   }
 
   async changePassword(
