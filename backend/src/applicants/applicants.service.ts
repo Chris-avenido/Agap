@@ -992,13 +992,7 @@ class ApplicantsServiceClass {
 
       // 4. Resolve item_no for the target application/cluster
       let itemNo: string | null = null;
-      if (clusterId) {
-        const vacRes = await client.query(
-          'SELECT item_no FROM vacancies WHERE job_cluster_id = $1 LIMIT 1',
-          [clusterId],
-        );
-        itemNo = vacRes.rows[0]?.item_no || null;
-      } else if (targetApplicationIds && targetApplicationIds.length > 0) {
+      if (targetApplicationIds && targetApplicationIds.length > 0) {
         const vacRes = await client.query(
           `SELECT v.item_no FROM applications a
            JOIN vacancies v ON a.job_cluster_id = v.job_cluster_id
