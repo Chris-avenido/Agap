@@ -1015,7 +1015,7 @@ class ApplicantsServiceClass {
             : null;
 
       await client.query(
-        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, replaced_at)
+        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
         [
           applicantId.toString(),
@@ -1071,7 +1071,7 @@ class ApplicantsServiceClass {
       }
 
       const result = await pool.query(
-        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, replaced_at)
+        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
          RETURNING *`,
         [
@@ -1095,7 +1095,7 @@ class ApplicantsServiceClass {
     const result = await pool.query(
       `SELECT * FROM document_audit_logs 
        WHERE applicant_id = $1 
-       ORDER BY replaced_at DESC, id DESC`,
+       ORDER BY created_at DESC, id DESC`,
       [applicantId.toString()],
     );
     return result.rows;
