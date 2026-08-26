@@ -877,7 +877,7 @@ class ApplicantsServiceClass {
     try {
       await client.query('BEGIN');
 
-      // 1. Fetch applicant profile
+      // 1. Fetch and lock applicant profile
       const appRes = await client.query(
         'SELECT * FROM applicants WHERE id = $1 FOR UPDATE',
         [applicantId],
@@ -897,27 +897,39 @@ class ApplicantsServiceClass {
 
       const oldBlobUrl = otherInfo.documents[docType] || null;
 
-      // Update applicant other_information.documents
+      // 2. Always update applicant master profile other_information.documents with newest blob URL for future applications
       otherInfo.documents[docType] = newBlobUrl;
       await client.query(
         'UPDATE applicants SET other_information = $1, updated_at = NOW() WHERE id = $2',
         [JSON.stringify(otherInfo), applicantId],
       );
 
-      // 2. Update targeted applications or all active applications
-      let affectedCount = 0;
+      // 3. Conditionally update applications: ONLY update if the job cluster is OPEN in the vacancies table
+      // If the vacancy/cluster is closed/expired, retain the original blob ID
       const columnToUpdate =
         docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
 
+      let updateRes;
       if (
         targetApplicationIds &&
         Array.isArray(targetApplicationIds) &&
         targetApplicationIds.length > 0
       ) {
-        const updateRes = await client.query(
-          `UPDATE applications 
+        updateRes = await client.query(
+          `UPDATE applications a
            SET ${columnToUpdate} = $1, updated_at = NOW() 
-           WHERE id = ANY($2::text[]) AND (applicant_id = $3 OR applicant_id = $4) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
+           WHERE a.id = ANY($2::text[]) 
+             AND (a.applicant_id = $3 OR a.applicant_id = $4) 
+             AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
+             AND EXISTS (
+               SELECT 1 FROM vacancies v 
+               WHERE v.job_cluster_id::text = a.job_cluster_id::text 
+                 AND LOWER(v.status) = 'open'
+                 AND (v.posting_end IS NULL OR v.posting_end::date >= CURRENT_DATE)
+                 AND (v.posting_start IS NULL OR v.posting_start::date <= CURRENT_DATE)
+                 AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+             )
+           RETURNING a.id`,
           [
             newBlobUrl,
             targetApplicationIds,
@@ -925,22 +937,36 @@ class ApplicantsServiceClass {
             applicantId.toString(),
           ],
         );
-        affectedCount = updateRes.rowCount || 0;
       } else {
-        const updateRes = await client.query(
-          `UPDATE applications 
+        updateRes = await client.query(
+          `UPDATE applications a
            SET ${columnToUpdate} = $1, updated_at = NOW() 
-           WHERE (applicant_id = $2 OR applicant_id = $3) AND (status IS NULL OR status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))`,
+           WHERE (a.applicant_id = $2 OR a.applicant_id = $3) 
+             AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
+             AND EXISTS (
+               SELECT 1 FROM vacancies v 
+               WHERE v.job_cluster_id::text = a.job_cluster_id::text 
+                 AND LOWER(v.status) = 'open'
+                 AND (v.posting_end IS NULL OR v.posting_end::date >= CURRENT_DATE)
+                 AND (v.posting_start IS NULL OR v.posting_start::date <= CURRENT_DATE)
+                 AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+             )
+           RETURNING a.id`,
           [newBlobUrl, applicantId, applicantId.toString()],
         );
-        affectedCount = updateRes.rowCount || 0;
       }
 
-      // 3. Create audit log record
+      const updatedAppIds = (updateRes.rows || []).map((r: any) => r.id);
+      const affectedCount = updatedAppIds.length;
+
+      // 4. Create audit log record
       const appIdsStr =
-        targetApplicationIds && targetApplicationIds.length > 0
-          ? targetApplicationIds.join(',')
-          : null;
+        updatedAppIds.length > 0
+          ? updatedAppIds.join(',')
+          : targetApplicationIds && targetApplicationIds.length > 0
+            ? targetApplicationIds.join(',')
+            : null;
+
       await client.query(
         `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -961,6 +987,7 @@ class ApplicantsServiceClass {
         newUrl: newBlobUrl,
         oldUrl: oldBlobUrl,
         affectedApplications: affectedCount,
+        updatedApplicationIds: updatedAppIds,
         targetApplicationIds: targetApplicationIds || [],
         documents: otherInfo.documents,
       };

@@ -8,7 +8,6 @@ const APPLICANT_SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 import {
   uploadToAzure,
   downloadFromAzure,
-  deleteFromAzure,
 } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
 import {
@@ -490,15 +489,6 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
     const uploadPromises = files.map(async (file, index) => {
       const docName = documentNames[index];
 
-      // Delete existing blob if replacing (except for per-application documents like Letter of Intent or Sworn Declaration)
-      if (
-        otherInfo.documents[docName] &&
-        docName !== 'Letter of Intent' &&
-        docName !== 'Sworn Declaration'
-      ) {
-        await deleteFromAzure(otherInfo.documents[docName]);
-      }
-
       // Sanitize file name
       const ext = file.originalname.split('.').pop();
       const surname = (applicant.surname || 'Applicant')
@@ -687,11 +677,6 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
     let otherInfo = applicant.other_information || {};
     if (typeof otherInfo === 'string') {
       otherInfo = JSON.parse(otherInfo);
-    }
-
-    // Delete existing photo if replacing
-    if (otherInfo.photoUrl) {
-      await deleteFromAzure(otherInfo.photoUrl);
     }
 
     const ext = file.originalname.split('.').pop();

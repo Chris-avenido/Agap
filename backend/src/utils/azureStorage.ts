@@ -1,5 +1,6 @@
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
 import * as dotenv from 'dotenv';
+import * as crypto from 'crypto';
 dotenv.config();
 
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
@@ -24,8 +25,27 @@ export const uploadToAzure = async (
   // Create container if it does not exist
   await containerClient.createIfNotExists();
 
+  // Ensure unique versioned blob path to prevent overwriting existing blobs
+  const lastSlashIndex = fileName.lastIndexOf('/');
+  const dirPath =
+    lastSlashIndex !== -1 ? fileName.substring(0, lastSlashIndex + 1) : '';
+  const baseNameWithExt =
+    lastSlashIndex !== -1 ? fileName.substring(lastSlashIndex + 1) : fileName;
+
+  const lastDotIndex = baseNameWithExt.lastIndexOf('.');
+  const baseName =
+    lastDotIndex !== -1
+      ? baseNameWithExt.substring(0, lastDotIndex)
+      : baseNameWithExt;
+  const ext =
+    lastDotIndex !== -1 ? baseNameWithExt.substring(lastDotIndex) : '';
+
+  // Generate a unique version token (timestamp + random hex)
+  const uniqueToken = `${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const uniqueBlobName = `${dirPath}${baseName}_${uniqueToken}${ext}`;
+
   const blockBlobClient: BlockBlobClient =
-    containerClient.getBlockBlobClient(fileName);
+    containerClient.getBlockBlobClient(uniqueBlobName);
 
   await blockBlobClient.uploadData(fileBuffer, {
     blobHTTPHeaders: { blobContentType: mimetype },
