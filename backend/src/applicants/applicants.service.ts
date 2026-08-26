@@ -450,28 +450,33 @@ class ApplicantsServiceClass {
       );
       const itemNo = vacRes.rows[0]?.item_no || null;
 
-      // Log submitted documents in document_audit_logs with item_no
+      // Log ALL uploaded documents into document_audit_logs with item_no and application_id
+      const allDocs: Record<string, string> = {};
+      if (otherInfo.documents && typeof otherInfo.documents === 'object') {
+        Object.assign(allDocs, otherInfo.documents);
+      }
       if (letterOfIntent) {
-        await this.logDocumentAudit(
-          applicantId,
-          'Letter of Intent',
-          null,
-          letterOfIntent,
-          1,
-          appId,
-          itemNo,
-        );
+        allDocs['Letter of Intent'] = letterOfIntent;
       }
       if (swornDocument) {
-        await this.logDocumentAudit(
-          applicantId,
-          'Sworn Declaration',
-          null,
-          swornDocument,
-          1,
-          appId,
-          itemNo,
-        );
+        allDocs['Sworn Declaration'] = swornDocument;
+      }
+      if (otherInfo.photoUrl && !allDocs['Profile Photo'] && !allDocs['profile_photo']) {
+        allDocs['Profile Photo'] = otherInfo.photoUrl;
+      }
+
+      for (const [docName, docUrl] of Object.entries(allDocs)) {
+        if (typeof docUrl === 'string' && docUrl.trim().length > 0) {
+          await this.logDocumentAudit(
+            applicantId,
+            docName,
+            null,
+            docUrl,
+            1,
+            appId,
+            itemNo,
+          );
+        }
       }
 
       console.log(
