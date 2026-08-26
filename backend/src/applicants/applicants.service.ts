@@ -443,6 +443,37 @@ class ApplicantsServiceClass {
         ],
       );
 
+      // Look up item_no for this job cluster
+      const vacRes = await pool.query(
+        'SELECT item_no FROM vacancies WHERE job_cluster_id = $1 LIMIT 1',
+        [jobClusterId],
+      );
+      const itemNo = vacRes.rows[0]?.item_no || null;
+
+      // Log submitted documents in document_audit_logs with item_no
+      if (letterOfIntent) {
+        await this.logDocumentAudit(
+          applicantId,
+          'Letter of Intent',
+          null,
+          letterOfIntent,
+          1,
+          appId,
+          itemNo,
+        );
+      }
+      if (swornDocument) {
+        await this.logDocumentAudit(
+          applicantId,
+          'Sworn Declaration',
+          null,
+          swornDocument,
+          1,
+          appId,
+          itemNo,
+        );
+      }
+
       console.log(
         `[DEBUG] applyJob INSERT successful. Returning row:`,
         result.rows[0],
@@ -959,7 +990,24 @@ class ApplicantsServiceClass {
       const updatedAppIds = (updateRes.rows || []).map((r: any) => r.id);
       const affectedCount = updatedAppIds.length;
 
-      // 4. Create audit log record
+      // 4. Resolve item_no for the target application/cluster
+      let itemNo: string | null = null;
+      if (clusterId) {
+        const vacRes = await client.query(
+          'SELECT item_no FROM vacancies WHERE job_cluster_id = $1 LIMIT 1',
+          [clusterId],
+        );
+        itemNo = vacRes.rows[0]?.item_no || null;
+      } else if (targetApplicationIds && targetApplicationIds.length > 0) {
+        const vacRes = await client.query(
+          `SELECT v.item_no FROM applications a
+           JOIN vacancies v ON a.job_cluster_id = v.job_cluster_id
+           WHERE a.id = ANY($1) LIMIT 1`,
+          [targetApplicationIds],
+        );
+        itemNo = vacRes.rows[0]?.item_no || null;
+      }
+
       const appIdsStr =
         updatedAppIds.length > 0
           ? updatedAppIds.join(',')
@@ -968,8 +1016,8 @@ class ApplicantsServiceClass {
             : null;
 
       await client.query(
-        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, replaced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
         [
           applicantId.toString(),
           docType,
@@ -977,6 +1025,7 @@ class ApplicantsServiceClass {
           newBlobUrl,
           affectedCount,
           appIdsStr,
+          itemNo,
         ],
       );
 
@@ -997,6 +1046,60 @@ class ApplicantsServiceClass {
     } finally {
       client.release();
     }
+  }
+
+  async logDocumentAudit(
+    applicantId: string | number,
+    docType: string,
+    oldBlobUrl: string | null,
+    newBlobUrl: string,
+    affectedCount: number = 0,
+    applicationId: string | null = null,
+    itemNo: string | null = null,
+  ) {
+    try {
+      let resolvedItemNo = itemNo;
+      if (!resolvedItemNo && applicationId) {
+        const itemRes = await pool.query(
+          `SELECT v.item_no 
+           FROM vacancies v
+           LEFT JOIN applications a ON a.job_cluster_id = v.job_cluster_id
+           WHERE a.id = $1 OR v.job_cluster_id = $1
+           LIMIT 1`,
+          [applicationId],
+        );
+        resolvedItemNo = itemRes.rows[0]?.item_no || null;
+      }
+
+      const result = await pool.query(
+        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, replaced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+         RETURNING *`,
+        [
+          applicantId.toString(),
+          docType,
+          oldBlobUrl,
+          newBlobUrl,
+          affectedCount,
+          applicationId,
+          resolvedItemNo,
+        ],
+      );
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error logging document audit:', error);
+      return null;
+    }
+  }
+
+  async getDocumentAuditLogs(applicantId: string | number) {
+    const result = await pool.query(
+      `SELECT * FROM document_audit_logs 
+       WHERE applicant_id = $1 
+       ORDER BY replaced_at DESC, id DESC`,
+      [applicantId.toString()],
+    );
+    return result.rows;
   }
 }
 

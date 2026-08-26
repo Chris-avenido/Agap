@@ -27,9 +27,10 @@ pool
     try {
       await client.query('ALTER TABLE vacancies ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
       await client.query('ALTER TABLE applicants ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
-      console.log('✅ Schema migration: is_test boolean column verified on vacancies and applicants tables.');
+      await client.query('ALTER TABLE document_audit_logs ADD COLUMN IF NOT EXISTS item_no VARCHAR(100);');
+      console.log('✅ Schema migration: is_test and document_audit_logs item_no columns verified.');
     } catch (migErr) {
-      console.error('⚠️ Schema migration warning for is_test columns:', migErr);
+      console.error('⚠️ Schema migration warning for columns:', migErr);
     } finally {
       client.release();
     }

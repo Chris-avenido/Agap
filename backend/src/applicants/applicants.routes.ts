@@ -488,6 +488,7 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
 
     const uploadPromises = files.map(async (file, index) => {
       const docName = documentNames[index];
+      const oldBlobUrl = otherInfo.documents[docName] || null;
 
       // Sanitize file name
       const ext = file.originalname.split('.').pop();
@@ -521,6 +522,16 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
 
       const url = await uploadToAzure(finalBuffer, fullBlobPath, file.mimetype);
       otherInfo.documents[docName] = url;
+
+      // Insert audit log for this uploaded document
+      await ApplicantsService.logDocumentAudit(
+        applicantId,
+        docName,
+        oldBlobUrl,
+        url,
+        0,
+        req.body.jobClusterId ? String(req.body.jobClusterId) : null,
+      );
     });
 
     await Promise.all(uploadPromises);
@@ -679,6 +690,11 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
       otherInfo = JSON.parse(otherInfo);
     }
 
+    const oldPhotoUrl =
+      otherInfo.photoUrl ||
+      otherInfo.documents?.profile_photo ||
+      null;
+
     const ext = file.originalname.split('.').pop();
     const applicantNumber = applicant.applicant_number || `ID-${applicantId}`;
     const safeName = `${applicantNumber}_ProfilePhoto_${Date.now()}.${ext}`;
@@ -689,6 +705,16 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
 
     const url = await uploadToAzure(file.buffer, fullBlobPath, file.mimetype);
     otherInfo.photoUrl = url;
+
+    // Insert audit log for photo upload
+    await ApplicantsService.logDocumentAudit(
+      applicantId,
+      'Profile Photo',
+      oldPhotoUrl,
+      url,
+      0,
+      null,
+    );
 
     await ApplicantsService.update(applicantId, {
       other_information: otherInfo,
@@ -702,6 +728,20 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
   } catch (error: any) {
     console.error('Error uploading photo:', error);
     res.status(500).json({ message: error.message || 'Error uploading photo' });
+  }
+});
+
+router.get('/:id/document-audit-logs', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return next();
+  try {
+    const logs = await ApplicantsService.getDocumentAuditLogs(id);
+    res.json({ success: true, data: logs });
+  } catch (error: any) {
+    console.error('Error fetching document audit logs:', error);
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching document audit logs' });
   }
 });
 
