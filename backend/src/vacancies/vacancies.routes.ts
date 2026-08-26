@@ -5,7 +5,10 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const vacancies = await VacanciesService.getOpenVacancies();
+    const applicantId = req.query.applicantId
+      ? String(req.query.applicantId)
+      : undefined;
+    const vacancies = await VacanciesService.getOpenVacancies(applicantId);
     res.json({ success: true, data: vacancies });
   } catch (error: any) {
     console.error('Error fetching vacancies:', error);
@@ -15,7 +18,10 @@ router.get('/', async (req, res) => {
 
 router.get('/locations', async (req, res) => {
   try {
-    const locations = await VacanciesService.getAgapLocations();
+    const applicantId = req.query.applicantId
+      ? String(req.query.applicantId)
+      : undefined;
+    const locations = await VacanciesService.getAgapLocations(applicantId);
     res.json({ success: true, data: locations });
   } catch (error: any) {
     console.error('Error fetching locations:', error);

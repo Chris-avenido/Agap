@@ -831,7 +831,7 @@ export default function ApplicantJobList() {
     }
     const session = JSON.parse(sessionStr);
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations?applicantId=${session.id}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
@@ -842,7 +842,7 @@ export default function ApplicantJobList() {
       })
       .catch(err => console.error('Error fetching locations:', err));
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies?applicantId=${session.id}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {

@@ -1,7 +1,40 @@
 import { pool } from '../database';
 
 export class VacanciesService {
-  static async getOpenVacancies() {
+  static async getOpenVacancies(applicantId?: string | number | null) {
+    let isTestApplicant = false;
+    if (applicantId) {
+      const numId = Number(applicantId);
+      if (!isNaN(numId)) {
+        const appRes = await pool.query(
+          'SELECT is_test FROM applicants WHERE id = $1',
+          [numId],
+        );
+        if (appRes.rows.length > 0 && appRes.rows[0].is_test === true) {
+          isTestApplicant = true;
+        }
+      }
+    }
+
+    let filterCondition = '';
+    if (isTestApplicant) {
+      // Test applicant: ONLY show CENTRAL OFFICE (BHROD & SED)
+      filterCondition = `
+        AND (
+          (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) = 'BHROD') OR
+          (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) = 'SED')
+        )
+      `;
+    } else {
+      // Regular applicant / Public: DO NOT display BHROD & SED under CENTRAL OFFICE and DO NOT display test vacancies
+      filterCondition = `
+        AND NOT (
+          (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))
+          OR (EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.is_test IS TRUE))
+        )
+      `;
+    }
+
     const result = await pool.query(
       `
       SELECT 
@@ -27,6 +60,7 @@ export class VacanciesService {
           AND v.status = 'open' 
           AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
       )
+      ${filterCondition}
       ORDER BY posting_start DESC
     `,
     );
@@ -71,16 +105,40 @@ export class VacanciesService {
     return result.rowCount;
   }
 
-  static async getAgapLocations() {
+  static async getAgapLocations(applicantId?: string | number | null) {
+    let isTestApplicant = false;
+    if (applicantId) {
+      const numId = Number(applicantId);
+      if (!isNaN(numId)) {
+        const appRes = await pool.query(
+          'SELECT is_test FROM applicants WHERE id = $1',
+          [numId],
+        );
+        if (appRes.rows.length > 0 && appRes.rows[0].is_test === true) {
+          isTestApplicant = true;
+        }
+      }
+    }
+
+    if (isTestApplicant) {
+      return {
+        regions: ['CENTRAL OFFICE'],
+        divisions: ['BHROD', 'SED'],
+        divisionsByRegion: {
+          'CENTRAL OFFICE': ['BHROD', 'SED'],
+        },
+      };
+    }
+
     const [regionsResult, divisionsResult, regdivResult] = await Promise.all([
       pool.query(
-        'SELECT region FROM agap_schools WHERE region IS NOT NULL GROUP BY region ORDER BY region',
+        "SELECT region FROM agap_schools WHERE region IS NOT NULL AND region != 'CENTRAL OFFICE' GROUP BY region ORDER BY region",
       ),
       pool.query(
-        'SELECT division FROM agap_schools WHERE division IS NOT NULL GROUP BY division ORDER BY division',
+        "SELECT division FROM agap_schools WHERE division IS NOT NULL AND division NOT IN ('BHROD', 'SED') GROUP BY division ORDER BY division",
       ),
       pool.query(
-        'SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL ORDER BY region, division',
+        "SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL AND NOT (region = 'CENTRAL OFFICE' AND division IN ('BHROD', 'SED')) ORDER BY region, division",
       ),
     ]);
 

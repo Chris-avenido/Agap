@@ -22,11 +22,17 @@ export default function ApplicationPage() {
     if (!jobId && !jobTitle) {
       navigate('/');
     } else if (jobId) {
-      fetch(`${import.meta.env.VITE_API_URL}/api/vacancies`)
+      const sessionStr = localStorage.getItem('session_data');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const url = session?.id
+        ? `${import.meta.env.VITE_API_URL}/api/vacancies?applicantId=${session.id}`
+        : `${import.meta.env.VITE_API_URL}/api/vacancies`;
+
+      fetch(url)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.data) {
-            const cluster = data.data.find((v: any) => v.cluster_id === jobId || v.position_id === jobId);
+            const cluster = data.data.find((v: any) => v.cluster_id === jobId || v.position_id === jobId || v.jobClusterId === jobId);
             if (cluster) {
               setJobDetails(cluster);
             }
