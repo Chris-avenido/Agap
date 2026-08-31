@@ -443,17 +443,13 @@ class ApplicantsServiceClass {
         ],
       );
 
-      // Look up item_no for this job cluster
-      const vacRes = await pool.query(
-        'SELECT item_no FROM vacancies WHERE job_cluster_id = $1 LIMIT 1',
-        [jobClusterId],
-      );
-      const itemNo = vacRes.rows[0]?.item_no || null;
-
-      // Log ALL uploaded documents into document_audit_logs with item_no and application_id
+      // Log ALL uploaded documents into document_audit_logs
       const allDocs: Record<string, string> = {};
       if (otherInfo.documents && typeof otherInfo.documents === 'object') {
-        Object.assign(allDocs, otherInfo.documents);
+        for (const [key, val] of Object.entries(otherInfo.documents)) {
+          const normKey = key === 'Personal Data Sheet' ? 'Notarized Personal Data Sheet' : key;
+          allDocs[normKey] = val as string;
+        }
       }
       if (letterOfIntent) {
         allDocs['Letter of Intent'] = letterOfIntent;
@@ -465,16 +461,17 @@ class ApplicantsServiceClass {
         allDocs['Profile Photo'] = otherInfo.photoUrl;
       }
 
+      const batchNumber = await this.getNextBatchNumber(applicantId);
       for (const [docName, docUrl] of Object.entries(allDocs)) {
         if (typeof docUrl === 'string' && docUrl.trim().length > 0) {
           await this.logDocumentAudit(
             applicantId,
             docName,
-            null,
             docUrl,
             1,
             appId,
-            itemNo,
+            true,
+            batchNumber,
           );
         }
       }
@@ -995,43 +992,21 @@ class ApplicantsServiceClass {
       const updatedAppIds = (updateRes.rows || []).map((r: any) => r.id);
       const affectedCount = updatedAppIds.length;
 
-      // 4. Resolve item_no for the target application/cluster
-      let itemNo: string | null = null;
-      if (targetApplicationIds && targetApplicationIds.length > 0) {
-        const vacRes = await client.query(
-          `SELECT v.item_no FROM applications a
-           JOIN vacancies v ON a.job_cluster_id = v.job_cluster_id
-           WHERE a.id = ANY($1) LIMIT 1`,
-          [targetApplicationIds],
-        );
-        itemNo = vacRes.rows[0]?.item_no || null;
-      }
-
-      const appIdsStr =
-        updatedAppIds.length > 0
-          ? updatedAppIds.join(',')
-          : targetApplicationIds && targetApplicationIds.length > 0
-            ? targetApplicationIds.join(',')
-            : null;
-
-      await client.query(
-        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-        [
-          applicantId.toString(),
-          docType,
-          oldBlobUrl,
-          newBlobUrl,
-          affectedCount,
-          appIdsStr,
-          itemNo,
-        ],
+      // 4. Generate concurrency-safe batch number and insert per-application audit records
+      const batchNumber = await this.getNextBatchNumber(applicantId, client);
+      await this.logDocumentAuditPerApplication(
+        applicantId,
+        docType,
+        newBlobUrl,
+        batchNumber,
+        client,
       );
 
       await client.query('COMMIT');
 
       return {
         success: true,
+        batchNumber,
         newUrl: newBlobUrl,
         oldUrl: oldBlobUrl,
         affectedApplications: affectedCount,
@@ -1047,41 +1022,221 @@ class ApplicantsServiceClass {
     }
   }
 
+  async getNextBatchNumber(
+    applicantId: string | number,
+    client?: any,
+  ): Promise<number> {
+    const db = client || pool;
+    if (client) {
+      // Transaction-level advisory lock on applicant ID
+      await client.query('SELECT pg_advisory_xact_lock($1)', [Number(applicantId)]);
+    }
+
+    const res = await db.query(
+      `SELECT (COALESCE(
+         (SELECT CASE WHEN batch_number ~ '^[0-9]+$' THEN batch_number::int ELSE 0 END
+          FROM document_audit_logs
+          WHERE applicant_id = $1
+          ORDER BY CASE WHEN batch_number ~ '^[0-9]+$' THEN batch_number::int ELSE 0 END DESC
+          LIMIT 1), 0) + 1) AS next_batch`,
+      [applicantId.toString()],
+    );
+    return parseInt(res.rows[0].next_batch, 10);
+  }
+
+  async logDocumentAuditPerApplication(
+    applicantId: string | number,
+    docType: string,
+    newBlobUrl: string,
+    batchNumber: number,
+    client?: any,
+  ): Promise<number> {
+    const db = client || pool;
+
+    // 1. Determine all applications for the applicant and their vacancy status
+    const appsRes = await db.query(
+      `SELECT a.id,
+              EXISTS (
+                SELECT 1 FROM vacancies v 
+                WHERE v.job_cluster_id::text = a.job_cluster_id::text 
+                  AND LOWER(v.status) = 'open'
+              ) AS is_open
+       FROM applications a
+       WHERE a.applicant_id = $1`,
+      [applicantId.toString()],
+    );
+
+    const applications = appsRes.rows;
+    const applicationCount = applications.length;
+
+    // 2. Insert audit log records for this document save/update batch
+    if (applicationCount === 0) {
+      // Profile-level upload before any job applications exist
+      await db.query(
+        `INSERT INTO document_audit_logs (
+           applicant_id,
+           document_type,
+           new_blob_url,
+           affected_applications_count,
+           application_id,
+           is_open,
+           batch_number,
+           created_at
+         ) VALUES ($1, $2, $3, 0, NULL, TRUE, $4, NOW())`,
+        [
+          applicantId.toString(),
+          docType,
+          newBlobUrl,
+          batchNumber.toString(),
+        ],
+      );
+    } else {
+      // One record per application
+      for (const app of applications) {
+        await db.query(
+          `INSERT INTO document_audit_logs (
+             applicant_id,
+             document_type,
+             new_blob_url,
+             affected_applications_count,
+             application_id,
+             is_open,
+             batch_number,
+             created_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+          [
+            applicantId.toString(),
+            docType,
+            newBlobUrl,
+            applicationCount,
+            app.id,
+            app.is_open,
+            batchNumber.toString(),
+          ],
+        );
+      }
+    }
+
+    return applicationCount;
+  }
+
+  async saveApplicantDocuments(
+    applicantId: number,
+    uploadedDocs: Array<{ docName: string; url: string }>,
+  ) {
+    if (uploadedDocs.length === 0) {
+      return { success: true, affectedApplications: 0, batchNumber: 0, documents: {} };
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Concurrency-safe batch number generation
+      const batchNumber = await this.getNextBatchNumber(applicantId, client);
+
+      // 2. Fetch and lock applicant
+      const appRes = await client.query(
+        'SELECT * FROM applicants WHERE id = $1 FOR UPDATE',
+        [applicantId],
+      );
+      if (appRes.rows.length === 0) {
+        throw new Error('Applicant not found');
+      }
+
+      let otherInfo = appRes.rows[0].other_information || {};
+      if (typeof otherInfo === 'string') {
+        try {
+          otherInfo = JSON.parse(otherInfo);
+        } catch {
+          otherInfo = {};
+        }
+      }
+      if (!otherInfo.documents) otherInfo.documents = {};
+
+      // 3. For each uploaded document in this Save operation, create per-application audit records
+      let totalApplications = 0;
+      for (const { docName, url } of uploadedDocs) {
+        otherInfo.documents[docName] = url;
+        if (docName === 'profile_photo' || docName === 'Profile Photo') {
+          otherInfo.photoUrl = url;
+        }
+
+        totalApplications = await this.logDocumentAuditPerApplication(
+          applicantId,
+          docName,
+          url,
+          batchNumber,
+          client,
+        );
+
+        // Conditionally update open applications for Letter of Intent or Sworn Declaration
+        if (docName === 'Letter of Intent' || docName === 'Sworn Declaration') {
+          const col = docName === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
+          await client.query(
+            `UPDATE applications a
+             SET ${col} = $1, updated_at = NOW()
+             WHERE a.applicant_id = $2
+               AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
+               AND EXISTS (
+                 SELECT 1 FROM vacancies v
+                 WHERE v.job_cluster_id::text = a.job_cluster_id::text
+                   AND LOWER(v.status) = 'open'
+               )`,
+            [url, applicantId.toString()],
+          );
+        }
+      }
+
+      // 4. Update applicant master profile
+      await client.query(
+        'UPDATE applicants SET other_information = $1, updated_at = NOW() WHERE id = $2',
+        [JSON.stringify(otherInfo), applicantId],
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        batchNumber,
+        affectedApplications: totalApplications,
+        documents: otherInfo.documents,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   async logDocumentAudit(
     applicantId: string | number,
     docType: string,
-    oldBlobUrl: string | null,
     newBlobUrl: string,
     affectedCount: number = 0,
     applicationId: string | null = null,
-    itemNo: string | null = null,
+    isOpen: boolean = true,
+    batchNumber?: string | number,
   ) {
     try {
-      let resolvedItemNo = itemNo;
-      if (!resolvedItemNo && applicationId) {
-        const itemRes = await pool.query(
-          `SELECT v.item_no 
-           FROM vacancies v
-           LEFT JOIN applications a ON a.job_cluster_id = v.job_cluster_id
-           WHERE a.id = $1 OR v.job_cluster_id = $1
-           LIMIT 1`,
-          [applicationId],
-        );
-        resolvedItemNo = itemRes.rows[0]?.item_no || null;
+      let resolvedBatchNumber = batchNumber;
+      if (resolvedBatchNumber === undefined || resolvedBatchNumber === null) {
+        resolvedBatchNumber = await this.getNextBatchNumber(applicantId);
       }
 
       const result = await pool.query(
-        `INSERT INTO document_audit_logs (applicant_id, document_type, old_blob_url, new_blob_url, affected_applications_count, application_id, item_no, created_at)
+        `INSERT INTO document_audit_logs (applicant_id, document_type, new_blob_url, affected_applications_count, application_id, is_open, batch_number, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
          RETURNING *`,
         [
           applicantId.toString(),
           docType,
-          oldBlobUrl,
           newBlobUrl,
           affectedCount,
           applicationId,
-          resolvedItemNo,
+          isOpen,
+          resolvedBatchNumber.toString(),
         ],
       );
       return result.rows[0];
@@ -1103,3 +1258,4 @@ class ApplicantsServiceClass {
 }
 
 export const ApplicantsService = new ApplicantsServiceClass();
+

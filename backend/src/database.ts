@@ -27,8 +27,12 @@ pool
     try {
       await client.query('ALTER TABLE vacancies ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
       await client.query('ALTER TABLE applicants ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;');
-      await client.query('ALTER TABLE document_audit_logs ADD COLUMN IF NOT EXISTS item_no VARCHAR(100);');
-      console.log('✅ Schema migration: is_test and document_audit_logs item_no columns verified.');
+      await client.query('ALTER TABLE document_audit_logs DROP COLUMN IF EXISTS old_blob_url CASCADE;');
+      await client.query('ALTER TABLE document_audit_logs DROP COLUMN IF EXISTS item_no CASCADE;');
+      await client.query('ALTER TABLE document_audit_logs ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT TRUE;');
+      await client.query('ALTER TABLE document_audit_logs ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100) DEFAULT \'1\';');
+      await client.query('UPDATE document_audit_logs SET batch_number = \'1\' WHERE batch_number IS NULL;');
+      console.log('✅ Schema migration: is_test verified, document_audit_logs columns (is_open, batch_number) verified, old columns (old_blob_url, item_no) dropped, null batch_numbers populated.');
     } catch (migErr) {
       console.error('⚠️ Schema migration warning for columns:', migErr);
     } finally {

@@ -460,11 +460,22 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
   try {
     const applicantId = id;
     const files = (req as any).files;
-    let documentNames = req.body.documentNames; // Array of doc names matching files array order
+    let rawDocNames = req.body.documentNames ?? req.body['documentNames[]'];
+    let documentNames: string[] = [];
 
-    // If only one file is uploaded, documentNames will be a string instead of an array
-    if (!Array.isArray(documentNames)) {
-      documentNames = [documentNames];
+    if (Array.isArray(rawDocNames)) {
+      documentNames = rawDocNames;
+    } else if (typeof rawDocNames === 'string') {
+      try {
+        const parsed = JSON.parse(rawDocNames);
+        if (Array.isArray(parsed)) {
+          documentNames = parsed;
+        } else {
+          documentNames = [rawDocNames];
+        }
+      } catch {
+        documentNames = [rawDocNames];
+      }
     }
 
     if (!files || files.length === 0) {
@@ -477,21 +488,11 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
 
     const applicantNumber = applicant.applicant_number || `ID-${applicantId}`;
 
-    let otherInfo = applicant.other_information || {};
-    if (typeof otherInfo === 'string') {
-      otherInfo = JSON.parse(otherInfo);
-    }
-
-    if (!otherInfo.documents) {
-      otherInfo.documents = {};
-    }
-
-    const uploadPromises = files.map(async (file, index) => {
-      const docName = documentNames[index];
-      const oldBlobUrl = otherInfo.documents[docName] || null;
+    const uploadPromises = files.map(async (file: any, index: number) => {
+      const docName = documentNames[index] || file.originalname;
 
       // Sanitize file name
-      const ext = file.originalname.split('.').pop();
+      const ext = file.originalname.split('.').pop() || 'pdf';
       const surname = (applicant.surname || 'Applicant')
         .replace(/[^a-zA-Z0-9]/g, '')
         .toLowerCase();
@@ -521,35 +522,23 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
       }
 
       const url = await uploadToAzure(finalBuffer, fullBlobPath, file.mimetype);
-      otherInfo.documents[docName] = url;
-
-      // Insert audit log for this uploaded document
-      await ApplicantsService.logDocumentAudit(
-        applicantId,
-        docName,
-        oldBlobUrl,
-        url,
-        0,
-        req.body.jobClusterId ? String(req.body.jobClusterId) : null,
-      );
+      return { docName, url };
     });
 
-    await Promise.all(uploadPromises);
+    const uploadedDocs = await Promise.all(uploadPromises);
 
-    // Sync profile_photo to photoUrl if present
-    if (otherInfo.documents.profile_photo) {
-      otherInfo.photoUrl = otherInfo.documents.profile_photo;
-    }
-
-    // Update applicant with new other_information
-    await ApplicantsService.update(applicantId, {
-      other_information: otherInfo,
-    });
+    // Save documents and log audit records per application in a single concurrency-safe batch transaction
+    const result = await ApplicantsService.saveApplicantDocuments(
+      applicantId,
+      uploadedDocs,
+    );
 
     res.json({
       success: true,
       message: 'Documents uploaded successfully',
-      documents: otherInfo.documents,
+      batchNumber: result.batchNumber,
+      affectedApplications: result.affectedApplications,
+      documents: result.documents,
     });
   } catch (error: any) {
     console.error('Error uploading documents:', error);
@@ -710,7 +699,6 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
     await ApplicantsService.logDocumentAudit(
       applicantId,
       'Profile Photo',
-      oldPhotoUrl,
       url,
       0,
       null,

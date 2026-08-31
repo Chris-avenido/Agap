@@ -309,20 +309,57 @@ export default function ApplicationModal({
           "profile_photo": "profile_photo"
         };
 
+        const changedFiles: Array<{ docLabel: string; file: File }> = [];
         for (const key of Object.keys(docMapping)) {
           const docLabel = docMapping[key];
-          let file = formData.get(key) as File;
+          let file: File | null = null;
           if (selectedFiles[docLabel] && selectedFiles[docLabel].size > 0) {
             file = selectedFiles[docLabel];
+          } else {
+            const formVal = formData.get(key);
+            if (formVal instanceof File && formVal.size > 0) {
+              file = formVal;
+            }
           }
           if (file && file.size > 0) {
-            const singleUploadFormData = new FormData();
-            singleUploadFormData.append("files", file);
-            singleUploadFormData.append("documentNames", docLabel);
-            await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}/documents`, {
-              method: 'POST',
-              body: singleUploadFormData
-            }).catch(() => { });
+            changedFiles.push({ docLabel, file });
+          }
+        }
+
+        if (changedFiles.length > 0) {
+          const batchUploadFormData = new FormData();
+          for (const item of changedFiles) {
+            batchUploadFormData.append("files", item.file);
+            batchUploadFormData.append("documentNames", item.docLabel);
+          }
+          const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${sessionId}/documents`, {
+            method: 'POST',
+            body: batchUploadFormData
+          });
+
+          if (uploadRes.ok) {
+            const uploadResult = await uploadRes.json().catch(() => ({}));
+            if (uploadResult.documents) {
+              if (userData && userData.other_information) {
+                if (typeof userData.other_information === 'string') {
+                  try {
+                    const parsed = JSON.parse(userData.other_information);
+                    parsed.documents = { ...(parsed.documents || {}), ...uploadResult.documents };
+                    userData.other_information = parsed;
+                  } catch { }
+                } else {
+                  userData.other_information.documents = { ...(userData.other_information.documents || {}), ...uploadResult.documents };
+                }
+              }
+              if (otherInfo) {
+                otherInfo.documents = { ...(otherInfo.documents || {}), ...uploadResult.documents };
+              }
+            }
+            setSelectedFiles({});
+            setSelectedDocumentNames({});
+            setSelectedDocumentUrls({});
+            const fileInputs = form.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+            fileInputs.forEach((input) => { input.value = ''; });
           }
         }
 
@@ -3563,7 +3600,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_pds" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_pds" accept=".pdf" required onChange={handleDocumentSelection("Notarized Personal Data Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3604,7 +3641,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_work_exp" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_work_exp" accept=".pdf" required onChange={handleDocumentSelection("Work Experience Sheet")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3645,7 +3682,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_eligibility" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_eligibility" accept=".pdf" required onChange={handleDocumentSelection("Certificate of Eligibility")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3689,7 +3726,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_tor" accept=".pdf" required className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_tor" accept=".pdf" required onChange={handleDocumentSelection("Transcript of Records")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3730,7 +3767,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_prc" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_prc" accept=".pdf" onChange={handleDocumentSelection("Updated PRC License/ID")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3772,7 +3809,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_diploma" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_diploma" accept=".pdf" onChange={handleDocumentSelection("Diploma (optional)")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -3813,7 +3850,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_resume" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_resume" accept=".pdf" onChange={handleDocumentSelection("Resume")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
                     {/* Item 8 */}
@@ -3853,12 +3890,12 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_performance_rating" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_performance_rating" accept=".pdf" onChange={handleDocumentSelection("Performance Rating")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
                     {/* Item 9 */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Training Certificates <span className="text-gray-400 font-normal italic text-[10px]"><br />(optional but mandatory for positions with training requirement)</span></span>
                       </div>
@@ -3894,12 +3931,12 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_training_certificates" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_training_certificates" accept=".pdf" onChange={handleDocumentSelection("Training Certificates")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
                     {/* Item 10 */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Application of Education</span>
                       </div>
@@ -3935,12 +3972,12 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_application_of_education" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_application_of_education" accept=".pdf" onChange={handleDocumentSelection("Application of Education")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
                     {/* Item 11 */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Application of Learning and Development</span>
                       </div>
@@ -3976,12 +4013,12 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_application_of_learning" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_application_of_learning" accept=".pdf" onChange={handleDocumentSelection("Application of Learning and Development")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
                     {/* Item 12 */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Outstanding Accomplishments <span className="text-gray-400 font-normal italic text-[10px]"><br />(Optional)</span></span>
                       </div>
@@ -4017,12 +4054,12 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_outstanding_accomplishments" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_outstanding_accomplishments" accept=".pdf" onChange={handleDocumentSelection("Outstanding Accomplishments")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
                     {/* Item 13 - Service Record / Certificate of Employment */}
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4 items-center px-6 py-5 border-b border-gray-100">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-700">Service Record / Certificate of Employment <span className="text-gray-400 font-normal italic text-[10px]"><br />(Optional)</span></span>
                       </div>
@@ -4058,7 +4095,7 @@ export default function ApplicationModal({
                           </div>
                         </div>
                       ) : (
-                        <input type="file" name="doc_service_record" accept=".pdf" className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                        <input type="file" name="doc_service_record" accept=".pdf" onChange={handleDocumentSelection("Service Record / Certificate of Employment")} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
                       )}
                     </div>
 
@@ -4400,6 +4437,7 @@ export default function ApplicationModal({
                           try {
                             const docMapping: Record<string, string> = {
                               "doc_loi": "Letter of Intent",
+                              "doc_sworn": "Sworn Declaration",
                               "doc_pds": "Notarized Personal Data Sheet",
                               "doc_work_exp": "Work Experience Sheet",
                               "doc_eligibility": "Certificate of Eligibility",
@@ -4415,6 +4453,9 @@ export default function ApplicationModal({
                               "doc_service_record": "Service Record / Certificate of Employment",
                               "profile_photo": "profile_photo"
                             };
+
+                            const changedFiles: Array<{ docLabel: string; file: File }> = [];
+                            let attachJobId = false;
 
                             for (const key of Object.keys(docMapping)) {
                               const docLabel = docMapping[key];
@@ -4433,23 +4474,55 @@ export default function ApplicationModal({
                               }
 
                               if (file && file.size > 0) {
-                                const singleUploadFormData = new FormData();
-                                singleUploadFormData.append("files", file);
-                                singleUploadFormData.append("documentNames", docLabel);
+                                changedFiles.push({ docLabel, file });
                                 if (docLabel === 'Letter of Intent' && jobId) {
-                                  singleUploadFormData.append('jobClusterId', jobId.toString());
+                                  attachJobId = true;
                                 }
+                              }
+                            }
 
-                                const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/documents`, {
-                                  method: 'POST',
-                                  body: singleUploadFormData
-                                });
+                            if (changedFiles.length > 0) {
+                              const batchUploadFormData = new FormData();
+                              for (const item of changedFiles) {
+                                batchUploadFormData.append("files", item.file);
+                                batchUploadFormData.append("documentNames", item.docLabel);
+                              }
+                              if (attachJobId && jobId) {
+                                batchUploadFormData.append('jobClusterId', jobId.toString());
+                              }
 
-                                if (!uploadRes.ok) {
-                                  const errData = await uploadRes.json();
-                                  console.error(`Failed to upload ${docLabel}:`, errData);
-                                  Swal.fire("Warning", `Failed to upload ${docLabel}: ${errData.message || 'Unknown error'}`, "warning");
+                              const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/documents`, {
+                                method: 'POST',
+                                body: batchUploadFormData
+                              });
+
+                              if (uploadRes.ok) {
+                                const uploadResult = await uploadRes.json().catch(() => ({}));
+                                if (uploadResult.documents) {
+                                  if (userData && userData.other_information) {
+                                    if (typeof userData.other_information === 'string') {
+                                      try {
+                                        const parsed = JSON.parse(userData.other_information);
+                                        parsed.documents = { ...(parsed.documents || {}), ...uploadResult.documents };
+                                        userData.other_information = parsed;
+                                      } catch { }
+                                    } else {
+                                      userData.other_information.documents = { ...(userData.other_information.documents || {}), ...uploadResult.documents };
+                                    }
+                                  }
+                                  if (otherInfo) {
+                                    otherInfo.documents = { ...(otherInfo.documents || {}), ...uploadResult.documents };
+                                  }
                                 }
+                                setSelectedFiles({});
+                                setSelectedDocumentNames({});
+                                setSelectedDocumentUrls({});
+                                const fileInputs = form.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+                                fileInputs.forEach((input) => { input.value = ''; });
+                              } else {
+                                const errData = await uploadRes.json().catch(() => ({}));
+                                console.error('Failed to upload documents:', errData);
+                                Swal.fire("Warning", `Failed to upload documents: ${errData.message || 'Unknown error'}`, "warning");
                               }
                             }
                           } catch (e) {

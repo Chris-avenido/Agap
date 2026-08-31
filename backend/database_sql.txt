@@ -139,9 +139,10 @@ CREATE TABLE document_audit_logs (
     id SERIAL PRIMARY KEY,
     applicant_id VARCHAR(50) NOT NULL,
     document_type VARCHAR(100) NOT NULL,
-    old_blob_url TEXT,
     new_blob_url TEXT NOT NULL,
     affected_applications_count INTEGER DEFAULT 0,
     application_id TEXT,
+    is_open BOOLEAN DEFAULT TRUE,
+    batch_number VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
