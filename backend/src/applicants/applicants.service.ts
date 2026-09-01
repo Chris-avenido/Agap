@@ -443,7 +443,7 @@ class ApplicantsServiceClass {
         ],
       );
 
-      // Log ALL uploaded documents into document_audit_logs
+      // Log ALL uploaded documents into document_audit_logs simultaneously in a single batch insert
       const allDocs: Record<string, string> = {};
       if (otherInfo.documents && typeof otherInfo.documents === 'object') {
         for (const [key, val] of Object.entries(otherInfo.documents)) {
@@ -462,18 +462,20 @@ class ApplicantsServiceClass {
       }
 
       const batchNumber = await this.getNextBatchNumber(applicantId);
-      for (const [docName, docUrl] of Object.entries(allDocs)) {
-        if (typeof docUrl === 'string' && docUrl.trim().length > 0) {
-          await this.logDocumentAudit(
-            applicantId,
-            docName,
-            docUrl,
-            1,
-            appId,
-            true,
-            batchNumber,
-          );
-        }
+      const applyAuditRecords = Object.entries(allDocs)
+        .filter(([_, docUrl]) => typeof docUrl === 'string' && docUrl.trim().length > 0)
+        .map(([docName, docUrl]) => ({
+          applicantId,
+          docType: docName,
+          newBlobUrl: docUrl as string,
+          affectedCount: 1,
+          applicationId: appId,
+          isOpen: true,
+          batchNumber,
+        }));
+
+      if (applyAuditRecords.length > 0) {
+        await this.batchLogDocumentAuditRecords(applyAuditRecords);
       }
 
       console.log(
@@ -1044,6 +1046,58 @@ class ApplicantsServiceClass {
     return parseInt(res.rows[0].next_batch, 10);
   }
 
+  async batchLogDocumentAuditRecords(
+    records: Array<{
+      applicantId: string | number;
+      docType: string;
+      newBlobUrl: string;
+      affectedCount: number;
+      applicationId: string | null;
+      isOpen: boolean;
+      batchNumber: string | number;
+    }>,
+    client?: any,
+  ) {
+    if (records.length === 0) return [];
+    const db = client || pool;
+
+    const values: any[] = [];
+    const valuePlaceholders: string[] = [];
+
+    records.forEach((rec, idx) => {
+      const baseIdx = idx * 7;
+      valuePlaceholders.push(
+        `($${baseIdx + 1}, $${baseIdx + 2}, $${baseIdx + 3}, $${baseIdx + 4}, $${baseIdx + 5}, $${baseIdx + 6}, $${baseIdx + 7}, NOW())`,
+      );
+      values.push(
+        rec.applicantId.toString(),
+        rec.docType,
+        rec.newBlobUrl,
+        rec.affectedCount,
+        rec.applicationId,
+        rec.isOpen,
+        rec.batchNumber.toString(),
+      );
+    });
+
+    const queryText = `
+      INSERT INTO document_audit_logs (
+        applicant_id,
+        document_type,
+        new_blob_url,
+        affected_applications_count,
+        application_id,
+        is_open,
+        batch_number,
+        created_at
+      ) VALUES ${valuePlaceholders.join(',\n')}
+      RETURNING *
+    `;
+
+    const result = await db.query(queryText, values);
+    return result.rows;
+  }
+
   async logDocumentAuditPerApplication(
     applicantId: string | number,
     docType: string,
@@ -1069,52 +1123,32 @@ class ApplicantsServiceClass {
     const applications = appsRes.rows;
     const applicationCount = applications.length;
 
-    // 2. Insert audit log records for this document save/update batch
     if (applicationCount === 0) {
-      // Profile-level upload before any job applications exist
-      await db.query(
-        `INSERT INTO document_audit_logs (
-           applicant_id,
-           document_type,
-           new_blob_url,
-           affected_applications_count,
-           application_id,
-           is_open,
-           batch_number,
-           created_at
-         ) VALUES ($1, $2, $3, 0, NULL, TRUE, $4, NOW())`,
+      await this.batchLogDocumentAuditRecords(
         [
-          applicantId.toString(),
-          docType,
-          newBlobUrl,
-          batchNumber.toString(),
-        ],
-      );
-    } else {
-      // One record per application
-      for (const app of applications) {
-        await db.query(
-          `INSERT INTO document_audit_logs (
-             applicant_id,
-             document_type,
-             new_blob_url,
-             affected_applications_count,
-             application_id,
-             is_open,
-             batch_number,
-             created_at
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-          [
-            applicantId.toString(),
+          {
+            applicantId,
             docType,
             newBlobUrl,
-            applicationCount,
-            app.id,
-            app.is_open,
-            batchNumber.toString(),
-          ],
-        );
-      }
+            affectedCount: 0,
+            applicationId: null,
+            isOpen: true,
+            batchNumber,
+          },
+        ],
+        db,
+      );
+    } else {
+      const records = applications.map((app: any) => ({
+        applicantId,
+        docType,
+        newBlobUrl,
+        affectedCount: applicationCount,
+        applicationId: app.id,
+        isOpen: app.is_open,
+        batchNumber,
+      }));
+      await this.batchLogDocumentAuditRecords(records, db);
     }
 
     return applicationCount;
@@ -1132,7 +1166,7 @@ class ApplicantsServiceClass {
     try {
       await client.query('BEGIN');
 
-      // 1. Concurrency-safe batch number generation
+      // 1. Concurrency-safe batch number generation with transaction lock
       const batchNumber = await this.getNextBatchNumber(applicantId, client);
 
       // 2. Fetch and lock applicant
@@ -1154,41 +1188,114 @@ class ApplicantsServiceClass {
       }
       if (!otherInfo.documents) otherInfo.documents = {};
 
-      // 3. For each uploaded document in this Save operation, create per-application audit records
-      let totalApplications = 0;
+      // 3. Query all applications for the applicant once
+      const appsRes = await client.query(
+        `SELECT a.id,
+                EXISTS (
+                  SELECT 1 FROM vacancies v 
+                  WHERE v.job_cluster_id::text = a.job_cluster_id::text 
+                    AND LOWER(v.status) = 'open'
+                ) AS is_open
+         FROM applications a
+         WHERE a.applicant_id = $1`,
+        [applicantId.toString()],
+      );
+
+      const applications = appsRes.rows;
+      const applicationCount = applications.length;
+
+      // 4. Build all audit records for simultaneous single-query batch insertion
+      const auditRecords: Array<{
+        applicantId: string | number;
+        docType: string;
+        newBlobUrl: string;
+        affectedCount: number;
+        applicationId: string | null;
+        isOpen: boolean;
+        batchNumber: string | number;
+      }> = [];
+
+      let hasLoi = false;
+      let loiUrl = '';
+      let hasSworn = false;
+      let swornUrl = '';
+
       for (const { docName, url } of uploadedDocs) {
         otherInfo.documents[docName] = url;
         if (docName === 'profile_photo' || docName === 'Profile Photo') {
           otherInfo.photoUrl = url;
         }
 
-        totalApplications = await this.logDocumentAuditPerApplication(
-          applicantId,
-          docName,
-          url,
-          batchNumber,
-          client,
-        );
+        if (docName === 'Letter of Intent') {
+          hasLoi = true;
+          loiUrl = url;
+        }
+        if (docName === 'Sworn Declaration') {
+          hasSworn = true;
+          swornUrl = url;
+        }
 
-        // Conditionally update open applications for Letter of Intent or Sworn Declaration
-        if (docName === 'Letter of Intent' || docName === 'Sworn Declaration') {
-          const col = docName === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
-          await client.query(
-            `UPDATE applications a
-             SET ${col} = $1, updated_at = NOW()
-             WHERE a.applicant_id = $2
-               AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
-               AND EXISTS (
-                 SELECT 1 FROM vacancies v
-                 WHERE v.job_cluster_id::text = a.job_cluster_id::text
-                   AND LOWER(v.status) = 'open'
-               )`,
-            [url, applicantId.toString()],
-          );
+        if (applicationCount === 0) {
+          auditRecords.push({
+            applicantId,
+            docType: docName,
+            newBlobUrl: url,
+            affectedCount: 0,
+            applicationId: null,
+            isOpen: true,
+            batchNumber,
+          });
+        } else {
+          for (const app of applications) {
+            auditRecords.push({
+              applicantId,
+              docType: docName,
+              newBlobUrl: url,
+              affectedCount: applicationCount,
+              applicationId: app.id,
+              isOpen: app.is_open,
+              batchNumber,
+            });
+          }
         }
       }
 
-      // 4. Update applicant master profile
+      // Execute simultaneous multi-row batch insert in 1 SQL query
+      if (auditRecords.length > 0) {
+        await this.batchLogDocumentAuditRecords(auditRecords, client);
+      }
+
+      // 5. Update open applications if Letter of Intent or Sworn Declaration were uploaded
+      if (hasLoi) {
+        await client.query(
+          `UPDATE applications a
+           SET letter_of_intent = $1, updated_at = NOW()
+           WHERE a.applicant_id = $2
+             AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
+             AND EXISTS (
+               SELECT 1 FROM vacancies v
+               WHERE v.job_cluster_id::text = a.job_cluster_id::text
+                 AND LOWER(v.status) = 'open'
+             )`,
+          [loiUrl, applicantId.toString()],
+        );
+      }
+      if (hasSworn) {
+        await client.query(
+          `UPDATE applications a
+           SET sworn_document = $1, updated_at = NOW()
+           WHERE a.applicant_id = $2
+             AND (a.status IS NULL OR a.status NOT IN ('Hired', 'Archived', 'Cancelled', 'Rejected'))
+             AND EXISTS (
+               SELECT 1 FROM vacancies v
+               WHERE v.job_cluster_id::text = a.job_cluster_id::text
+                 AND LOWER(v.status) = 'open'
+             )`,
+          [swornUrl, applicantId.toString()],
+        );
+      }
+
+      // 6. Update applicant master profile
       await client.query(
         'UPDATE applicants SET other_information = $1, updated_at = NOW() WHERE id = $2',
         [JSON.stringify(otherInfo), applicantId],
@@ -1199,7 +1306,7 @@ class ApplicantsServiceClass {
       return {
         success: true,
         batchNumber,
-        affectedApplications: totalApplications,
+        affectedApplications: applicationCount,
         documents: otherInfo.documents,
       };
     } catch (err) {
