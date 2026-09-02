@@ -723,7 +723,8 @@ router.get('/:id/document-audit-logs', async (req, res, next) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return next();
   try {
-    const logs = await ApplicantsService.getDocumentAuditLogs(id);
+    const latestOnly = req.query.latest === 'true';
+    const logs = await ApplicantsService.getDocumentAuditLogs(id, latestOnly);
     res.json({ success: true, data: logs });
   } catch (error: any) {
     console.error('Error fetching document audit logs:', error);

@@ -833,6 +833,130 @@ class ApplicantsServiceClass {
         calculateTraining(data.learning_and_development),
       );
     }
+
+    if (data.other_information !== undefined) {
+      // 1. Fetch current other_information from DB
+      const currentRes = await pool.query(
+        'SELECT other_information FROM applicants WHERE id = $1',
+        [id],
+      );
+      let currentOtherInfo = currentRes.rows[0]?.other_information || {};
+      if (typeof currentOtherInfo === 'string') {
+        try {
+          currentOtherInfo = JSON.parse(currentOtherInfo);
+        } catch {
+          currentOtherInfo = {};
+        }
+      }
+
+      // 2. Parse incoming other_information
+      let incomingOtherInfo = data.other_information || {};
+      if (typeof incomingOtherInfo === 'string') {
+        try {
+          incomingOtherInfo = JSON.parse(incomingOtherInfo);
+        } catch {
+          incomingOtherInfo = {};
+        }
+      }
+
+      // 3. Fetch latest audit records for all document types of this applicant
+      const latestAudits = await this.getLatestDocumentAudits(id);
+      const auditMap: Record<string, string> = {};
+      for (const audit of latestAudits) {
+        if (audit.document_type && audit.new_blob_url) {
+          auditMap[audit.document_type] = audit.new_blob_url;
+        }
+      }
+
+      // 4. Merge documents: protect only document URLs, keep metadata editable
+      const existingDocs =
+        (currentOtherInfo &&
+          typeof currentOtherInfo === 'object' &&
+          currentOtherInfo.documents) ||
+        {};
+      const incomingDocs =
+        (incomingOtherInfo &&
+          typeof incomingOtherInfo === 'object' &&
+          incomingOtherInfo.documents) ||
+        {};
+
+      const mergedDocs: Record<string, any> = {};
+      const allDocKeys = new Set([
+        ...Object.keys(existingDocs),
+        ...Object.keys(incomingDocs),
+      ]);
+
+      for (const docKey of allDocKeys) {
+        const existingDoc = existingDocs[docKey];
+        const incomingDoc = incomingDocs[docKey];
+
+        // 4a. Authoritative URL resolution:
+        // Priority: latest new_blob_url in document_audit_logs -> existing stored URL in DB
+        // Never use incoming URL. Never overwrite existing valid URL with null.
+        let authoritativeUrl: string | null = null;
+        if (auditMap[docKey]) {
+          authoritativeUrl = auditMap[docKey];
+        } else if (typeof existingDoc === 'string' && existingDoc.trim()) {
+          authoritativeUrl = existingDoc.trim();
+        } else if (
+          existingDoc &&
+          typeof existingDoc === 'object' &&
+          typeof existingDoc.url === 'string' &&
+          existingDoc.url.trim()
+        ) {
+          authoritativeUrl = existingDoc.url.trim();
+        }
+
+        // 4b. Merge document metadata (fileName, uploadedAt, remarks, etc.)
+        if (
+          incomingDoc &&
+          typeof incomingDoc === 'object' &&
+          !Array.isArray(incomingDoc)
+        ) {
+          const existingObj =
+            existingDoc &&
+            typeof existingDoc === 'object' &&
+            !Array.isArray(existingDoc)
+              ? existingDoc
+              : {};
+          mergedDocs[docKey] = {
+            ...existingObj,
+            ...incomingDoc,
+          };
+          if (authoritativeUrl) {
+            mergedDocs[docKey].url = authoritativeUrl;
+          } else {
+            delete mergedDocs[docKey].url;
+          }
+        } else if (
+          existingDoc &&
+          typeof existingDoc === 'object' &&
+          !Array.isArray(existingDoc)
+        ) {
+          mergedDocs[docKey] = {
+            ...existingDoc,
+          };
+          if (authoritativeUrl) {
+            mergedDocs[docKey].url = authoritativeUrl;
+          } else {
+            delete mergedDocs[docKey].url;
+          }
+        } else {
+          // String format document URL
+          if (authoritativeUrl) {
+            mergedDocs[docKey] = authoritativeUrl;
+          }
+        }
+      }
+
+      // 5. Compose final other_information preserving all non-document fields
+      data.other_information = {
+        ...currentOtherInfo,
+        ...incomingOtherInfo,
+        documents: mergedDocs,
+      };
+    }
+
     addField('other_information', data.other_information, true);
     addField('questionnaire_responses', data.questionnaire_responses, true);
 
@@ -1353,7 +1477,47 @@ class ApplicantsServiceClass {
     }
   }
 
-  async getDocumentAuditLogs(applicantId: string | number) {
+  async getLatestDocumentAudit(
+    applicantId: string | number,
+    documentType: string,
+    client?: any,
+  ) {
+    const db = client || pool;
+    const result = await db.query(
+      `SELECT *
+       FROM public.document_audit_logs
+       WHERE applicant_id = $1
+         AND document_type = $2
+       ORDER BY id DESC
+       LIMIT 1`,
+      [applicantId.toString(), documentType],
+    );
+    return result.rows[0] || null;
+  }
+
+  async getLatestDocumentAudits(
+    applicantId: string | number,
+    client?: any,
+  ) {
+    const db = client || pool;
+    const result = await db.query(
+      `SELECT DISTINCT ON (document_type)
+         *
+       FROM public.document_audit_logs
+       WHERE applicant_id = $1
+       ORDER BY document_type, id DESC`,
+      [applicantId.toString()],
+    );
+    return result.rows;
+  }
+
+  async getDocumentAuditLogs(
+    applicantId: string | number,
+    latestOnly: boolean = false,
+  ) {
+    if (latestOnly) {
+      return this.getLatestDocumentAudits(applicantId);
+    }
     const result = await pool.query(
       `SELECT * FROM document_audit_logs 
        WHERE applicant_id = $1 
