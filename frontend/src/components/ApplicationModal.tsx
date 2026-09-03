@@ -508,16 +508,7 @@ export default function ApplicationModal({
     }
   };
 
-  const handleDirectReplace = async (docType: 'Letter of Intent' | 'Sworn Declaration', e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      Swal.fire('Error', 'File size must be less than 5MB', 'error');
-      e.target.value = '';
-      return;
-    }
-
+  const handleDirectReplace = async (docType: 'Letter of Intent' | 'Sworn Declaration', e?: React.ChangeEvent<HTMLInputElement>) => {
     const sessionStr = localStorage.getItem('session_data');
     if (!sessionStr) return;
     const session = JSON.parse(sessionStr);
@@ -547,16 +538,45 @@ export default function ApplicationModal({
 
     let selectedIds: string[] = [];
 
+    // Helper to identify if vacancy is closed (directly sourced from vacancies.status)
+    const isVacancyClosed = (app: any) => {
+      const vStatus = String(app.vacancy_status || '').toLowerCase().trim();
+      return vStatus === 'closed';
+    };
+
+    const openApps = activeApps.filter(app => !isVacancyClosed(app));
+
     if (activeApps.length > 0) {
       const appCheckboxesHtml = activeApps.map(app => {
         const positionTitle = app.job_title || app.position || 'Position Applied';
         const divisionName = app.division || app.office || 'Department of Education';
         const dateApplied = app.date_applied || app.created_at;
         const formattedDate = dateApplied ? new Date(dateApplied).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
+        const closed = isVacancyClosed(app);
+
+        if (closed) {
+          return `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 8px; opacity: 0.65; cursor: not-allowed; text-align: left; transition: all 0.2s;">
+              <div style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
+                <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <span style="font-weight: 700; font-size: 13.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${positionTitle}</span>
+                  <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                    <span style="font-size: 10px; font-weight: 700; background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5;">Vacancy Closed</span>
+                    <span style="font-size: 10px; font-weight: 700; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px;">${app.status || 'Closed'}</span>
+                  </div>
+                </div>
+                <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">${divisionName} &bull; Applied: ${formattedDate} (Closed &bull; Disabled)</span>
+              </div>
+            </div>
+          `;
+        }
 
         return `
           <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
-            <input type="checkbox" class="swal-app-checkbox" value="${app.id}" checked style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0;" />
+            <input type="checkbox" class="swal-app-checkbox" value="${app.id}" style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0;" />
             <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                 <span style="font-weight: 700; font-size: 13.5px; color: #022851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${positionTitle}</span>
@@ -576,8 +596,8 @@ export default function ApplicationModal({
 
           <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 8px 12px; border-radius: 6px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #2563eb; cursor: pointer; user-select: none;">
-              <input type="checkbox" id="swal-toggle-all" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;" />
-              Select / Deselect All Applied Jobs (${activeApps.length})
+              <input type="checkbox" id="swal-toggle-all" style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;" />
+              Select / Deselect All Applied Jobs (${openApps.length})
             </label>
           </div>
 
@@ -592,7 +612,7 @@ export default function ApplicationModal({
         html: htmlContent,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Confirm & Update Selected',
+        confirmButtonText: 'Confirm & Select File',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#2563eb',
         focusConfirm: false,
@@ -603,12 +623,28 @@ export default function ApplicationModal({
             toggleAll.addEventListener('change', () => {
               checkboxes.forEach(cb => { cb.checked = toggleAll.checked; });
             });
+            checkboxes.forEach(cb => {
+              cb.addEventListener('change', () => {
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                const someChecked = Array.from(checkboxes).some(c => c.checked);
+                if (allChecked) {
+                  toggleAll.checked = true;
+                  toggleAll.indeterminate = false;
+                } else if (!someChecked) {
+                  toggleAll.checked = false;
+                  toggleAll.indeterminate = false;
+                } else {
+                  toggleAll.checked = false;
+                  toggleAll.indeterminate = true;
+                }
+              });
+            });
           }
         },
         preConfirm: () => {
           const checkboxes = document.querySelectorAll('.swal-app-checkbox:checked') as NodeListOf<HTMLInputElement>;
           const ids = Array.from(checkboxes).map(cb => cb.value);
-          if (ids.length === 0) {
+          if (openApps.length > 0 && ids.length === 0) {
             Swal.showValidationMessage('Please select at least one applied job position to update!');
             return false;
           }
@@ -617,11 +653,66 @@ export default function ApplicationModal({
       });
 
       if (!confirmResult.isConfirmed || !confirmResult.value) {
-        e.target.value = '';
+        if (e && e.target) e.target.value = '';
         return;
       }
 
       selectedIds = confirmResult.value;
+    }
+
+    // Prompt user to select replacement PDF file from explorer
+    let file: File | null = null;
+    if (e?.target?.files?.[0]) {
+      file = e.target.files[0];
+    } else {
+      file = await new Promise<File | null>((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.onchange = () => {
+          const selectedFile = input.files?.[0] || null;
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+          resolve(selectedFile);
+        };
+
+        input.addEventListener('cancel', () => {
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+          resolve(null);
+        });
+
+        window.addEventListener(
+          'focus',
+          () => {
+            setTimeout(() => {
+              if (document.body.contains(input)) {
+                document.body.removeChild(input);
+                resolve(null);
+              }
+            }, 1000);
+          },
+          { once: true }
+        );
+
+        input.click();
+      });
+    }
+
+    if (!file) {
+      if (e && e.target) e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Error', 'File size must be less than 5MB', 'error');
+      if (e && e.target) e.target.value = '';
+      return;
     }
 
     Swal.fire({
@@ -652,6 +743,17 @@ export default function ApplicationModal({
         if (userData && userData.other_information) {
           userData.other_information.documents = data.documents;
         }
+        setUserData((prev: any) => {
+          if (!prev) return prev;
+          const oi = typeof prev.other_information === 'string' ? JSON.parse(prev.other_information) : (prev.other_information || {});
+          return {
+            ...prev,
+            other_information: {
+              ...oi,
+              documents: data.documents
+            }
+          };
+        });
         Swal.fire({
           icon: 'success',
           title: 'Document Updated!',
@@ -663,6 +765,8 @@ export default function ApplicationModal({
       }
     } catch (err) {
       Swal.fire('Error', 'An error occurred while uploading.', 'error');
+    } finally {
+      if (e && e.target) e.target.value = '';
     }
   };
 
@@ -4131,14 +4235,23 @@ export default function ApplicationModal({
                                 <button type="button" onClick={() => handleDirectView("Letter of Intent")} className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
                                   View File
                                 </button>
-                                <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectReplace("Letter of Intent")}
+                                  className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center"
+                                >
                                   Replace File
-                                  <input type="file" name="doc_loi" accept=".pdf" onChange={(e) => handleDirectReplace("Letter of Intent", e)} className="hidden" />
-                                </label>
+                                </button>
                               </div>
                             </div>
                           ) : (
-                            <input type="file" name="doc_loi" accept=".pdf" onChange={(e) => handleDirectReplace("Letter of Intent", e)} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                            <button
+                              type="button"
+                              onClick={() => handleDirectReplace("Letter of Intent")}
+                              className="cursor-pointer bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded text-[13px] font-medium hover:bg-blue-100 transition-colors text-center w-full"
+                            >
+                              Upload Letter of Intent (.pdf)
+                            </button>
                           )}
                         </div>
 
@@ -4172,14 +4285,23 @@ export default function ApplicationModal({
                                 <button type="button" onClick={() => handleDirectView("Sworn Declaration")} className="cursor-pointer bg-blue-600 text-white border border-blue-700 px-4 py-1.5 rounded-[3px] text-[12px] font-bold hover:bg-blue-700 transition-colors h-[32px] flex-1 flex items-center justify-center text-center" style={{ color: 'white' }}>
                                   View File
                                 </button>
-                                <label className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectReplace("Sworn Declaration")}
+                                  className="cursor-pointer bg-gray-50 text-gray-600 border border-gray-300 px-4 py-1.5 rounded-[3px] text-[12px] font-medium hover:bg-gray-100 transition-colors h-[32px] flex-1 flex items-center justify-center text-center"
+                                >
                                   Replace File
-                                  <input type="file" name="doc_sworn" accept=".pdf" onChange={(e) => handleDirectReplace("Sworn Declaration", e)} className="hidden" />
-                                </label>
+                                </button>
                               </div>
                             </div>
                           ) : (
-                            <input type="file" name="doc_sworn" accept=".pdf" onChange={(e) => handleDirectReplace("Sworn Declaration", e)} className="text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[13px] file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer focus:outline-none w-full" />
+                            <button
+                              type="button"
+                              onClick={() => handleDirectReplace("Sworn Declaration")}
+                              className="cursor-pointer bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded text-[13px] font-medium hover:bg-blue-100 transition-colors text-center w-full"
+                            >
+                              Upload CAV / Sworn Declaration (.pdf)
+                            </button>
                           )}
                         </div>
                       </>

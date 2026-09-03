@@ -259,12 +259,41 @@ export default function ApplicantDashboard() {
       return;
     }
 
+    const isVacancyClosed = (app: any) => {
+      const vStatus = String(app.vacancy_status || '').toLowerCase().trim();
+      return vStatus === 'closed';
+    };
+
+    const openApps = activeApps.filter(app => !isVacancyClosed(app));
+
     const appCheckboxesHtml = activeApps.map(app => {
       const positionTitle = app.job_title || app.position || 'Position Applied';
       const divisionName = app.division || app.office || 'Department of Education';
       const dateApplied = app.date_applied || app.created_at;
       const formattedDate = dateApplied ? new Date(dateApplied).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
-      const isChecked = preselectAppId ? String(app.id) === String(preselectAppId) : true;
+      const closed = isVacancyClosed(app);
+
+      if (closed) {
+        return `
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 8px; opacity: 0.65; cursor: not-allowed; text-align: left;">
+            <div style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
+              <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span style="font-weight: 700; font-size: 13.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${positionTitle}</span>
+                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                  <span style="font-size: 10px; font-weight: 700; background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5;">Vacancy Closed</span>
+                  <span style="font-size: 10px; font-weight: 700; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px;">${app.status || 'Closed'}</span>
+                </div>
+              </div>
+              <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">${divisionName} &bull; Applied: ${formattedDate} (Closed &bull; Disabled)</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const isChecked = preselectAppId ? String(app.id) === String(preselectAppId) : false;
 
       return `
         <label style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s;" onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc';">
@@ -288,8 +317,8 @@ export default function ApplicantDashboard() {
 
         <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 8px 12px; border-radius: 6px;">
           <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #2563eb; cursor: pointer; user-select: none;">
-            <input type="checkbox" id="swal-toggle-all" checked style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;" />
-            Select / Deselect All Applied Jobs (${activeApps.length})
+            <input type="checkbox" id="swal-toggle-all" style="width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer;" />
+            Select / Deselect All Applied Jobs (${openApps.length})
           </label>
         </div>
 
@@ -322,6 +351,22 @@ export default function ApplicantDashboard() {
           toggleAll.addEventListener('change', () => {
             checkboxes.forEach(cb => { cb.checked = toggleAll.checked; });
           });
+          checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+              const allChecked = Array.from(checkboxes).every(c => c.checked);
+              const someChecked = Array.from(checkboxes).some(c => c.checked);
+              if (allChecked) {
+                toggleAll.checked = true;
+                toggleAll.indeterminate = false;
+              } else if (!someChecked) {
+                toggleAll.checked = false;
+                toggleAll.indeterminate = false;
+              } else {
+                toggleAll.checked = false;
+                toggleAll.indeterminate = true;
+              }
+            });
+          });
         }
       },
       preConfirm: () => {
@@ -330,7 +375,7 @@ export default function ApplicantDashboard() {
         const fileInput = document.getElementById('swal-replacement-file') as HTMLInputElement;
         const file = fileInput?.files?.[0];
 
-        if (selectedIds.length === 0) {
+        if (openApps.length > 0 && selectedIds.length === 0) {
           Swal.showValidationMessage('Please select at least one applied job position to update!');
           return false;
         }
