@@ -788,6 +788,9 @@ export default function ApplicantJobList() {
               if (prev.some(app => app.positionId === applyingJob.id)) return prev;
               return [newApp, ...prev];
             });
+
+            // Automatically reload vacancies so any closed vacancy disappears without page refresh
+            fetchVacancies(session.id);
           } else {
             Swal.fire('Error', 'Profile updated but failed to apply for the job.', 'error');
           }
@@ -823,26 +826,8 @@ export default function ApplicantJobList() {
     }
   }, [location]);
 
-  useEffect(() => {
-    const sessionStr = localStorage.getItem('session_data');
-    if (!sessionStr) {
-      navigate('/login');
-      return;
-    }
-    const session = JSON.parse(sessionStr);
-
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations?applicantId=${session.id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          setAvailableRegions(data.data.regions || []);
-          setAvailableDivisions(data.data.divisions || []);
-          setDivisionsByRegion(data.data.divisionsByRegion || {});
-        }
-      })
-      .catch(err => console.error('Error fetching locations:', err));
-
-    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies?applicantId=${session.id}`)
+  const fetchVacancies = (applicantId: string | number) => {
+    return fetch(`${import.meta.env.VITE_API_URL}/api/vacancies?applicantId=${applicantId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
@@ -869,14 +854,45 @@ export default function ApplicantJobList() {
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);
+          return formatted;
+        }
+        return [];
+      })
+      .catch(err => {
+        console.error('Error fetching vacancies:', err);
+        return [];
+      });
+  };
 
-          fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
-            .then(res => res.json())
-            .then(appData => {
-              if (appData.success && appData.data) {
-                setAppliedJobIds(appData.data.map((app: any) => app.position_id));
-                setApplications(appData.data.map((app: any) => {
-                  const jobDetails = formatted.find((p: any) => p.id === app.position_id) || {} as any;
+  useEffect(() => {
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) {
+      navigate('/login');
+      return;
+    }
+    const session = JSON.parse(sessionStr);
+
+    fetch(`${import.meta.env.VITE_API_URL}/api/vacancies/locations?applicantId=${session.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setAvailableRegions(data.data.regions || []);
+          setAvailableDivisions(data.data.divisions || []);
+          setDivisionsByRegion(data.data.divisionsByRegion || {});
+        }
+      })
+      .catch(err => console.error('Error fetching locations:', err));
+
+    fetchVacancies(session.id)
+      .then((formatted: any) => {
+        const jobs = formatted || [];
+        fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`)
+          .then(res => res.json())
+          .then(appData => {
+            if (appData.success && appData.data) {
+              setAppliedJobIds(appData.data.map((app: any) => app.position_id));
+              setApplications(appData.data.map((app: any) => {
+                const jobDetails = jobs.find((p: any) => p.id === app.position_id) || {} as any;
                   return {
                     id: app.id,
                     positionId: app.position_id,
@@ -909,7 +925,6 @@ export default function ApplicantJobList() {
               }
             })
             .catch(err => console.error('Error fetching applications:', err));
-        }
       })
       .catch(err => console.error('Error fetching vacancies:', err));
 

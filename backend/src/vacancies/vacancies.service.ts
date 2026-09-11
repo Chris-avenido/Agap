@@ -4,10 +4,12 @@ export class VacanciesService {
   static async getOpenVacancies(applicantId?: string | number | null) {
     let isTestApplicant = false;
     const applicantEmails: string[] = [];
+    let authenticatedApplicantNumId: number | null = null;
 
     if (applicantId) {
       const numId = Number(applicantId);
       if (!isNaN(numId)) {
+        authenticatedApplicantNumId = numId;
         const appRes = await pool.query(
           'SELECT is_test, email_address, alternate_email FROM applicants WHERE id = $1',
           [numId],
@@ -35,6 +37,19 @@ export class VacanciesService {
     const queryParams: any[] = [];
     let hasAllowedEmailClause = 'FALSE';
     let allowedEmailCondition = 'FALSE';
+    let alreadyAppliedClause = 'FALSE';
+
+    if (authenticatedApplicantNumId !== null) {
+      queryParams.push(authenticatedApplicantNumId);
+      const appNumIdIndex = `$${queryParams.length}`;
+      alreadyAppliedClause = `(
+        EXISTS (
+          SELECT 1 FROM applications a 
+          WHERE (a.applicant_id = ${appNumIdIndex} OR a.applicant_id::text = ${appNumIdIndex}::text)
+            AND a.job_cluster_id = c.id
+        )
+      )`;
+    }
 
     if (applicantEmails.length > 0) {
       queryParams.push(applicantEmails);
@@ -95,6 +110,13 @@ export class VacanciesService {
         (SELECT MIN(posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id AND ${vacancyCondition}) as "posting_start",
         (SELECT MAX(posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id AND ${vacancyCondition}) as "posting_end",
         ${hasAllowedEmailClause} as "has_allowed_email_access",
+        (EXISTS (
+          SELECT 1 FROM vacancies v 
+          WHERE v.job_cluster_id = c.id 
+            AND v.status = 'open' 
+            AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+        )) as "has_open_vacancies",
+        ${alreadyAppliedClause} as "already_applied",
         p.required_bachelor_degree,
         p.required_degree_keywords,
         p.years_experience as "min_years_experience",
@@ -108,6 +130,17 @@ export class VacanciesService {
         WHERE v.job_cluster_id = c.id 
           AND ${vacancyCondition}
       )
+      AND NOT (
+        -- If cluster has NO open vacancies (status is closed / expired)
+        NOT EXISTS (
+          SELECT 1 FROM vacancies v 
+          WHERE v.job_cluster_id = c.id 
+            AND v.status = 'open' 
+            AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
+        )
+        -- AND applicant has already applied for this job cluster in applications
+        AND ${alreadyAppliedClause}
+      )
       ${filterCondition}
       ORDER BY posting_start DESC
     `,
@@ -118,6 +151,10 @@ export class VacanciesService {
     const now = new Date();
     return result.rows
       .filter((row) => {
+        // If the cluster has NO open vacancies (closed/expired) and applicant already applied, do NOT display
+        if (!row.has_open_vacancies && row.already_applied) {
+          return false;
+        }
         if (row.has_allowed_email_access) {
           return true;
         }
