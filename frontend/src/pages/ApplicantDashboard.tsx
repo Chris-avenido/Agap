@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
+import PlantillaGateModal from '../components/PlantillaGateModal';
 
 export default function ApplicantDashboard() {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ export default function ApplicantDashboard() {
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [reclassData, setReclassData] = useState<any>(null);
+  const [showGateModal, setShowGateModal] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'active' | 'history' | 'saved'>('active');
@@ -79,9 +82,10 @@ export default function ApplicantDashboard() {
     Promise.all([
       fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`).then(res => res.json()),
       fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/saved-jobs`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`).then(res => res.json())
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/reclass-details`).then(res => res.json()).catch(() => ({ success: false }))
     ])
-      .then(([appsData, savedData, profileData]) => {
+      .then(([appsData, savedData, profileData, reclassRes]) => {
         if (appsData.success && appsData.data) {
           setApplications(appsData.data.map((app: any) => ({
             id: app.id,
@@ -107,7 +111,20 @@ export default function ApplicantDashboard() {
           })));
         }
         if (profileData.success && profileData.data) {
-          setProfile(profileData.data);
+          const userProfile = profileData.data;
+          setProfile(userProfile);
+
+          const registrantType = userProfile.registrant_type || session.registrant_type || 'jobseeker';
+          if (registrantType === 'reclass') {
+            const hasVerifiedItem = !!(userProfile.plantilla_item_number || session.plantilla_item_number);
+            if (!hasVerifiedItem) {
+              setShowGateModal(true);
+            } else {
+              if (reclassRes && reclassRes.success && reclassRes.data) {
+                setReclassData(reclassRes.data);
+              }
+            }
+          }
         }
       })
       .catch(err => console.error('Error fetching dashboard data:', err))
@@ -503,7 +520,11 @@ export default function ApplicantDashboard() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-2 mt-4">
           <div>
             <h1 className="text-[32px] font-extrabold text-[#022851] tracking-tight">Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}! 👋</h1>
-            <p className="text-gray-500 font-medium text-[15px] mt-1">Here's a quick overview of your application activity.</p>
+            <p className="text-gray-500 font-medium text-[15px] mt-1">
+              {profile?.registrant_type === 'reclass'
+                ? 'Here is the status of your reclassification from Guidance Counselor to School Counselor.'
+                : "Here's a quick overview of your application activity."}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -512,12 +533,14 @@ export default function ApplicantDashboard() {
             >
               <Lock className="w-4 h-4" /> Set Passcode
             </button>
-            <button
-              onClick={() => navigate('/applicant-jobs')}
-              className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
-            >
-              <Briefcase className="w-4 h-4" /> Go to Job Board <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {profile?.registrant_type !== 'reclass' && (
+              <button
+                onClick={() => navigate('/applicant-jobs')}
+                className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
+              >
+                <Briefcase className="w-4 h-4" /> Go to Job Board <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -555,64 +578,129 @@ export default function ApplicantDashboard() {
           </div>
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button
-            onClick={() => handleFilterChange('active')}
-            className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'active' ? 'border-[#9333ea] shadow-[0_8px_25px_rgba(147,51,234,0.2)] ring-1 ring-[#9333ea]' : 'border-[#9333ea]/20 shadow-[0_4px_15px_rgba(147,51,234,0.05)] hover:shadow-[0_8px_25px_rgba(147,51,234,0.15)] hover:border-[#9333ea]/40'}`}
-          >
-            <div className="flex items-center gap-5">
-              <div className="w-[68px] h-[68px] bg-[#f3e8ff] rounded-[20px] flex items-center justify-center shrink-0">
-                <Briefcase className="w-8 h-8 text-[#9333ea]" />
+        {/* Reclassification Status Card — only shown to reclass registrants */}
+        {profile?.registrant_type === 'reclass' && (
+          <div className="bg-white border-2 border-[#0369a1]/20 rounded-2xl shadow-sm overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-[#022851] to-[#0369a1] px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
+                  <Award className="w-5 h-5 text-[#fbbf24]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold tracking-tight">Reclassification Status</h2>
+                  <p className="text-xs text-sky-100">DepEd Guidance Counselor → School Counselor</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] text-gray-500 font-bold mb-1">Active Applications</p>
-                <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{activeApps.length}</p>
-                <p className="text-[12px] text-gray-400 font-medium">Applications in progress</p>
-              </div>
+              <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 border border-white/20 text-sky-100">
+                Incumbent Portal
+              </span>
             </div>
-            <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          </button>
 
-          <button
-            onClick={() => handleFilterChange('history')}
-            className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'history' ? 'border-[#3b82f6] shadow-[0_8px_25px_rgba(59,130,246,0.2)] ring-1 ring-[#3b82f6]' : 'border-[#3b82f6]/20 shadow-[0_4px_15px_rgba(59,130,246,0.05)] hover:shadow-[0_8px_25px_rgba(59,130,246,0.15)] hover:border-[#3b82f6]/40'}`}
-          >
-            <div className="flex items-center gap-5">
-              <div className="w-[68px] h-[68px] bg-[#eff6ff] rounded-[20px] flex items-center justify-center shrink-0">
-                <History className="w-8 h-8 text-[#3b82f6]" />
-              </div>
-              <div>
-                <p className="text-[13px] text-gray-500 font-bold mb-1">Application History</p>
-                <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{historyApps.length}</p>
-                <p className="text-[12px] text-gray-400 font-medium">All your applications</p>
-              </div>
-            </div>
-            <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          </button>
+            {reclassData ? (
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Application No.', value: reclassData.application_number || '—' },
+                    { label: 'Plantilla Item No.', value: reclassData.plantilla_item_number || profile?.plantilla_item_number || '—' },
+                    { label: 'Position Title', value: reclassData.position_title || reclassData.current_position || '—' },
+                    { label: 'Target Position', value: reclassData.target_position || reclassData.reclass_position || '—' },
+                    { label: 'Salary Grade', value: reclassData.salary_grade ? `SG-${reclassData.salary_grade}` : '—' },
+                    { label: 'School / Station', value: reclassData.school_station || reclassData.station_division || '—' },
+                    { label: 'Division', value: reclassData.division || '—' },
+                    { label: 'Evaluation Status', value: reclassData.evaluation_status ? reclassData.evaluation_status.replace(/_/g, ' ').toUpperCase() : 'PENDING REEVALUATION' },
+                  ].map((field, idx) => (
+                    <div key={idx} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{field.label}</p>
+                      <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words">{field.value}</p>
+                    </div>
+                  ))}
+                </div>
 
-          <button
-            onClick={() => handleFilterChange('saved')}
-            className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'saved' ? 'border-[#22c55e] shadow-[0_8px_25px_rgba(34,197,94,0.2)] ring-1 ring-[#22c55e]' : 'border-[#22c55e]/20 shadow-[0_4px_15px_rgba(34,197,94,0.05)] hover:shadow-[0_8px_25px_rgba(34,197,94,0.15)] hover:border-[#22c55e]/40'}`}
-          >
-            <div className="flex items-center gap-5">
-              <div className="w-[68px] h-[68px] bg-[#f0fdf4] rounded-[20px] flex items-center justify-center shrink-0">
-                <Bookmark className="w-8 h-8 text-[#22c55e]" />
+                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600">Current Stage</span>
+                    <p className="text-base font-extrabold text-[#0369a1] mt-0.5">
+                      {reclassData.stage_of_reclassification || 'Under Review'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {reclassData.remarks || 'Your reclassification credentials are being verified by your Division HRMO.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#0369a1] animate-pulse"></div>
+                    <span className="text-xs font-bold text-[#0369a1]">Processing</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] text-gray-500 font-bold mb-1">Saved Positions</p>
-                <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{savedPositionsCount}</p>
-                <p className="text-[12px] text-gray-400 font-medium">Jobs you've saved</p>
+            ) : (
+              <div className="p-8 text-center text-gray-500 text-sm">
+                <div className="w-8 h-8 border-2 border-[#0369a1] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p>Loading your reclassification record…</p>
               </div>
-            </div>
-            <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          </button>
-        </div>
+            )}
+          </div>
+        )}
+
+        {profile?.registrant_type !== 'reclass' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button
+              onClick={() => handleFilterChange('active')}
+              className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'active' ? 'border-[#9333ea] shadow-[0_8px_25px_rgba(147,51,234,0.2)] ring-1 ring-[#9333ea]' : 'border-[#9333ea]/20 shadow-[0_4px_15px_rgba(147,51,234,0.05)] hover:shadow-[0_8px_25px_rgba(147,51,234,0.15)] hover:border-[#9333ea]/40'}`}
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-[68px] h-[68px] bg-[#f3e8ff] rounded-[20px] flex items-center justify-center shrink-0">
+                  <Briefcase className="w-8 h-8 text-[#9333ea]" />
+                </div>
+                <div>
+                  <p className="text-[13px] text-gray-500 font-bold mb-1">Active Applications</p>
+                  <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{activeApps.length}</p>
+                  <p className="text-[12px] text-gray-400 font-medium">Applications in progress</p>
+                </div>
+              </div>
+              <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleFilterChange('history')}
+              className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'history' ? 'border-[#3b82f6] shadow-[0_8px_25px_rgba(59,130,246,0.2)] ring-1 ring-[#3b82f6]' : 'border-[#3b82f6]/20 shadow-[0_4px_15px_rgba(59,130,246,0.05)] hover:shadow-[0_8px_25px_rgba(59,130,246,0.15)] hover:border-[#3b82f6]/40'}`}
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-[68px] h-[68px] bg-[#eff6ff] rounded-[20px] flex items-center justify-center shrink-0">
+                  <History className="w-8 h-8 text-[#3b82f6]" />
+                </div>
+                <div>
+                  <p className="text-[13px] text-gray-500 font-bold mb-1">Application History</p>
+                  <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{historyApps.length}</p>
+                  <p className="text-[12px] text-gray-400 font-medium">All your applications</p>
+                </div>
+              </div>
+              <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleFilterChange('saved')}
+              className={`bg-white p-6 rounded-2xl flex items-center justify-between text-left transition-all focus:outline-none border-[1.5px] ${activeFilter === 'saved' ? 'border-[#22c55e] shadow-[0_8px_25px_rgba(34,197,94,0.2)] ring-1 ring-[#22c55e]' : 'border-[#22c55e]/20 shadow-[0_4px_15px_rgba(34,197,94,0.05)] hover:shadow-[0_8px_25px_rgba(34,197,94,0.15)] hover:border-[#22c55e]/40'}`}
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-[68px] h-[68px] bg-[#f0fdf4] rounded-[20px] flex items-center justify-center shrink-0">
+                  <Bookmark className="w-8 h-8 text-[#22c55e]" />
+                </div>
+                <div>
+                  <p className="text-[13px] text-gray-500 font-bold mb-1">Saved Vacancies</p>
+                  <p className="text-[32px] font-extrabold text-[#022851] leading-none mb-1">{savedJobs.length}</p>
+                  <p className="text-[12px] text-gray-400 font-medium">Bookmarked positions</p>
+                </div>
+              </div>
+              <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(2,40,81,0.08)] border-[1.5px] border-[#022851]/10 overflow-hidden mt-2">
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
@@ -737,6 +825,16 @@ export default function ApplicantDashboard() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           jobTitle="Profile Update"
+        />
+      )}
+
+      {showGateModal && (
+        <PlantillaGateModal
+          applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
+          onVerified={(incumbentRecord) => {
+            setShowGateModal(false);
+            setReclassData(incumbentRecord);
+          }}
         />
       )}
     </div>
