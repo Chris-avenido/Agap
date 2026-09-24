@@ -7,3 +7,7 @@ dist/
 *.tsbuildinfo
 
 .env.example
+
+# Database backups
+backups/
+*.sql.gz
