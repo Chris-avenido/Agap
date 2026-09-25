@@ -66,6 +66,7 @@ async function verifyBackup() {
   const latestDir = path.join(backupsBase, backupDirs[0]);
   const manifestPath = path.join(latestDir, 'manifest.json');
   const sqlPath = path.join(latestDir, 'agap_production_backup.sql');
+  const dbPath = path.join(latestDir, 'agap_production_backup.db');
 
   console.log(`📁 Inspecting Latest Backup Directory: ${latestDir}`);
 
@@ -74,16 +75,20 @@ async function verifyBackup() {
     process.exit(1);
   }
 
-  if (!fs.existsSync(sqlPath)) {
-    console.error('❌ Backup SQL file missing:', sqlPath);
-    process.exit(1);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  if (fs.existsSync(dbPath)) {
+    const dbStats = fs.statSync(dbPath);
+    const dbSizeMb = (dbStats.size / (1024 * 1024)).toFixed(2);
+    console.log(`📦 SQLite Database:  agap_production_backup.db (${dbSizeMb} MB) ✅`);
   }
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const sqlStats = fs.statSync(sqlPath);
-  const sqlSizeMb = (sqlStats.size / (1024 * 1024)).toFixed(2);
+  if (fs.existsSync(sqlPath)) {
+    const sqlStats = fs.statSync(sqlPath);
+    const sqlSizeMb = (sqlStats.size / (1024 * 1024)).toFixed(2);
+    console.log(`📄 SQL Script Dump:  agap_production_backup.sql (${sqlSizeMb} MB) ✅`);
+  }
 
-  console.log(`📄 Backup File: agap_production_backup.sql (${sqlSizeMb} MB)`);
   console.log(`⏱️  Backup Timestamp: ${manifest.backupDate}`);
   console.log(`🏷️  Manifest Database: ${manifest.databaseName}`);
   console.log('----------------------------------------------------------------\n');

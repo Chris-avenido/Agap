@@ -55,6 +55,93 @@ const pool = new Pool({
   connectionTimeoutMillis: 30000,
 });
 
+// Initialize SQLite database connection with resilient driver fallback
+function initSqliteDatabase(dbPath) {
+  if (fs.existsSync(dbPath)) {
+    try {
+      fs.unlinkSync(dbPath);
+    } catch (e) {}
+  }
+  // Try Node.js built-in node:sqlite (Node 22.5+)
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    const db = new DatabaseSync(dbPath);
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA synchronous = NORMAL;');
+    db.exec('PRAGMA temp_store = MEMORY;');
+    return {
+      type: 'DatabaseSync (Node Built-in)',
+      exec: (sql) => db.exec(sql),
+      prepare: (sql) => db.prepare(sql),
+      close: () => {
+        try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);'); } catch (e) {}
+        try { db.exec('PRAGMA optimize;'); } catch (e) {}
+        db.close();
+      }
+    };
+  } catch (e) {
+    // Try better-sqlite3 fallback
+    try {
+      let Database;
+      try {
+        Database = require('better-sqlite3');
+      } catch (err) {
+        Database = require(path.join(rootDir, 'backend', 'node_modules', 'better-sqlite3'));
+      }
+      const db = new Database(dbPath);
+      db.pragma('journal_mode = WAL');
+      db.pragma('synchronous = NORMAL');
+      return {
+        type: 'better-sqlite3',
+        exec: (sql) => db.exec(sql),
+        prepare: (sql) => {
+          const stmt = db.prepare(sql);
+          return { run: (...args) => stmt.run(...args) };
+        },
+        close: () => {
+          try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch (err) {}
+          db.close();
+        }
+      };
+    } catch (err) {
+      throw new Error(`No SQLite driver found. Please use Node.js 22.5+ or install better-sqlite3. (${e.message})`);
+    }
+  }
+}
+
+// Map PostgreSQL column data type to SQLite column affinity
+function mapPgTypeToSqlite(dataType) {
+  const dt = (dataType || '').toLowerCase();
+  if (dt.includes('int') || dt === 'serial' || dt === 'bigserial') return 'INTEGER';
+  if (dt.includes('bool')) return 'INTEGER';
+  if (dt.includes('numeric') || dt.includes('decimal') || dt.includes('real') || dt.includes('double') || dt.includes('float')) return 'REAL';
+  if (dt === 'bytea') return 'BLOB';
+  return 'TEXT';
+}
+
+// Format JavaScript / Postgres value for SQLite insertion
+function formatSqliteValue(val, colType) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'boolean') return val ? 1 : 0;
+  if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+  if (val instanceof Date) {
+    if (colType === 'date') {
+      const yyyy = val.getFullYear();
+      const mm = String(val.getMonth() + 1).padStart(2, '0');
+      const dd = String(val.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return val.toISOString();
+  }
+  if (Buffer.isBuffer(val)) {
+    return val;
+  }
+  if (typeof val === 'object') {
+    return JSON.stringify(val);
+  }
+  return String(val);
+}
+
 // Escape value safely for PostgreSQL INSERT statements
 function escapeSqlValue(val, colType) {
   if (val === null || val === undefined) return 'NULL';
@@ -144,17 +231,24 @@ async function runBackup() {
   console.log('================================================================');
   console.log('📦 Starting AGAP Production Database Backup');
   console.log(`   Source Database: AGAP (Azure PostgreSQL Flexible Server)`);
-  console.log(`   Target Output: ${backupDir}`);
+  console.log(`   Target Output:   ${backupDir}`);
+  console.log(`   Outputs:`);
+  console.log(`     1. SQLite Database:  agap_production_backup.db`);
+  console.log(`     2. SQL Script Dump:  agap_production_backup.sql`);
+  console.log(`     3. Manifest Record:  manifest.json`);
   console.log('   Mode: STRICT READ-ONLY SAFE TRANSACTION (Zero writes to server)');
   console.log('   Streaming: Memory-Safe Server-Side Cursors (FETCH 500)');
   console.log('================================================================');
   console.log('⚠️  SCOPE NOTICE:');
-  console.log('   This is a Tables + Column Definitions + Row Data export.');
-  console.log('   It is NOT a full PostgreSQL disaster-recovery backup.');
-  console.log('   Excluded objects: Foreign Keys, Secondary Indexes, Unique/Check');
-  console.log('   Constraints (except PK), Sequences/Identity State, Triggers,');
-  console.log('   Functions/Procedures, Views, Extensions, Roles/Permissions.');
+  console.log('   This is a complete Tables + Column Definitions + Row Data export.');
+  console.log('   All data is stored directly in a standalone SQLite .db database.');
   console.log('================================================================\n');
+
+  const dbOutPath = path.join(backupDir, 'agap_production_backup.db');
+  const sqlOutPath = path.join(backupDir, 'agap_production_backup.sql');
+
+  const sqliteDb = initSqliteDatabase(dbOutPath);
+  console.log(`[Backup] Initialized SQLite engine: ${sqliteDb.type}`);
 
   const client = await pool.connect();
   const manifest = {
@@ -162,6 +256,8 @@ async function runBackup() {
     databaseName: 'AGAP',
     host: 'stride-posgre-prod-01.postgres.database.azure.com',
     backupType: 'Tables and Data Export (Memory-Safe Cursor Stream)',
+    sqliteFile: 'agap_production_backup.db',
+    sqlFile: 'agap_production_backup.sql',
     excludedObjects: [
       'foreign keys',
       'secondary indexes',
@@ -177,8 +273,10 @@ async function runBackup() {
     totalRows: 0,
   };
 
-  const sqlOutPath = path.join(backupDir, 'agap_production_backup.sql');
   const sqlStream = fs.createWriteStream(sqlOutPath, { encoding: 'utf8' });
+  sqlStream.on('error', (err) => {
+    console.error('❌ [SQL Stream Error]:', err.message);
+  });
 
   await writeToStream(sqlStream, `-- ====================================================================\n`);
   await writeToStream(sqlStream, `-- AGAP Portal Production Database Backup (Tables & Data Export)\n`);
@@ -264,7 +362,7 @@ async function runBackup() {
 
       const pkCols = pkRes.rows.map(r => `"${r.column_name}"`);
 
-      // 4. Generate DDL
+      // 4. Generate SQL DDL
       await writeToStream(sqlStream, `-- Table Definition: ${table}\n`);
       await writeToStream(sqlStream, `CREATE TABLE IF NOT EXISTS "${table}" (\n`);
 
@@ -283,7 +381,22 @@ async function runBackup() {
 
       await writeToStream(sqlStream, colDefs.join(',\n') + '\n);\n\n');
 
-      // 5. Stream Table Data using Cursor (Memory-Safe FETCH 500)
+      // 5. Generate SQLite DDL in .db
+      const sqliteColDefs = colRes.rows.map(c => {
+        const sqliteType = mapPgTypeToSqlite(c.data_type);
+        let line = `  "${c.column_name}" ${sqliteType}`;
+        if (c.is_nullable === 'NO' && pkCols.includes(`"${c.column_name}"`)) {
+          line += ' NOT NULL';
+        }
+        return line;
+      });
+      if (pkCols.length > 0) {
+        sqliteColDefs.push(`  PRIMARY KEY (${pkCols.join(', ')})`);
+      }
+      const createSqliteSql = `CREATE TABLE IF NOT EXISTS "${table}" (\n${sqliteColDefs.join(',\n')}\n);`;
+      sqliteDb.exec(createSqliteSql);
+
+      // 6. Stream Table Data using Cursor (Memory-Safe FETCH 500)
       const cursorName = `cur_${table.replace(/[^a-zA-Z0-9_]/g, '_')}_${Date.now()}`;
       await client.query(`DECLARE "${cursorName}" NO SCROLL CURSOR FOR SELECT * FROM "${table}";`);
 
@@ -294,8 +407,13 @@ async function runBackup() {
       });
 
       const colListStr = columns.map(c => `"${c}"`).join(', ');
+      const sqlitePlaceholders = columns.map(() => '?').join(', ');
+      const sqliteInsertStmt = sqliteDb.prepare(`INSERT INTO "${table}" (${colListStr}) VALUES (${sqlitePlaceholders});`);
+
       let tableRowCount = 0;
       const batchSize = 500;
+
+      sqliteDb.exec('BEGIN TRANSACTION;');
 
       while (true) {
         const fetchRes = await client.query(`FETCH ${batchSize} FROM "${cursorName}";`);
@@ -304,44 +422,65 @@ async function runBackup() {
 
         tableRowCount += rows.length;
 
+        // Write to SQL script
         await writeToStream(sqlStream, `INSERT INTO "${table}" (${colListStr}) VALUES\n`);
         const valueRows = rows.map(row => {
           const valList = columns.map(col => escapeSqlValue(row[col], colTypeMap[col]));
           return `  (${valList.join(', ')})`;
         });
         await writeToStream(sqlStream, valueRows.join(',\n') + ';\n\n');
+
+        // Insert into SQLite binary database
+        for (const row of rows) {
+          const params = columns.map(col => formatSqliteValue(row[col], colTypeMap[col]));
+          sqliteInsertStmt.run(...params);
+        }
       }
 
+      sqliteDb.exec('COMMIT;');
       await client.query(`CLOSE "${cursorName}";`);
 
       manifest.tables[table] = tableRowCount;
       manifest.totalRows += tableRowCount;
-      console.log(`    ✅ Exported ${tableRowCount.toLocaleString()} rows.`);
+      console.log(`    ✅ Exported ${tableRowCount.toLocaleString()} rows into .db and .sql`);
     }
 
     await writeToStream(sqlStream, `COMMIT;\n`);
-    sqlStream.end();
+    await new Promise((resolve) => {
+      sqlStream.end(() => resolve());
+    });
+
+    // Cleanly close SQLite connection
+    sqliteDb.close();
 
     await client.query('ROLLBACK;');
     console.log('\n🔒 [Backup] Safe read-only transaction closed. ZERO changes made to server database.');
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-    const stats = fs.statSync(sqlOutPath);
-    const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+    const dbStats = fs.existsSync(dbOutPath) ? fs.statSync(dbOutPath) : { size: 0 };
+    const sqlStats = fs.existsSync(sqlOutPath) ? fs.statSync(sqlOutPath) : { size: 0 };
+    const dbSizeMb = (dbStats.size / (1024 * 1024)).toFixed(2);
+    const sqlSizeMb = (sqlStats.size / (1024 * 1024)).toFixed(2);
+
+    manifest.fileSizes = {
+      sqliteDb: `${dbSizeMb} MB (${dbStats.size.toLocaleString()} bytes)`,
+      sqlDump: `${sqlSizeMb} MB (${sqlStats.size.toLocaleString()} bytes)`,
+    };
 
     console.log('================================================================');
     console.log(`🎉 Backup successfully created!`);
-    console.log(`   File: ${sqlOutPath}`);
-    console.log(`   File Size: ${sizeMb} MB (${stats.size.toLocaleString()} bytes)`);
-    console.log(`   Total Tables Exported: ${Object.keys(manifest.tables).length}`);
-    console.log(`   Total Rows Dumped: ${manifest.totalRows.toLocaleString()}`);
-    console.log(`   Duration: ${elapsed}s`);
+    console.log(`   📦 SQLite Database (.db): ${dbOutPath} [${dbSizeMb} MB]`);
+    console.log(`   📄 SQL Script Dump (.sql): ${sqlOutPath} [${sqlSizeMb} MB]`);
+    console.log(`   Total Tables Exported:    ${Object.keys(manifest.tables).length}`);
+    console.log(`   Total Rows Exported:      ${manifest.totalRows.toLocaleString()}`);
+    console.log(`   Duration:                 ${elapsed}s`);
     console.log('================================================================');
 
     const manifestPath = path.join(backupDir, 'manifest.json');
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
 
   } catch (err) {
+    try { sqliteDb.close(); } catch (e) {}
     try { await client.query('ROLLBACK;'); } catch (e) {}
     console.error('❌ [Backup] Error during backup:', err);
     process.exit(1);
