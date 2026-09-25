@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users } from 'lucide-react';
+import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users, Award } from 'lucide-react';
 import modernLogo from '../assets/modern_logo.png';
 import { JobCard, JobTableList } from '../components/JobCards';
 import ApplicationModal from '../components/ApplicationModal';
@@ -16,6 +16,7 @@ export default function PublicCareers() {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRegion, setFilterRegion] = useState('All Regions');
@@ -279,7 +280,7 @@ export default function PublicCareers() {
 
         <div className="flex items-center gap-4 text-sm shrink-0">
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => setShowLoginModal(true)}
             className="px-6 py-2 bg-[#022851] hover:bg-[#033a76] text-white font-semibold rounded-full shadow-md transition-all hover:shadow-lg active:scale-95"
           >
             Login
@@ -540,6 +541,143 @@ export default function PublicCareers() {
                   Already have an account? <button type="button" onClick={() => navigate('/login')} className="text-[#0a6fa6] font-bold hover:text-[#022851] hover:underline ml-1 transition-colors">LOG IN.</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Login Portal Selection Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-8 pt-8 pb-4 flex items-center justify-between border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#022851] rounded-xl flex items-center justify-center shadow-md">
+                  <img src={modernLogo} alt="AGAP" className="w-6 h-6 object-contain" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#022851] tracking-tight">Select Login Portal</h2>
+                  <p className="text-xs text-gray-500 font-medium">Please choose your user category to proceed to the correct gateway</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Options Grid */}
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gradient-to-b from-gray-50/50 to-white">
+              {/* Option 1: Jobseeker */}
+              <div className="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-[#022851] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-200">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-14 h-14 rounded-2xl bg-[#022851]/10 group-hover:bg-[#022851] text-[#022851] group-hover:text-white flex items-center justify-center transition-colors shadow-inner">
+                      <Briefcase className="w-7 h-7 transition-transform group-hover:scale-110 duration-200" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-[#022851] border border-blue-100">
+                      External &amp; Internal
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#022851] group-hover:text-[#033a76] transition-colors">
+                      Jobseeker Portal
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                      For new applicants, transferees, and DepEd personnel applying to posted vacancy positions.
+                    </p>
+                  </div>
+                  <ul className="text-xs text-gray-600 space-y-2 pt-1 border-t border-gray-100">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#022851]"></div>
+                      Browse DepEd vacancies &amp; job clusters
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#022851]"></div>
+                      Submit Personal Data Sheet (PDS)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#022851]"></div>
+                      Track comparative evaluation status
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    navigate('/login?type=jobseeker');
+                  }}
+                  className="mt-6 w-full py-3 px-4 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                >
+                  <span>Login as Jobseeker</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+
+              {/* Option 2: Reclassification */}
+              <div className="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-[#0369a1] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-200">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-14 h-14 rounded-2xl bg-[#0369a1]/10 group-hover:bg-[#0369a1] text-[#0369a1] group-hover:text-white flex items-center justify-center transition-colors shadow-inner">
+                      <Award className="w-7 h-7 transition-transform group-hover:scale-110 duration-200" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-50 text-[#0369a1] border border-cyan-100">
+                      Guidance Counselors
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0369a1] group-hover:text-[#02527e] transition-colors">
+                      Reclassification Portal
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                      For incumbent DepEd Guidance Counselors processing reclassification to School Counselor positions.
+                    </p>
+                  </div>
+                  <ul className="text-xs text-gray-600 space-y-2 pt-1 border-t border-gray-100">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      Verify Plantilla Item Number
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      Upload PDS &amp; eligibility credentials
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      Monitor regional DBM qualification
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    navigate('/login?type=reclass');
+                  }}
+                  className="mt-6 w-full py-3 px-4 rounded-xl bg-[#0369a1] hover:bg-[#02527e] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                >
+                  <span>Login for Reclassification</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+              <span>Department of Education — Human Resource Management Information System</span>
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(false)}
+                className="font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

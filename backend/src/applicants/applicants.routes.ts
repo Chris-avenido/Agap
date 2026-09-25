@@ -47,11 +47,94 @@ router.post('/login', async (req, res) => {
         id: applicant.id,
         applicant_number: applicant.applicant_number,
         email: applicant.email_address,
+        registrant_type: applicant.registrant_type || 'jobseeker',
+        plantilla_item_number: applicant.plantilla_item_number || null,
       },
     });
   } catch (error: any) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: error.message || 'Error logging in' });
+  }
+});
+
+router.get('/incumbent-locations', async (_req, res) => {
+  try {
+    const data = await ApplicantsService.getIncumbentLocations();
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error fetching incumbent locations:', error);
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching locations' });
+  }
+});
+
+router.get('/incumbent-info', async (req, res) => {
+  const { plantilla } = req.query;
+  if (!plantilla || typeof plantilla !== 'string') {
+    return res.status(400).json({ message: 'Plantilla is required' });
+  }
+  try {
+    const data = await ApplicantsService.getIncumbentInfoByPlantilla(plantilla);
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error fetching incumbent info:', error);
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching incumbent info' });
+  }
+});
+
+router.post('/reclass-login', async (req, res) => {
+  const { plantilla_item_number, full_name, target_position, region, division } = req.body;
+  if (!plantilla_item_number || !plantilla_item_number.trim()) {
+    return res
+      .status(400)
+      .json({ message: 'Plantilla Item Number is required' });
+  }
+  if (!full_name || !full_name.trim()) {
+    return res
+      .status(400)
+      .json({ message: 'Full Name is required for Reclassification' });
+  }
+  try {
+    const result = await ApplicantsService.reclassLogin(
+      plantilla_item_number.trim(),
+      full_name.trim(),
+      target_position ? String(target_position).trim() : undefined,
+      region ? String(region).trim().toUpperCase() : undefined,
+      division ? String(division).trim().toUpperCase() : undefined,
+    );
+    res.json({
+      success: true,
+      data: {
+        id: result.applicant.id,
+        applicant_number: result.applicant.applicant_number,
+        email: result.applicant.email_address,
+        registrant_type: result.applicant.registrant_type || 'reclass',
+        plantilla_item_number:
+          result.applicant.plantilla_item_number ||
+          plantilla_item_number.trim().toUpperCase(),
+        target_position:
+          target_position ||
+          result.reclassApplication?.position_title ||
+          result.incumbent?.target_position ||
+          result.incumbent?.reclass_position,
+        region:
+          result.incumbent?.region ||
+          (region ? String(region).trim().toUpperCase() : null),
+        division:
+          result.incumbent?.division ||
+          (division ? String(division).trim().toUpperCase() : null),
+        incumbent: result.incumbent,
+        reclass_application: result.reclassApplication,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in reclass-login:', error);
+    res
+      .status(401)
+      .json({ message: error.message || 'Verification failed' });
   }
 });
 
@@ -913,6 +996,41 @@ router.get('/:id/print-pds', async (req, res, next) => {
       .send(
         `Error generating Personal Data Sheet: ${error.message} - ${error.stack}`,
       );
+  }
+});
+
+// POST /api/applicants/:id/verify-plantilla
+router.post('/:id/verify-plantilla', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { plantilla_item_number } = req.body;
+    if (!plantilla_item_number || !String(plantilla_item_number).trim()) {
+      return res.status(400).json({ message: 'Plantilla item number is required.' });
+    }
+    const reclassRecord = await ApplicantsService.verifyPlantillaItem(id, plantilla_item_number);
+    res.json({
+      success: true,
+      message: 'Plantilla item number verified successfully.',
+      data: reclassRecord,
+    });
+  } catch (error: any) {
+    console.error('Error verifying plantilla item number:', error);
+    res.status(404).json({ message: error.message || 'Plantilla item number not found.' });
+  }
+});
+
+// GET /api/applicants/:id/reclass-details
+router.get('/:id/reclass-details', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const reclassDetails = await ApplicantsService.getReclassDetails(id);
+    res.json({
+      success: true,
+      data: reclassDetails,
+    });
+  } catch (error: any) {
+    console.error('Error fetching reclass details:', error);
+    res.status(500).json({ message: error.message || 'Error fetching reclassification details.' });
   }
 });
 
