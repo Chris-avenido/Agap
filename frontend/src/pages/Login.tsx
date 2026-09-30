@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, MapPin } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
+import LoginConfirmationModal, { type LoginConfirmationData } from '../components/LoginConfirmationModal';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,11 +20,17 @@ export default function Login() {
   const [loginMethod, setLoginMethod] = useState<'password' | 'passcode'>('password');
   const [plantillaNumber, setPlantillaNumber] = useState('');
   const [reclassFullName, setReclassFullName] = useState('');
+  const [incumbentStatus, setIncumbentStatus] = useState<'existing' | 'non_existing'>('existing');
+  const [currentDesignation, setCurrentDesignation] = useState('Guidance Counselor (Designate)');
   const [targetPosition, setTargetPosition] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
   const [regionsList, setRegionsList] = useState<string[]>([]);
   const [divisionsByRegion, setDivisionsByRegion] = useState<Record<string, string[]>>({});
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    sessionItem: any;
+    confirmationData: LoginConfirmationData;
+  } | null>(null);
 
   // Registration state
   const [isRegistering, setIsRegistering] = useState(false);
@@ -87,33 +94,51 @@ export default function Login() {
     }
   }, [navigate]);
 
+  const handleConfirmLogin = () => {
+    if (pendingConfirmation) {
+      localStorage.setItem('session_data', JSON.stringify(pendingConfirmation.sessionItem));
+      setPendingConfirmation(null);
+      navigate('/applicant-dashboard');
+    }
+  };
+
+  const handleCancelLogin = () => {
+    localStorage.removeItem('session_data');
+    setPendingConfirmation(null);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (portalType === 'reclass') {
-      const cleanFullName = reclassFullName.trim();
+      const isExisting = incumbentStatus === 'existing';
       const cleanPlantilla = plantillaNumber.trim().toUpperCase();
+      const cleanFullName = reclassFullName.trim();
 
-      if (!cleanFullName) {
-        Swal.fire('Required', 'Please enter your Full Name for Reclassification.', 'warning');
-        return;
+      if (isExisting) {
+        if (!cleanPlantilla) {
+          Swal.fire('Required', 'Please enter your Plantilla Item Number for Reclassification.', 'warning');
+          return;
+        }
+      } else {
+        if (!cleanFullName) {
+          Swal.fire('Required', 'Please enter your Full Name for Reclassification.', 'warning');
+          return;
+        }
+        if (!selectedRegion) {
+          Swal.fire('Required', 'Please select your Region for Reclassification.', 'warning');
+          return;
+        }
+        if (!selectedDivision) {
+          Swal.fire('Required', 'Please select your Division for Reclassification.', 'warning');
+          return;
+        }
+        if (!targetPosition) {
+          Swal.fire('Required', 'Please select your Target Position for Reclassification.', 'warning');
+          return;
+        }
       }
-      if (!cleanPlantilla) {
-        Swal.fire('Required', 'Please enter your Plantilla Item Number for Reclassification.', 'warning');
-        return;
-      }
-      if (!selectedRegion) {
-        Swal.fire('Required', 'Please select your Region for Reclassification.', 'warning');
-        return;
-      }
-      if (!selectedDivision) {
-        Swal.fire('Required', 'Please select your Division for Reclassification.', 'warning');
-        return;
-      }
-      if (!targetPosition) {
-        Swal.fire('Required', 'Please select your Target Position for Reclassification.', 'warning');
-        return;
-      }
+
       setLoading(true);
 
       try {
@@ -121,32 +146,50 @@ export default function Login() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            full_name: cleanFullName,
-            plantilla_item_number: cleanPlantilla,
-            target_position: targetPosition,
-            region: selectedRegion.trim().toUpperCase(),
-            division: selectedDivision.trim().toUpperCase(),
+            plantilla_item_number: isExisting ? cleanPlantilla : '',
+            full_name: isExisting ? (cleanFullName || undefined) : cleanFullName,
+            target_position: targetPosition || undefined,
+            region: isExisting ? undefined : selectedRegion.trim().toUpperCase(),
+            division: isExisting ? undefined : selectedDivision.trim().toUpperCase(),
+            current_position: isExisting ? undefined : (currentDesignation || 'Guidance Counselor (Designate)'),
+            is_existing: isExisting,
           })
         });
 
         const resData = await response.json();
         if (response.ok && resData.success) {
           const now = new Date();
-          const item = {
+          const sessionItem = {
             id: resData.data.id,
             applicant_number: resData.data.applicant_number,
             email: resData.data.email,
             registrant_type: resData.data.registrant_type || 'reclass',
-            plantilla_item_number: cleanPlantilla,
+            plantilla_item_number: isExisting ? (resData.data.plantilla_item_number || cleanPlantilla) : null,
             target_position: targetPosition || resData.data.target_position,
-            region: (selectedRegion || resData.data.region || '').trim().toUpperCase(),
-            division: (selectedDivision || resData.data.division || '').trim().toUpperCase(),
+            region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
+            division: resData.data.division || (selectedDivision || '').trim().toUpperCase(),
             expiry: now.getTime() + 3 * 60 * 60 * 1000,
           };
-          localStorage.setItem('session_data', JSON.stringify(item));
-          navigate('/applicant-dashboard');
+          setPendingConfirmation({
+            sessionItem,
+            confirmationData: {
+              id: resData.data.id,
+              applicant_number: resData.data.applicant_number,
+              full_name: resData.data.full_name || cleanFullName,
+              first_name: resData.data.first_name,
+              middle_name: resData.data.middle_name,
+              surname: resData.data.surname,
+              email: resData.data.email,
+              registrant_type: 'reclass',
+              plantilla_item_number: isExisting ? (resData.data.plantilla_item_number || cleanPlantilla) : null,
+              current_position: resData.data.current_position || (isExisting ? 'Guidance Counselor' : 'Guidance Counselor (Designate)'),
+              target_position: targetPosition || resData.data.target_position,
+              region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
+              division: resData.data.division || (selectedDivision || '').trim().toUpperCase(),
+            }
+          });
         } else {
-          Swal.fire('Verification Failed', resData.message || 'Verification failed. Please check your Full Name and Plantilla Item Number.', 'error');
+          Swal.fire('Verification Failed', resData.message || (isExisting ? 'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.' : 'Verification failed. Please try again.'), 'error');
         }
       } catch (err) {
         console.error('Reclass login error:', err);
@@ -174,7 +217,7 @@ export default function Login() {
         const resData = await response.json();
         const applicantId = resData.data.id;
         const now = new Date();
-        const item = {
+        const sessionItem = {
           id: applicantId,
           applicant_number: resData.data.applicant_number,
           email: resData.data.email,
@@ -182,8 +225,20 @@ export default function Login() {
           plantilla_item_number: resData.data.plantilla_item_number || null,
           expiry: now.getTime() + 3 * 60 * 60 * 1000,
         };
-        localStorage.setItem('session_data', JSON.stringify(item));
-        navigate('/applicant-dashboard');
+        setPendingConfirmation({
+          sessionItem,
+          confirmationData: {
+            id: applicantId,
+            applicant_number: resData.data.applicant_number,
+            full_name: resData.data.full_name,
+            first_name: resData.data.first_name,
+            middle_name: resData.data.middle_name,
+            surname: resData.data.surname,
+            email: resData.data.email,
+            registrant_type: resData.data.registrant_type || 'jobseeker',
+            plantilla_item_number: resData.data.plantilla_item_number || null,
+          }
+        });
       } else {
         Swal.fire('Error', 'Invalid credentials', 'error');
       }
@@ -324,57 +379,41 @@ export default function Login() {
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-[var(--ink)] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            {isRegistering ? 'Create an Account' : 'Welcome back!'}
+            {isRegistering ? 'Create an Account' : portalType === 'reclass' ? 'Reclassification Login' : 'Welcome back!'}
           </h2>
           <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
-            {isRegistering ? 'Join AGAP Portal to start your application' : 'Sign in to access your account'}
+            {isRegistering
+              ? 'Join AGAP Portal to start your application'
+              : portalType === 'reclass'
+              ? 'Sign in using your Plantilla Item Number and credentials'
+              : 'Sign in to access your account'}
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]/70">
             Government HR Management Information System
           </p>
 
           <div className="mt-8">
-            {/* Portal Switcher Tabs — only shown during login */}
+            {/* Dedicated Gateway Header / Info — Jobseeker Portal tab is NOT displayed in Reclassification */}
             {!isRegistering && (
               <>
-                <div className="mb-4 p-1 bg-gray-100 rounded-xl flex gap-1 border border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPortalType('jobseeker');
-                      setSearchParams({ type: 'jobseeker' });
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                      portalType === 'jobseeker'
-                        ? 'bg-[#022851] text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>Jobseeker Portal</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPortalType('reclass');
-                      setSearchParams({ type: 'reclass' });
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                      portalType === 'reclass'
-                        ? 'bg-[#0369a1] text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                    }`}
-                  >
-                    <Award className="w-3.5 h-3.5" />
-                    <span>Reclassification</span>
-                  </button>
-                </div>
-
-                {/* Portal Info Alert */}
                 {portalType === 'reclass' ? (
-                  <div className="mb-4 bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3 text-xs text-[#0369a1] flex items-center gap-2">
-                    <Award className="w-4 h-4 shrink-0 text-[#0369a1]" />
-                    <span>Logging in to the <strong>Guidance Counselor Reclassification</strong> gateway.</span>
+                  <div className="mb-5 bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-[#0369a1] text-white flex items-center justify-center shadow-sm">
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider">Reclassification Portal</h3>
+                        <p className="text-[11px] text-gray-500 font-medium">Guidance Counselor Gateway</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/careers')}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                    >
+                      Change
+                    </button>
                   </div>
                 ) : (
                   <div className="mb-4 bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center gap-2">
@@ -503,7 +542,7 @@ export default function Login() {
             ) : (
               <form onSubmit={handleLogin} className="space-y-6">
                 {portalType === 'reclass' ? (
-                  /* Reclassification: Full Name + Plantilla Item Number */
+                  /* Reclassification: Full Name + Plantilla Item Number / Non-Plantilla */
                   <div className="bg-[#f0f9ff]/80 border border-[#bae6fd] rounded-xl p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#0369a1] flex items-center gap-1.5">
@@ -514,129 +553,195 @@ export default function Login() {
                       </span>
                     </div>
 
+                    {/* Incumbent Status Tabs: Existing Plantilla Holder vs Non-Plantilla / Designate */}
                     <div>
-                      <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                        Full Name
+                      <label className="block text-xs font-bold text-[#0369a1] uppercase tracking-wider mb-1.5">
+                        Incumbent Status
                       </label>
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-[#0369a1]" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={reclassFullName}
-                          onChange={e => setReclassFullName(e.target.value)}
-                          className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
-                          placeholder="e.g. Maria Cecilia Hinayhinay or Hinayhinay, Maria Cecilia"
-                        />
-                      </div>
-                      <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                        Enter your full name as registered in DepEd incumbent guidance counselor records.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                        Plantilla Item Number
-                      </label>
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Award className="h-5 w-5 text-[#0369a1]" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={plantillaNumber}
-                          onChange={e => setPlantillaNumber(e.target.value.toUpperCase())}
-                          className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
-                          placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
-                        />
-                      </div>
-                      <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                        Enter your official DepEd Plantilla Item Number. No username or password required.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                        Region
-                      </label>
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <MapPin className="h-5 w-5 text-[#0369a1]" />
-                        </div>
-                        <select
-                          required
-                          value={selectedRegion}
-                          onChange={e => {
-                            setSelectedRegion(e.target.value);
-                            setSelectedDivision('');
+                      <div className="p-1 bg-[#e0f2fe] rounded-xl flex gap-1 border border-[#bae6fd]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIncumbentStatus('existing');
+                            setTargetPosition('');
                           }}
-                          className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                            incumbentStatus === 'existing'
+                              ? 'bg-[#0369a1] text-white shadow-sm'
+                              : 'text-[#0369a1] hover:text-[#02527e] hover:bg-white/60'
+                          }`}
                         >
-                          <option value="">Select Region</option>
-                          {regionsList.map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
+                          <Award className="w-3.5 h-3.5" />
+                          <span>Plantilla Incumbent</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIncumbentStatus('non_existing');
+                            setPlantillaNumber('');
+                          }}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                            incumbentStatus === 'non_existing'
+                              ? 'bg-[#0369a1] text-white shadow-sm'
+                              : 'text-[#0369a1] hover:text-[#02527e] hover:bg-white/60'
+                          }`}
+                        >
+                          <User className="w-3.5 h-3.5" />
+                          <span>Non-Plantilla / Designate</span>
+                        </button>
                       </div>
-                      <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                        Select your DepEd regional office.
-                      </p>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                        Division
-                      </label>
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Building2 className="h-5 w-5 text-[#0369a1]" />
+                    {incumbentStatus === 'existing' ? (
+                      /* Existing Plantilla Incumbent: Login using Plantilla Item Number only */
+                      <div>
+                        <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                          Plantilla Item Number
+                        </label>
+                        <div className="relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Award className="h-5 w-5 text-[#0369a1]" />
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            value={plantillaNumber}
+                            onChange={e => setPlantillaNumber(e.target.value.toUpperCase())}
+                            className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
+                            placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
+                          />
                         </div>
-                        <select
-                          required
-                          value={selectedDivision}
-                          onChange={e => setSelectedDivision(e.target.value)}
-                          disabled={!selectedRegion}
-                          className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer disabled:opacity-60 disabled:bg-gray-50"
-                        >
-                          <option value="">{selectedRegion ? 'Select Division' : 'Select Region First'}</option>
-                          {(divisionsByRegion[selectedRegion] || []).map(d => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
+                        <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                          Enter your official DepEd Plantilla Item Number. Your Full Name, Station/Division, and Plantilla records will be automatically loaded from <strong>reclass_gc</strong>.
+                        </p>
                       </div>
-                      <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                        Select your DepEd schools division office.
-                      </p>
-                    </div>
+                    ) : (
+                      /* Non-Plantilla / Designate */
+                      <>
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Full Name
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={reclassFullName}
+                              onChange={e => setReclassFullName(e.target.value)}
+                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
+                              placeholder="e.g. Maria Cecilia Hinayhinay"
+                            />
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            Enter your official full name for reclassification assessment.
+                          </p>
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                        Target Position
-                      </label>
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Briefcase className="h-5 w-5 text-[#0369a1]" />
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Current Designation / Position
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Briefcase className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <input
+                              type="text"
+                              value={currentDesignation}
+                              onChange={e => setCurrentDesignation(e.target.value)}
+                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
+                              placeholder="e.g. Guidance Counselor (Designate) or Teacher I"
+                            />
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            For teacher-designates, contract of service, or non-plantilla guidance counselors.
+                          </p>
                         </div>
-                        <select
-                          required
-                          value={targetPosition}
-                          onChange={e => setTargetPosition(e.target.value)}
-                          className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
-                        >
-                          <option value="">Select Target Position</option>
-                          <option value="School Counselor Associate I">School Counselor Associate I</option>
-                          <option value="School Counselor Associate II">School Counselor Associate II</option>
-                          <option value="School Counselor Associate III">School Counselor Associate III</option>
-                          <option value="School Counselor Associate IV">School Counselor Associate IV</option>
-                        </select>
-                      </div>
-                      <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                        Select your target position for reclassification.
-                      </p>
-                    </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Region
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <MapPin className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <select
+                              required
+                              value={selectedRegion}
+                              onChange={e => {
+                                setSelectedRegion(e.target.value);
+                                setSelectedDivision('');
+                              }}
+                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
+                            >
+                              <option value="">Select Region</option>
+                              {regionsList.map(r => (
+                                <option key={r} value={r}>{r}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            Select your DepEd regional office.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Division
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Building2 className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <select
+                              required
+                              value={selectedDivision}
+                              onChange={e => setSelectedDivision(e.target.value)}
+                              disabled={!selectedRegion}
+                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer disabled:opacity-60 disabled:bg-gray-50"
+                            >
+                              <option value="">{selectedRegion ? 'Select Division' : 'Select Region First'}</option>
+                              {(divisionsByRegion[selectedRegion] || []).map(d => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            Select your DepEd schools division office.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Target Position
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Briefcase className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <select
+                              required
+                              value={targetPosition}
+                              onChange={e => setTargetPosition(e.target.value)}
+                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
+                            >
+                              <option value="">Select Target Position</option>
+                              <option value="School Counselor Associate I">School Counselor Associate I</option>
+                              <option value="School Counselor Associate II">School Counselor Associate II</option>
+                              <option value="School Counselor Associate III">School Counselor Associate III</option>
+                              <option value="School Counselor Associate IV">School Counselor Associate IV</option>
+                            </select>
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            Select your target position for reclassification.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   /* Jobseeker: Username and Password */
@@ -754,16 +859,12 @@ export default function Login() {
                   </div>
                 ) : (
                   <div className="mt-4 text-center text-xs text-gray-500">
-                    Looking for standard job vacancies?{' '}
                     <button
                       type="button"
-                      onClick={() => {
-                        setPortalType('jobseeker');
-                        setSearchParams({ type: 'jobseeker' });
-                      }}
-                      className="font-semibold text-[#0369a1] hover:underline focus:outline-none"
+                      onClick={() => navigate('/careers')}
+                      className="font-semibold text-gray-500 hover:text-[#0369a1] transition-colors focus:outline-none"
                     >
-                      Switch to Jobseeker Portal
+                      ← Back to Careers Portal
                     </button>
                   </div>
                 )}
@@ -826,6 +927,15 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {pendingConfirmation && (
+        <LoginConfirmationModal
+          isOpen={!!pendingConfirmation}
+          data={pendingConfirmation.confirmationData}
+          onConfirm={handleConfirmLogin}
+          onCancel={handleCancelLogin}
+        />
+      )}
     </div>
   );
 }

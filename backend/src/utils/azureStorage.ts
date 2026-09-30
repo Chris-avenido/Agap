@@ -1,26 +1,33 @@
+import '../config/env';
 import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
-import * as dotenv from 'dotenv';
 import * as crypto from 'crypto';
-dotenv.config();
 
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
-const containerName = process.env.AZURE_FOLDER_NAME as string;
+let _blobServiceClient: BlobServiceClient | null = null;
 
-let blobServiceClient: BlobServiceClient;
-if (connectionString) {
-  blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+function getBlobServiceClient(): BlobServiceClient {
+  if (!_blobServiceClient) {
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
+    if (!connectionString) {
+      throw new Error('Azure Storage Connection String is missing.');
+    }
+    _blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+  }
+  return _blobServiceClient;
+}
+
+function getDefaultContainerName(): string {
+  return process.env.AZURE_FOLDER_NAME || 'main-agap';
 }
 
 export const uploadToAzure = async (
   fileBuffer: Buffer,
   fileName: string,
   mimetype: string,
+  targetContainerOverride?: string,
 ): Promise<string> => {
-  if (!blobServiceClient) {
-    throw new Error('Azure Storage Connection String is missing.');
-  }
-
-  const containerClient = blobServiceClient.getContainerClient(containerName);
+  const blobServiceClient = getBlobServiceClient();
+  const targetContainer = targetContainerOverride || getDefaultContainerName();
+  const containerClient = blobServiceClient.getContainerClient(targetContainer);
 
   // Create container if it does not exist
   await containerClient.createIfNotExists();
@@ -54,12 +61,21 @@ export const uploadToAzure = async (
   return blockBlobClient.url;
 };
 
+export const uploadToReclassAzure = async (
+  fileBuffer: Buffer,
+  fileName: string,
+  mimetype: string,
+): Promise<string> => {
+  const reclassContainer = process.env.AZURE_FOLDER_RECLASS || 'agap-reclass';
+  return uploadToAzure(fileBuffer, fileName, mimetype, reclassContainer);
+};
+
 export const findLatestBlob = async (
   targetContainer: string,
   blobName: string,
 ): Promise<string> => {
-  if (!blobServiceClient) return blobName;
   try {
+    const blobServiceClient = getBlobServiceClient();
     const containerClient = blobServiceClient.getContainerClient(targetContainer);
     const lastSlashIndex = blobName.lastIndexOf('/');
     if (lastSlashIndex === -1) return blobName;
@@ -84,11 +100,9 @@ export const findLatestBlob = async (
 };
 
 export const downloadFromAzure = async (blobUrlOrName: string) => {
-  if (!blobServiceClient) {
-    throw new Error('Azure Storage Connection String is missing.');
-  }
-
-  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
+  const blobServiceClient = getBlobServiceClient();
+  const defaultContainer = getDefaultContainerName();
+  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, defaultContainer);
   let containerClient = blobServiceClient.getContainerClient(targetContainer);
   let blockBlobClient: BlockBlobClient =
     containerClient.getBlockBlobClient(blobName);
@@ -143,8 +157,9 @@ export const getBlobNameFromUrl = (
 
 export const deleteFromAzure = async (blobUrlOrName: string) => {
   try {
-    if (!blobServiceClient) return;
-    const { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
+    const blobServiceClient = getBlobServiceClient();
+    const defaultContainer = getDefaultContainerName();
+    const { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, defaultContainer);
     if (!blobName) return;
 
     const containerClient = blobServiceClient.getContainerClient(targetContainer);
@@ -157,10 +172,9 @@ export const deleteFromAzure = async (blobUrlOrName: string) => {
 };
 
 export const getBlobSasUrl = async (blobUrlOrName: string) => {
-  if (!blobServiceClient)
-    throw new Error('Azure Storage Connection String is missing.');
-
-  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, containerName);
+  const blobServiceClient = getBlobServiceClient();
+  const defaultContainer = getDefaultContainerName();
+  let { targetContainer, blobName } = parseBlobUrl(blobUrlOrName, defaultContainer);
   if (!blobName) throw new Error('Invalid blob URL');
 
   let containerClient = blobServiceClient.getContainerClient(targetContainer);

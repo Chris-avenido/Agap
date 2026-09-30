@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck2, Building2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 import PlantillaGateModal from '../components/PlantillaGateModal';
+import ReclassUploadModal from '../components/ReclassUploadModal';
 
 export default function ApplicantDashboard() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function ApplicantDashboard() {
   const [loading, setLoading] = useState(true);
   const [reclassData, setReclassData] = useState<any>(null);
   const [showGateModal, setShowGateModal] = useState(false);
+  const [isReclassUploadModalOpen, setIsReclassUploadModalOpen] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'active' | 'history' | 'saved'>('active');
@@ -499,6 +501,9 @@ export default function ApplicantDashboard() {
   });
   const progressPercentage = parseFloat(rawProgressPercentage) >= 90 ? 100 : parseFloat(rawProgressPercentage);
 
+  const sessionData = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('session_data') || '{}') : {};
+  const isReclass = profile?.registrant_type === 'reclass' || sessionData?.registrant_type === 'reclass';
+
   return (
     <div
       className="min-h-screen font-sans flex flex-col relative"
@@ -514,6 +519,7 @@ export default function ApplicantDashboard() {
         firstName={profile?.first_name || ''}
         lastName={profile?.surname || ''}
         photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null}
+        isReclass={isReclass}
       />
 
       <main className="max-w-6xl mx-auto py-8 px-4 space-y-6 w-full">
@@ -521,19 +527,21 @@ export default function ApplicantDashboard() {
           <div>
             <h1 className="text-[32px] font-extrabold text-[#022851] tracking-tight">Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}! 👋</h1>
             <p className="text-gray-500 font-medium text-[15px] mt-1">
-              {profile?.registrant_type === 'reclass'
+              {isReclass
                 ? 'Here is the status of your reclassification from Guidance Counselor to School Counselor.'
                 : "Here's a quick overview of your application activity."}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleSetPasscode}
-              className="bg-white border-2 border-[#022851]/20 hover:border-[#022851] text-[#022851] px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all text-[14px] flex items-center justify-center gap-2"
-            >
-              <Lock className="w-4 h-4" /> Set Passcode
-            </button>
-            {profile?.registrant_type !== 'reclass' && (
+            {!isReclass && (
+              <button
+                onClick={handleSetPasscode}
+                className="bg-white border-2 border-[#022851]/20 hover:border-[#022851] text-[#022851] px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all text-[14px] flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4" /> Set Passcode
+              </button>
+            )}
+            {!isReclass && (
               <button
                 onClick={() => navigate('/applicant-jobs')}
                 className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
@@ -541,45 +549,55 @@ export default function ApplicantDashboard() {
                 <Briefcase className="w-4 h-4" /> Go to Job Board <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             )}
+            {isReclass && (
+              <button
+                onClick={() => setIsReclassUploadModalOpen(true)}
+                className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
+              >
+                <Upload className="w-4 h-4" /> Upload Requirements
+              </button>
+            )}
           </div>
         </div>
 
         {/* Profile Completion Card */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full bg-white border-[1.5px] border-[#22c55e]/30 shadow-[0_8px_25px_rgba(34,197,94,0.15)] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 rounded-2xl hover:shadow-[0_12px_35px_rgba(34,197,94,0.25)] hover:border-[#22c55e]/50 transition-all focus:outline-none"
-        >
-          <div className="flex items-center gap-6 w-full md:w-auto">
-            <div className="w-20 h-20 bg-[#f0fdf4] rounded-full flex items-center justify-center shrink-0 border-[4px] border-white shadow-[0_0_20px_rgba(34,197,94,0.15)] relative">
-              <Users className="w-8 h-8 text-[#22c55e]" />
-              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                <CheckCircle2 className="w-6 h-6 text-[#22c55e] fill-white" />
+        {!isReclass && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full bg-white border-[1.5px] border-[#22c55e]/30 shadow-[0_8px_25px_rgba(34,197,94,0.15)] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 rounded-2xl hover:shadow-[0_12px_35px_rgba(34,197,94,0.25)] hover:border-[#22c55e]/50 transition-all focus:outline-none"
+          >
+            <div className="flex items-center gap-6 w-full md:w-auto">
+              <div className="w-20 h-20 bg-[#f0fdf4] rounded-full flex items-center justify-center shrink-0 border-[4px] border-white shadow-[0_0_20px_rgba(34,197,94,0.15)] relative">
+                <Users className="w-8 h-8 text-[#22c55e]" />
+                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                  <CheckCircle2 className="w-6 h-6 text-[#22c55e] fill-white" />
+                </div>
+              </div>
+              <div className="flex flex-col text-left">
+                <h2 className="text-[18px] font-bold text-[#022851] mb-1.5">Profile Completion</h2>
+                <p className="text-[14px] text-gray-500 font-medium leading-relaxed max-w-xs">
+                  Complete your profile to unlock all features and improve your chances.
+                </p>
               </div>
             </div>
-            <div className="flex flex-col text-left">
-              <h2 className="text-[18px] font-bold text-[#022851] mb-1.5">Profile Completion</h2>
-              <p className="text-[14px] text-gray-500 font-medium leading-relaxed max-w-xs">
-                Complete your profile to unlock all features and improve your chances.
-              </p>
-            </div>
-          </div>
-          <div className="w-full md:w-[450px] shrink-0 mt-4 md:mt-0 flex items-center gap-6">
-            <span className="text-[36px] font-extrabold text-[#22c55e] tracking-tight">{progressPercentage}%</span>
-            <div className="flex-1">
-              <div className="w-full bg-[#f0fdf4] h-3.5 rounded-full overflow-hidden">
-                <div className="bg-[#22c55e] h-full transition-all duration-500 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-              </div>
-              <div className="flex items-center justify-between mt-2 px-1">
-                <span className="text-[11px] font-bold text-gray-400">0%</span>
-                <span className="text-[11px] font-bold text-gray-400">50%</span>
-                <span className="text-[11px] font-bold text-gray-400">100%</span>
+            <div className="w-full md:w-[450px] shrink-0 mt-4 md:mt-0 flex items-center gap-6">
+              <span className="text-[36px] font-extrabold text-[#22c55e] tracking-tight">{progressPercentage}%</span>
+              <div className="flex-1">
+                <div className="w-full bg-[#f0fdf4] h-3.5 rounded-full overflow-hidden">
+                  <div className="bg-[#22c55e] h-full transition-all duration-500 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                </div>
+                <div className="flex items-center justify-between mt-2 px-1">
+                  <span className="text-[11px] font-bold text-gray-400">0%</span>
+                  <span className="text-[11px] font-bold text-gray-400">50%</span>
+                  <span className="text-[11px] font-bold text-gray-400">100%</span>
+                </div>
               </div>
             </div>
-          </div>
-        </button>
+          </button>
+        )}
 
         {/* Reclassification Status Card — only shown to reclass registrants */}
-        {profile?.registrant_type === 'reclass' && (
+        {isReclass && (
           <div className="bg-white border-2 border-[#0369a1]/20 rounded-2xl shadow-sm overflow-hidden mb-6">
             <div className="bg-gradient-to-r from-[#022851] to-[#0369a1] px-6 py-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -600,13 +618,13 @@ export default function ApplicantDashboard() {
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { label: 'Application No.', value: reclassData.application_number || '—' },
-                    { label: 'Plantilla Item No.', value: reclassData.plantilla_item_number || profile?.plantilla_item_number || '—' },
+                    { label: 'Plantilla Item No.', value: reclassData.plantilla_item_number || reclassData.item_no || profile?.plantilla_item_number || '—' },
+                    { label: 'School Name', value: reclassData.school_name || reclassData.application_number || reclassData.school_station || '—' },
                     { label: 'Position Title', value: reclassData.position_title || reclassData.current_position || '—' },
                     { label: 'Target Position', value: reclassData.target_position || reclassData.reclass_position || '—' },
                     { label: 'Salary Grade', value: reclassData.salary_grade ? `SG-${reclassData.salary_grade}` : '—' },
-                    { label: 'School / Station', value: reclassData.school_station || reclassData.station_division || '—' },
                     { label: 'Division', value: reclassData.division || '—' },
+                    { label: 'Region', value: reclassData.region || '—' },
                     { label: 'Evaluation Status', value: reclassData.evaluation_status ? reclassData.evaluation_status.replace(/_/g, ' ').toUpperCase() : 'PENDING REEVALUATION' },
                   ].map((field, idx) => (
                     <div key={idx} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
@@ -616,21 +634,140 @@ export default function ApplicantDashboard() {
                   ))}
                 </div>
 
-                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600">Current Stage</span>
-                    <p className="text-base font-extrabold text-[#0369a1] mt-0.5">
-                      {reclassData.stage_of_reclassification || 'Under Review'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {reclassData.remarks || 'Your reclassification credentials are being verified by your Division HRMO.'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#0369a1] animate-pulse"></div>
-                    <span className="text-xs font-bold text-[#0369a1]">Processing</span>
-                  </div>
-                </div>
+                {/* Reclassification Process Stage Stepper (Based on qs_status) */}
+                {(() => {
+                  const rawStatus = String(reclassData.qs_status || reclassData.stage_of_reclassification || reclassData.evaluation_status || '').trim().toLowerCase();
+                  
+                  let currentStep = 1;
+                  let currentLabel = 'For Review';
+                  let stepBadge = 'Step 1 of 3: SDO Initial Review';
+                  let defaultRemarks = 'Your reclassification credentials and plantilla information are currently being reviewed by your Division HRMO.';
+
+                  if (rawStatus.includes('dbm') || rawStatus.includes('endorsed to dbm') || rawStatus.includes('endorsed to dbm ro')) {
+                    currentStep = 3;
+                    currentLabel = 'Endorsed TO DBM RO';
+                    stepBadge = 'Step 3 of 3: DBM RO Endorsement';
+                    defaultRemarks = 'Your reclassification application has been endorsed to the Department of Budget and Management (DBM) Regional Office for NOSCA issuance.';
+                  } else if (rawStatus.includes('ro') || rawStatus.includes('endorsed to ro') || rawStatus.includes('endorsed')) {
+                    currentStep = 2;
+                    currentLabel = 'Endorsed To RO';
+                    stepBadge = 'Step 2 of 3: Endorsed to RO';
+                    defaultRemarks = 'Your documents have been verified and endorsed to the DepEd Regional Office for evaluation and transmittal.';
+                  }
+
+                  const STAGES = [
+                    {
+                      step: 1,
+                      displayTitle: 'For Review',
+                      subtitle: 'SDO Division HRMO',
+                      description: 'Initial document verification & qualification check',
+                      icon: FileCheck2,
+                    },
+                    {
+                      step: 2,
+                      displayTitle: 'Endorsed To RO',
+                      subtitle: 'Regional Office',
+                      description: 'Regional evaluation & transmittal processing',
+                      icon: Building2,
+                    },
+                    {
+                      step: 3,
+                      displayTitle: 'Endorsed TO DBM RO',
+                      subtitle: 'DBM Regional Office',
+                      description: 'Budget allocation & NOSCA issuance',
+                      icon: Award,
+                    },
+                  ];
+
+                  return (
+                    <div className="bg-gradient-to-b from-sky-50/70 to-blue-50/40 border border-sky-200/90 rounded-2xl p-5 md:p-6 shadow-sm space-y-6">
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-sky-200/60 pb-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#0369a1]">Current Stage</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#022851] text-[#facc15]">
+                              {stepBadge}
+                            </span>
+                          </div>
+                          <p className="text-lg md:text-xl font-black text-[#022851] mt-0.5 tracking-tight">
+                            {currentLabel}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                            {reclassData.remarks || defaultRemarks}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 self-start sm:self-center px-3 py-1.5 rounded-xl bg-white/80 border border-sky-200 shadow-sm shrink-0">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#0284c7] animate-ping"></div>
+                          <span className="text-xs font-extrabold text-[#022851]">{currentLabel}</span>
+                        </div>
+                      </div>
+
+                      {/* Process Steps Stepper */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+                        {STAGES.map((s) => {
+                          const isDone = currentStep > s.step;
+                          const isCurrent = currentStep === s.step;
+                          const IconComp = s.icon;
+
+                          return (
+                            <div
+                              key={s.step}
+                              className={`relative rounded-xl p-4 transition-all border flex flex-col justify-between ${
+                                isCurrent
+                                  ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
+                                  : isDone
+                                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                                  : 'bg-white/60 border-slate-200 text-gray-400'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                  <div
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                      isDone
+                                        ? 'bg-emerald-600 text-white shadow-sm'
+                                        : isCurrent
+                                        ? 'bg-[#022851] text-[#facc15] shadow-sm'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                    }`}
+                                  >
+                                    {isDone ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      <IconComp className="w-4 h-4" />
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                      isDone
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : isCurrent
+                                        ? 'bg-sky-100 text-[#0284c7] animate-pulse'
+                                        : 'bg-slate-100 text-slate-400'
+                                    }`}
+                                  >
+                                    {isDone ? 'Completed' : isCurrent ? 'Active Stage' : 'Upcoming'}
+                                  </span>
+                                </div>
+
+                                <p className={`text-xs font-bold uppercase tracking-wider ${isCurrent ? 'text-[#0284c7]' : isDone ? 'text-emerald-800' : 'text-gray-400'}`}>
+                                  Step {s.step} • {s.subtitle}
+                                </p>
+                                <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${isCurrent ? 'text-[#022851]' : isDone ? 'text-gray-800' : 'text-gray-500'}`}>
+                                  {s.displayTitle}
+                                </h4>
+                                <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                                  {s.description}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="p-8 text-center text-gray-500 text-sm">
@@ -702,122 +839,124 @@ export default function ApplicantDashboard() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(2,40,81,0.08)] border-[1.5px] border-[#022851]/10 overflow-hidden mt-2">
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#eff6ff] p-2.5 rounded-xl">
-                <Briefcase className="w-5 h-5 text-[#3b82f6]" />
+        {!isReclass && (
+          <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(2,40,81,0.08)] border-[1.5px] border-[#022851]/10 overflow-hidden mt-2">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#eff6ff] p-2.5 rounded-xl">
+                  <Briefcase className="w-5 h-5 text-[#3b82f6]" />
+                </div>
+                <h3 className="text-[16px] font-bold text-[#022851]">
+                  {activeFilter === 'active' && 'Active Applications'}
+                  {activeFilter === 'history' && 'Application History'}
+                  {activeFilter === 'saved' && 'Saved Positions'}
+                </h3>
               </div>
-              <h3 className="text-[16px] font-bold text-[#022851]">
-                {activeFilter === 'active' && 'Active Applications'}
-                {activeFilter === 'history' && 'Application History'}
-                {activeFilter === 'saved' && 'Saved Positions'}
-              </h3>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50/50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Position</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Division</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Date Applied</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Application Status</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Assessment Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {loading ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50/50">
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
-                      Loading your data...
-                    </td>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Position</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Division</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Date Applied</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Application Status</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Assessment Status</th>
                   </tr>
-                ) : filteredData.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
-                      {activeFilter === 'active' && "You don't have any active applications."}
-                      {activeFilter === 'history' && "You don't have any applications yet."}
-                      {activeFilter === 'saved' && "You haven't saved any positions yet."}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedData.map((app) => (
-                    <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#eff6ff] rounded-full flex items-center justify-center shrink-0">
-                            <Briefcase className="w-6 h-6 text-[#3b82f6]" />
-                          </div>
-                          <div>
-                            <div className="text-[14px] font-bold text-[#022851]">{app.position}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="text-[13px] text-gray-500 font-medium">{app.division}</div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="text-[13px] text-gray-600 font-medium">
-                          {app.date !== 'N/A' && app.date ? new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
-                          {app.applicationStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-purple-50 text-purple-700 uppercase tracking-wide border border-purple-200">
-                          {app.assessmentStatus}
-                        </span>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
+                        Loading your data...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
-              <div className="text-[13px] text-gray-500 font-medium">
-                Showing <span className="font-bold text-gray-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-gray-700">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span> of <span className="font-bold text-gray-700">{filteredData.length}</span> results
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentPage(idx + 1)}
-                      className={`w-8 h-8 rounded-lg text-[13px] font-bold transition-colors ${currentPage === idx + 1
-                          ? 'bg-[#022851] text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                    >
-                      {idx + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
-              </div>
+                  ) : filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">
+                        {activeFilter === 'active' && "You don't have any active applications."}
+                        {activeFilter === 'history' && "You don't have any applications yet."}
+                        {activeFilter === 'saved' && "You haven't saved any positions yet."}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedData.map((app) => (
+                      <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-[#eff6ff] rounded-full flex items-center justify-center shrink-0">
+                              <Briefcase className="w-6 h-6 text-[#3b82f6]" />
+                            </div>
+                            <div>
+                              <div className="text-[14px] font-bold text-[#022851]">{app.position}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <div className="text-[13px] text-gray-500 font-medium">{app.division}</div>
+                        </td>
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <div className="text-[13px] text-gray-600 font-medium">
+                            {app.date !== 'N/A' && app.date ? new Date(app.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-blue-50 text-blue-700 uppercase tracking-wide border border-blue-200">
+                            {app.applicationStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <span className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-purple-50 text-purple-700 uppercase tracking-wide border border-purple-200">
+                            {app.assessmentStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
+                <div className="text-[13px] text-gray-500 font-medium">
+                  Showing <span className="font-bold text-gray-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-gray-700">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span> of <span className="font-bold text-gray-700">{filteredData.length}</span> results
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentPage(idx + 1)}
+                        className={`w-8 h-8 rounded-lg text-[13px] font-bold transition-colors ${currentPage === idx + 1
+                            ? 'bg-[#022851] text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {isModalOpen && (
@@ -834,6 +973,28 @@ export default function ApplicantDashboard() {
           onVerified={(incumbentRecord) => {
             setShowGateModal(false);
             setReclassData(incumbentRecord);
+          }}
+        />
+      )}
+
+      {isReclassUploadModalOpen && (
+        <ReclassUploadModal
+          isOpen={isReclassUploadModalOpen}
+          applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
+          onClose={() => setIsReclassUploadModalOpen(false)}
+          onUploadSuccess={() => {
+            const sessionStr = localStorage.getItem('session_data');
+            if (sessionStr) {
+              const session = JSON.parse(sessionStr);
+              fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/reclass-details`)
+                .then(res => res.json())
+                .then(reclassRes => {
+                  if (reclassRes.success && reclassRes.data) {
+                    setReclassData(reclassRes.data);
+                  }
+                })
+                .catch(console.error);
+            }
           }}
         />
       )}

@@ -4,6 +4,8 @@ const pdfParse = require('pdf-parse');
 import * as mammoth from 'mammoth';
 import * as jwt from 'jsonwebtoken';
 import { sendPasswordResetEmail } from '../utils/mailer';
+import { uploadToAzure, uploadToReclassAzure } from '../utils/azureStorage';
+import { compressPdf } from '../utils/pdfCompressor';
 
 function parseAndSanitizeDate(dateInput: any): Date | null {
   if (!dateInput) return null;
@@ -339,13 +341,13 @@ class ApplicantsServiceClass {
     if (!isMatch) return null;
 
     let plantillaToEnsure = applicant.plantilla_item_number;
-    if (!plantillaToEnsure) {
+    if (!plantillaToEnsure && applicant.surname && applicant.first_name) {
       const incRes = await pool.query(
-        `SELECT plantilla_item_number FROM incumbent_guidance_counselors WHERE applicant_id = $1 LIMIT 1`,
-        [applicant.id],
+        `SELECT item_no FROM reclass_gc WHERE UPPER(TRIM(last_name)) = UPPER(TRIM($1)) AND UPPER(TRIM(first_name)) = UPPER(TRIM($2)) LIMIT 1`,
+        [applicant.surname, applicant.first_name],
       );
-      if (incRes.rows.length > 0 && incRes.rows[0].plantilla_item_number) {
-        plantillaToEnsure = incRes.rows[0].plantilla_item_number;
+      if (incRes.rows.length > 0 && incRes.rows[0].item_no) {
+        plantillaToEnsure = incRes.rows[0].item_no;
         await pool.query(
           `UPDATE applicants SET plantilla_item_number = $1 WHERE id = $2`,
           [plantillaToEnsure, applicant.id],
@@ -353,14 +355,6 @@ class ApplicantsServiceClass {
         applicant.plantilla_item_number = plantillaToEnsure;
       }
     }
-
-    if (plantillaToEnsure) {
-      await this.ensureReclassificationApplication(
-        applicant.id,
-        plantillaToEnsure,
-      );
-    }
-
     return applicant;
   }
 
@@ -1543,50 +1537,101 @@ class ApplicantsServiceClass {
 
   async ensureReclassificationApplication(
     applicantId: number | null,
-    plantillaItemNumber: string,
+    plantillaItemNumber?: string | null,
     clientOrPool?: any,
     targetPosition?: string,
     division?: string,
   ) {
     const db = clientOrPool || pool;
-    const normalizedPlantilla = (plantillaItemNumber || '').trim().toUpperCase();
-    if (!normalizedPlantilla) return null;
+    let normalizedPlantilla = (plantillaItemNumber || '').trim().toUpperCase();
 
-    // 1. Check if application already exists for this authoritative item_number
-    const existingAppRes = await db.query(
-      `SELECT * FROM reclassification_applications
-       WHERE UPPER(TRIM(item_number)) = UPPER(TRIM($1))
-       ORDER BY id DESC LIMIT 1`,
-      [normalizedPlantilla],
-    );
+    // 1. Fetch incumbent details from reclass_gc by item_no or applicantId
+    let incumbent: any = null;
+    if (normalizedPlantilla) {
+      const incRes = await db.query(
+        `SELECT * FROM reclass_gc
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
+         LIMIT 1`,
+        [normalizedPlantilla],
+      );
+      incumbent = incRes.rows[0] || null;
+    }
 
-    if (existingAppRes.rows.length > 0) {
+    if (!incumbent && applicantId) {
+      const applicantRes = await db.query(
+        `SELECT plantilla_item_number, surname, first_name FROM applicants WHERE id = $1`,
+        [applicantId],
+      );
+      const appRow = applicantRes.rows[0];
+      const applicantPlantilla = appRow?.plantilla_item_number;
+      if (applicantPlantilla) {
+        normalizedPlantilla = applicantPlantilla.trim().toUpperCase();
+        const incByAppPlantilla = await db.query(
+          `SELECT * FROM reclass_gc
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalizedPlantilla],
+        );
+        incumbent = incByAppPlantilla.rows[0] || null;
+      } else if (appRow?.surname && appRow?.first_name) {
+        const incByName = await db.query(
+          `SELECT * FROM reclass_gc
+           WHERE UPPER(TRIM(last_name)) = UPPER(TRIM($1)) AND UPPER(TRIM(first_name)) = UPPER(TRIM($2))
+           LIMIT 1`,
+          [appRow.surname, appRow.first_name],
+        );
+        incumbent = incByName.rows[0] || null;
+        if (incumbent?.item_no) {
+          normalizedPlantilla = incumbent.item_no.trim().toUpperCase();
+        }
+      }
+    }
+
+    const gcId = incumbent?.id || null;
+    const itemNo = normalizedPlantilla || incumbent?.item_no || (applicantId ? `APP-${applicantId}` : '');
+
+    // 2. Check if reclass_applications record exists by reclass_gc_id or item_no
+    let existingAppRes: any = null;
+    if (gcId) {
+      existingAppRes = await db.query(
+        `SELECT * FROM reclass_applications WHERE reclass_gc_id = $1 ORDER BY id DESC LIMIT 1`,
+        [gcId],
+      );
+    }
+    if ((!existingAppRes || existingAppRes.rows.length === 0) && itemNo) {
+      existingAppRes = await db.query(
+        `SELECT * FROM reclass_applications WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) ORDER BY id DESC LIMIT 1`,
+        [itemNo],
+      );
+    }
+
+    if (existingAppRes && existingAppRes.rows.length > 0) {
       const reclassApp = existingAppRes.rows[0];
       const updates: string[] = [];
       const params: any[] = [];
       let paramIdx = 1;
 
-      if (applicantId && reclassApp.applicant_id !== applicantId) {
-        updates.push(`applicant_id = $${paramIdx++}`);
-        params.push(applicantId);
-        reclassApp.applicant_id = applicantId;
+      if (gcId && !reclassApp.reclass_gc_id) {
+        updates.push(`reclass_gc_id = $${paramIdx++}`);
+        params.push(gcId);
+        reclassApp.reclass_gc_id = gcId;
       }
-      if (targetPosition && reclassApp.position_title !== targetPosition) {
-        updates.push(`position_title = $${paramIdx++}`);
+      if (targetPosition && reclassApp.reclass_position !== targetPosition) {
+        updates.push(`reclass_position = $${paramIdx++}`);
         params.push(targetPosition);
-        reclassApp.position_title = targetPosition;
+        reclassApp.reclass_position = targetPosition;
       }
       const upperDivision = division ? division.trim().toUpperCase() : undefined;
-      if (upperDivision && reclassApp.station_division !== upperDivision) {
-        updates.push(`station_division = $${paramIdx++}`);
+      if (upperDivision && reclassApp.division !== upperDivision) {
+        updates.push(`division = $${paramIdx++}`);
         params.push(upperDivision);
-        reclassApp.station_division = upperDivision;
+        reclassApp.division = upperDivision;
       }
 
       if (updates.length > 0) {
         params.push(reclassApp.id);
         await db.query(
-          `UPDATE reclassification_applications
+          `UPDATE reclass_applications
            SET ${updates.join(', ')}, updated_at = NOW()
            WHERE id = $${paramIdx}`,
           params,
@@ -1595,110 +1640,46 @@ class ApplicantsServiceClass {
       return reclassApp;
     }
 
-    // 2. Check if an application already exists for this applicant_id
-    if (applicantId) {
-      const existingByAppRes = await db.query(
-        `SELECT * FROM reclassification_applications
-         WHERE applicant_id = $1
-         ORDER BY id DESC LIMIT 1`,
-        [applicantId],
-      );
-      if (existingByAppRes.rows.length > 0) {
-        const reclassApp = existingByAppRes.rows[0];
-        const updates: string[] = [];
-        const params: any[] = [];
-        let paramIdx = 1;
+    // 3. Insert new record matching production columns
+    const curPos = incumbent?.current_position || 'Guidance Counselor';
+    const reg = (incumbent?.region || '').trim().toUpperCase() || null;
+    const div = (division || incumbent?.division || '').trim().toUpperCase() || null;
+    const schId = incumbent?.school_id || null;
+    const schName = incumbent?.school_name || null;
+    const recPos = targetPosition || incumbent?.reclass_position || null;
+    const newItem = incumbent?.new_item_no || null;
 
-        if (!reclassApp.item_number || reclassApp.item_number !== normalizedPlantilla) {
-          updates.push(`item_number = $${paramIdx++}`);
-          params.push(normalizedPlantilla);
-          reclassApp.item_number = normalizedPlantilla;
-        }
-        if (targetPosition && reclassApp.position_title !== targetPosition) {
-          updates.push(`position_title = $${paramIdx++}`);
-          params.push(targetPosition);
-          reclassApp.position_title = targetPosition;
-        }
-        const upperDivision = division ? division.trim().toUpperCase() : undefined;
-        if (upperDivision && reclassApp.station_division !== upperDivision) {
-          updates.push(`station_division = $${paramIdx++}`);
-          params.push(upperDivision);
-          reclassApp.station_division = upperDivision;
-        }
-
-        if (updates.length > 0) {
-          params.push(reclassApp.id);
-          await db.query(
-            `UPDATE reclassification_applications
-             SET ${updates.join(', ')}, updated_at = NOW()
-             WHERE id = $${paramIdx}`,
-            params,
-          );
-        }
-        return reclassApp;
-      }
-    }
-
-    // 3. Fetch incumbent details for position and station
-    const incRes = await db.query(
-      `SELECT * FROM incumbent_guidance_counselors
-       WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))
-       LIMIT 1`,
-      [normalizedPlantilla],
-    );
-    const incumbent = incRes.rows[0] || null;
-
-    // 4. Generate sequential REC-YYYY-XXX under table lock or transaction
-    const currentYear = new Date().getFullYear();
-    const prefix = `REC-${currentYear}-`;
-    const lastReclassRes = await db.query(
-      `SELECT application_number FROM reclassification_applications 
-       WHERE application_number LIKE $1 
-       ORDER BY id DESC LIMIT 1`,
-      [`${prefix}%`],
-    );
-    let nextSeq = 1;
-    if (lastReclassRes.rows.length > 0 && lastReclassRes.rows[0].application_number) {
-      const match = lastReclassRes.rows[0].application_number.match(/REC-\d{4}-(\d+)/);
-      if (match) nextSeq = parseInt(match[1], 10) + 1;
-    }
-    const newAppNumber = `${prefix}${String(nextSeq).padStart(3, '0')}`;
-    const upperDivision = division ? division.trim().toUpperCase() : undefined;
-    const positionTitle = targetPosition || incumbent?.target_position || incumbent?.reclass_position || incumbent?.current_position || 'Guidance Coordinator';
-    const stationDivision = upperDivision || incumbent?.station_division || incumbent?.division || 'DEPARTMENT OF EDUCATION';
-
-    const insertReclassRes = await db.query(
-      `INSERT INTO reclassification_applications (
-        application_number, applicant_id, employee_id, position_title,
-        item_number, station_division, date_originally_submitted,
-        evaluation_status, has_updated_credentials, documents,
-        created_at, updated_at
-      ) VALUES ($1, $2, NULL, $3, $4, $5, NOW(), 'pending_reevaluation', false, '[]'::jsonb, NOW(), NOW())
+    const insertRes = await db.query(
+      `INSERT INTO reclass_applications (
+        reclass_gc_id, item_no, current_position, region,
+        division, school_id, school_name, reclass_position,
+        new_item_no, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING *`,
-      [newAppNumber, applicantId || null, positionTitle, normalizedPlantilla, stationDivision],
+      [gcId, itemNo, curPos, reg, div, schId, schName, recPos, newItem],
     );
 
-    return insertReclassRes.rows[0];
+    return insertRes.rows[0];
   }
 
   async verifyPlantillaItem(applicantId: number, plantillaItemNumber: string) {
-    const normalized = String(plantillaItemNumber || '').trim();
+    const normalized = String(plantillaItemNumber || '').trim().toUpperCase();
     if (!normalized) {
       throw new Error('Plantilla item number is required.');
     }
 
-    // Look up in incumbent_guidance_counselors (primary source)
+    // Look up in reclass_gc (primary source)
     const incumbentRes = await pool.query(
-      `SELECT * FROM incumbent_guidance_counselors
-       WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))`,
+      `SELECT * FROM reclass_gc
+       WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
       [normalized],
     );
 
     if (incumbentRes.rows.length === 0) {
-      // Fallback: check reclassification_applications
+      // Fallback: check reclass_applications
       const reclassRes = await pool.query(
-        `SELECT * FROM reclassification_applications
-         WHERE UPPER(TRIM(item_number)) = UPPER(TRIM($1))`,
+        `SELECT * FROM reclass_applications
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
         [normalized],
       );
       if (reclassRes.rows.length === 0) {
@@ -1712,213 +1693,307 @@ class ApplicantsServiceClass {
       [normalized, applicantId],
     );
 
-    // Link the incumbent record back to this applicant
-    await pool.query(
-      `UPDATE incumbent_guidance_counselors
-       SET applicant_id = $1
-       WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2))`,
-      [applicantId, normalized],
-    );
-
-    // Ensure reclassification application exists
-    await this.ensureReclassificationApplication(applicantId, normalized);
-
-    // Return the full incumbent record
-    const linkedRes = await pool.query(
-      `SELECT * FROM incumbent_guidance_counselors
-       WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))`,
-      [normalized],
-    );
-
-    return linkedRes.rows[0] || null;
+    return incumbentRes.rows[0] || null;
   }
 
   async getReclassDetails(applicantId: number) {
-    // 1. Find incumbent by applicant_id or fallback via applicant's plantilla_item_number
     let incumbent: any = null;
-    const byIdRes = await pool.query(
-      `SELECT * FROM incumbent_guidance_counselors WHERE applicant_id = $1 LIMIT 1`,
+    const applicantRes = await pool.query(
+      `SELECT plantilla_item_number, surname, first_name FROM applicants WHERE id = $1`,
       [applicantId],
     );
-    if (byIdRes.rows.length > 0) {
-      incumbent = byIdRes.rows[0];
-    } else {
-      const applicantRes = await pool.query(
-        `SELECT plantilla_item_number FROM applicants WHERE id = $1`,
-        [applicantId],
+    const appRow = applicantRes.rows[0];
+    const plantillaItemNumber = appRow?.plantilla_item_number;
+
+    if (plantillaItemNumber) {
+      const incRes = await pool.query(
+        `SELECT * FROM reclass_gc
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        [plantillaItemNumber],
       );
-      const plantillaItemNumber = applicantRes.rows[0]?.plantilla_item_number;
-      if (plantillaItemNumber) {
-        const incRes = await pool.query(
-          `SELECT * FROM incumbent_guidance_counselors
-           WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1)) LIMIT 1`,
-          [plantillaItemNumber],
-        );
-        incumbent = incRes.rows[0] || null;
-      }
+      incumbent = incRes.rows[0] || null;
+    } else if (appRow?.surname && appRow?.first_name) {
+      const incByName = await pool.query(
+        `SELECT * FROM reclass_gc
+         WHERE UPPER(TRIM(last_name)) = UPPER(TRIM($1)) AND UPPER(TRIM(first_name)) = UPPER(TRIM($2)) LIMIT 1`,
+        [appRow.surname, appRow.first_name],
+      );
+      incumbent = incByName.rows[0] || null;
     }
 
-    // 2. Authoritative query/ensure for reclassification_applications by item_number or applicant_id
-    const plantilla = incumbent?.plantilla_item_number;
+    // Authoritative read-only query for reclass_applications by item_no or reclass_gc_id (DO NOT INSERT)
+    const gcId = incumbent?.id;
+    const itemNo = incumbent?.item_no || plantillaItemNumber;
     let reclassApp: any = null;
-    if (plantilla) {
-      reclassApp = await this.ensureReclassificationApplication(applicantId, plantilla);
-    }
-    if (!reclassApp) {
+
+    if (gcId) {
       const appById = await pool.query(
-        `SELECT * FROM reclassification_applications 
-         WHERE applicant_id = $1 
+        `SELECT * FROM reclass_applications 
+         WHERE reclass_gc_id = $1 
          ORDER BY id DESC LIMIT 1`,
-        [applicantId],
+        [gcId],
       );
       if (appById.rows.length > 0) {
         reclassApp = appById.rows[0];
       }
     }
 
+    if (!reclassApp && itemNo) {
+      const appByItem = await pool.query(
+        `SELECT * FROM reclass_applications 
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) 
+         ORDER BY id DESC LIMIT 1`,
+        [itemNo],
+      );
+      if (appByItem.rows.length > 0) {
+        reclassApp = appByItem.rows[0];
+      }
+    }
+
     if (!incumbent && !reclassApp) return null;
+
+    const fullName = incumbent ? `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim() : null;
 
     return {
       ...(incumbent || {}),
-      target_position: reclassApp?.position_title || incumbent?.target_position || incumbent?.reclass_position || null,
-      application_number: reclassApp?.application_number || null,
-      evaluation_status: reclassApp?.evaluation_status || null,
-      reclass_application: reclassApp,
+      full_name: fullName,
+      plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
+      target_position: reclassApp?.reclass_position || incumbent?.reclass_position || null,
+      current_position: reclassApp?.current_position || incumbent?.current_position || 'Guidance Counselor',
+      application_number: reclassApp?.school_name || incumbent?.school_name || null,
+      school_name: reclassApp?.school_name || incumbent?.school_name || null,
+      evaluation_status: incumbent?.qs_status || incumbent?.stage_of_reclassification || 'For Review',
+      reclass_application: reclassApp || null,
     };
   }
 
   async reclassLogin(
-    plantillaItemNumber: string,
-    inputFullName: string,
+    plantillaItemNumber?: string,
+    inputFullName?: string,
     targetPosition?: string,
     region?: string,
     division?: string,
+    currentPosition?: string,
+    isExisting: boolean = true,
   ) {
     const normalizedPlantilla = (plantillaItemNumber || '').trim().toUpperCase();
-    if (!normalizedPlantilla) {
+    const cleanInputName = (inputFullName || '').trim();
+
+    if (isExisting && !normalizedPlantilla) {
       throw new Error('Plantilla Item Number is required.');
     }
-    const cleanInputName = (inputFullName || '').trim();
-    if (!cleanInputName) {
-      throw new Error('Full Name is required for Reclassification.');
+    if (!isExisting && !cleanInputName) {
+      throw new Error('Full Name is required for Non-Plantilla Reclassification.');
     }
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // 1. Verify incumbent strictly by plantilla_item_number
-      const incRes = await client.query(
-        `SELECT * FROM incumbent_guidance_counselors
-         WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))
-         LIMIT 1`,
-        [normalizedPlantilla],
-      );
-
-      if (incRes.rows.length === 0) {
-        throw new Error('Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.');
-      }
-
-      const incumbent = incRes.rows[0];
-
-      if (!incumbent.full_name || incumbent.full_name.trim() === '' || incumbent.full_name.trim() === '#N/A') {
-        throw new Error('This Plantilla Item is currently unassigned or vacant in DepEd records.');
-      }
-
-      // 2. Verify full name against this exact incumbent record
-      if (!isIncumbentNameMatching(cleanInputName, incumbent.full_name)) {
-        throw new Error('The Full Name provided does not match our incumbent records for this Plantilla Item Number.');
-      }
-
-      // 3. Find or create applicant strictly by plantilla_item_number
+      let incumbent: any = null;
       let applicant: any = null;
-      const appRes = await client.query(
-        `SELECT * FROM applicants 
-         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))
-         LIMIT 1`,
-        [normalizedPlantilla],
-      );
 
-      if (appRes.rows.length > 0) {
-        // Reuse existing applicant record without modifying registrant_type or unrelated fields
-        applicant = appRes.rows[0];
-      } else {
-        // Provision applicant atomically under EXCLUSIVE LOCK
-        await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
-        const lastApplicant = await client.query(
-          `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+      if (isExisting && normalizedPlantilla) {
+        // 1. Verify incumbent strictly by item_no
+        const incRes = await client.query(
+          `SELECT * FROM reclass_gc
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalizedPlantilla],
         );
-        let nextApplicantNum = 1;
-        if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
-          const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
-          if (match) {
-            nextApplicantNum = parseInt(match[1], 10) + 1;
-          }
+
+        if (incRes.rows.length === 0) {
+          throw new Error('Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.');
         }
-        const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
-        const placeholderEmail = `no-email-${Date.now()}@test.com`;
-        const { surname, firstName, middleName } = parseIncumbentName(incumbent.full_name);
 
-        const insertAppRes = await client.query(
-          `INSERT INTO applicants (
-            applicant_number, surname, first_name, middle_name,
-            email_address, registrant_type, plantilla_item_number, is_test
-          ) VALUES ($1, $2, $3, $4, $5, 'reclass', $6, false)
-          RETURNING *`,
-          [newApplicantNumber, surname, firstName, middleName, placeholderEmail, normalizedPlantilla],
+        incumbent = incRes.rows[0];
+        const incumbentFullName = `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim();
+
+        if ((!incumbent.last_name && !incumbent.first_name) || incumbent.last_name === '#N/A' || incumbentFullName === '') {
+          throw new Error('This Plantilla Item is currently unassigned or vacant in DepEd records.');
+        }
+
+        // 2. If Full Name is provided, verify matching against incumbent record
+        if (cleanInputName && !isIncumbentNameMatching(cleanInputName, incumbentFullName)) {
+          throw new Error('The Full Name provided does not match our incumbent records for this Plantilla Item Number.');
+        }
+
+        // 3. Find or create applicant strictly by plantilla_item_number
+        const appRes = await client.query(
+          `SELECT * FROM applicants 
+           WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalizedPlantilla],
         );
-        applicant = insertAppRes.rows[0];
+
+        if (appRes.rows.length > 0) {
+          applicant = appRes.rows[0];
+        } else {
+          await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
+          const lastApplicant = await client.query(
+            `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+          );
+          let nextApplicantNum = 1;
+          if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
+            const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+            if (match) {
+              nextApplicantNum = parseInt(match[1], 10) + 1;
+            }
+          }
+          const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+          const placeholderEmail = `no-email-${Date.now()}@test.com`;
+          const surname = incumbent.last_name || '';
+          const firstName = incumbent.first_name || '';
+
+          const insertAppRes = await client.query(
+            `INSERT INTO applicants (
+              applicant_number, surname, first_name,
+              email_address, registrant_type, plantilla_item_number, is_test
+            ) VALUES ($1, $2, $3, $4, 'reclass', $5, false)
+            RETURNING *`,
+            [newApplicantNumber, surname, firstName, placeholderEmail, normalizedPlantilla],
+          );
+          applicant = insertAppRes.rows[0];
+        }
+
+        // 4. Update region, division, reclass_position if provided
+        const incUpdates: string[] = [];
+        const incParams: any[] = [];
+        let pIdx = 1;
+
+        if (targetPosition && targetPosition.trim()) {
+          incUpdates.push(`reclass_position = $${pIdx++}`);
+          incParams.push(targetPosition.trim());
+          incumbent.reclass_position = targetPosition.trim();
+        }
+        if (region && region.trim()) {
+          const upperRegion = region.trim().toUpperCase();
+          incUpdates.push(`region = $${pIdx++}`);
+          incParams.push(upperRegion);
+          incumbent.region = upperRegion;
+        }
+        if (division && division.trim()) {
+          const upperDivision = division.trim().toUpperCase();
+          incUpdates.push(`division = $${pIdx++}`);
+          incParams.push(upperDivision);
+          incumbent.division = upperDivision;
+        }
+
+        if (incUpdates.length > 0) {
+          incUpdates.push('updated_at = NOW()');
+          incParams.push(incumbent.id);
+          await client.query(
+            `UPDATE reclass_gc
+             SET ${incUpdates.join(', ')}
+             WHERE id = $${pIdx}`,
+            incParams,
+          );
+        }
+      } else {
+        // Non-plantilla / Designate path
+        const { surname, firstName, middleName } = parseIncumbentName(cleanInputName);
+        const appRes = await client.query(
+          `SELECT * FROM applicants 
+           WHERE UPPER(TRIM(COALESCE(surname, ''))) = UPPER(TRIM($1))
+             AND UPPER(TRIM(COALESCE(first_name, ''))) = UPPER(TRIM($2))
+             AND registrant_type = 'reclass'
+           LIMIT 1`,
+          [surname, firstName],
+        );
+
+        if (appRes.rows.length > 0) {
+          applicant = appRes.rows[0];
+        } else {
+          await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
+          const lastApplicant = await client.query(
+            `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+          );
+          let nextApplicantNum = 1;
+          if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
+            const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+            if (match) {
+              nextApplicantNum = parseInt(match[1], 10) + 1;
+            }
+          }
+          const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+          const placeholderEmail = `no-email-${Date.now()}@test.com`;
+
+          const insertAppRes = await client.query(
+            `INSERT INTO applicants (
+              applicant_number, surname, first_name, middle_name,
+              email_address, registrant_type, plantilla_item_number, is_test
+            ) VALUES ($1, $2, $3, $4, $5, 'reclass', NULL, false)
+            RETURNING *`,
+            [newApplicantNumber, surname, firstName, middleName, placeholderEmail],
+          );
+          applicant = insertAppRes.rows[0];
+        }
+
+        incumbent = {
+          id: null,
+          first_name: firstName,
+          last_name: surname,
+          current_position: currentPosition || 'Guidance Counselor (Designate)',
+          reclass_position: targetPosition || 'School Counselor Associate I',
+          region: region ? region.trim().toUpperCase() : null,
+          division: division ? division.trim().toUpperCase() : null,
+          item_no: null,
+          is_existing: false,
+        };
       }
 
-      // 4. Link incumbent record to applicant_id and update region, division, target_position
-      const incUpdates: string[] = ['applicant_id = $1'];
-      const incParams: any[] = [applicant.id];
-      let pIdx = 2;
-
-      if (targetPosition && targetPosition.trim()) {
-        incUpdates.push(`target_position = $${pIdx++}`);
-        incParams.push(targetPosition.trim());
-        incumbent.target_position = targetPosition.trim();
-      }
-      if (region && region.trim()) {
-        const upperRegion = region.trim().toUpperCase();
-        incUpdates.push(`region = $${pIdx++}`);
-        incParams.push(upperRegion);
-        incumbent.region = upperRegion;
-      }
-      if (division && division.trim()) {
-        const upperDivision = division.trim().toUpperCase();
-        incUpdates.push(`division = $${pIdx++}`);
-        incParams.push(upperDivision);
-        incumbent.division = upperDivision;
+      // 5. Look up existing reclass_applications record if any (DO NOT INSERT ON LOGIN)
+      let reclassApp: any = null;
+      if (incumbent?.id) {
+        const appByGcRes = await client.query(
+          `SELECT * FROM reclass_applications WHERE reclass_gc_id = $1 ORDER BY id DESC LIMIT 1`,
+          [incumbent.id],
+        );
+        if (appByGcRes.rows.length > 0) {
+          reclassApp = appByGcRes.rows[0];
+        }
       }
 
-      incUpdates.push('updated_at = NOW()');
-      incParams.push(incumbent.id);
-
-      await client.query(
-        `UPDATE incumbent_guidance_counselors
-         SET ${incUpdates.join(', ')}
-         WHERE id = $${pIdx}`,
-        incParams,
-      );
-      incumbent.applicant_id = applicant.id;
-
-      // 5. Find, reuse, or create reclassification_applications record strictly by authoritative item_number
-      await client.query('LOCK TABLE reclassification_applications IN EXCLUSIVE MODE');
-      const reclassApp = await this.ensureReclassificationApplication(
-        applicant.id,
-        normalizedPlantilla,
-        client,
-        targetPosition,
-        division,
-      );
+      if (!reclassApp && normalizedPlantilla) {
+        const appByItemRes = await client.query(
+          `SELECT * FROM reclass_applications WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) ORDER BY id DESC LIMIT 1`,
+          [normalizedPlantilla],
+        );
+        if (appByItemRes.rows.length > 0) {
+          reclassApp = appByItemRes.rows[0];
+        }
+      }
 
       await client.query('COMMIT');
-      return { applicant, incumbent, reclassApplication: reclassApp };
-    } catch (error) {
+
+      const incumbentFullName = `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim() || cleanInputName;
+
+      return {
+        session: {
+          id: applicant.id,
+          applicant_number: applicant.applicant_number,
+          surname: applicant.surname,
+          first_name: applicant.first_name,
+          middle_name: applicant.middle_name,
+          email_address: applicant.email_address,
+          registrant_type: 'reclass',
+          plantilla_item_number: normalizedPlantilla || null,
+        },
+        reclass: {
+          ...(incumbent || {}),
+          full_name: incumbentFullName,
+          plantilla_item_number: normalizedPlantilla || incumbent?.item_no || null,
+          target_position: reclassApp?.reclass_position || incumbent?.reclass_position || targetPosition || null,
+          current_position: reclassApp?.current_position || incumbent?.current_position || currentPosition || 'Guidance Counselor',
+          application_number: reclassApp?.school_name || incumbent?.school_name || null,
+          school_name: reclassApp?.school_name || incumbent?.school_name || null,
+          evaluation_status: incumbent?.qs_status || incumbent?.stage_of_reclassification || 'For Review',
+          reclass_application: reclassApp || null,
+        },
+      };
+    } catch (err) {
       await client.query('ROLLBACK');
-      throw error;
+      throw err;
     } finally {
       client.release();
     }
@@ -1951,14 +2026,235 @@ class ApplicantsServiceClass {
     const normalized = String(plantilla || '').trim().toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
-      `SELECT region, division, target_position, current_position
-       FROM incumbent_guidance_counselors
-       WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))
+      `SELECT region, division, reclass_position as target_position, current_position, first_name, last_name, school_name
+       FROM reclass_gc
+       WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
        LIMIT 1`,
       [normalized],
     );
     if (res.rows.length === 0) return null;
-    return res.rows[0];
+    const row = res.rows[0];
+    return {
+      ...row,
+      full_name: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+    };
+  }
+
+  async getReclassDocuments(applicantId: number) {
+    const reclassDetails = await this.getReclassDetails(applicantId);
+    const reclassAppId = reclassDetails?.reclass_application?.id || null;
+    const plantillaItemNumber = reclassDetails?.plantilla_item_number || reclassDetails?.item_no || null;
+
+    let docsRes: any = { rows: [] };
+    if (reclassAppId && plantillaItemNumber) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents 
+         WHERE reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)) 
+         ORDER BY id ASC`,
+        [reclassAppId, plantillaItemNumber],
+      );
+    } else if (reclassAppId) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents WHERE reclass_application_id = $1 ORDER BY id ASC`,
+        [reclassAppId],
+      );
+    } else if (plantillaItemNumber) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1)) ORDER BY id ASC`,
+        [plantillaItemNumber],
+      );
+    }
+
+    const keyByTitle: Record<string, string> = {
+      'reclassification form / rftp': 'reclass_form',
+      'personal data sheet': 'pds',
+      'service records & appointment': 'service_records',
+      'academic credentials': 'academic_credentials',
+      'training certificates': 'training_certs',
+      'performance ratings': 'performance_ratings',
+      'administrative supporting documents': 'admin_support',
+      'reclass_form': 'reclass_form',
+      'pds': 'pds',
+      'service_records': 'service_records',
+      'academic_credentials': 'academic_credentials',
+      'training_certs': 'training_certs',
+      'performance_ratings': 'performance_ratings',
+      'admin_support': 'admin_support',
+    };
+
+    if (docsRes.rows.length > 0) {
+      return docsRes.rows.map((row: any) => {
+        const title = row.document_title || '';
+        const lowerTitle = title.trim().toLowerCase();
+        const categoryKey = keyByTitle[lowerTitle] || lowerTitle.replace(/[^a-z0-9_-]/g, '_');
+
+        return {
+          id: String(row.id),
+          category_key: categoryKey,
+          category_title: row.document_title || 'Document',
+          file_name: row.file_name,
+          file_url: row.file_url,
+          uploaded_at: row.uploaded_at
+            ? new Date(row.uploaded_at).toISOString()
+            : new Date().toISOString(),
+        };
+      });
+    }
+
+    return [];
+  }
+
+  async uploadReclassDocument(
+    applicantId: number,
+    categoryKey: string,
+    categoryTitle: string,
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    description?: string,
+  ) {
+    const reclassDetails = await this.getReclassDetails(applicantId);
+    if (!reclassDetails) {
+      throw new Error('Applicant reclassification profile not found.');
+    }
+
+    // Resolve reclass_gc.id for folder naming (reclass-reclass_gc.id)
+    let reclassGcId = reclassDetails.id;
+    if (!reclassGcId && reclassDetails.reclass_application?.reclass_gc_id) {
+      reclassGcId = reclassDetails.reclass_application.reclass_gc_id;
+    }
+    if (!reclassGcId) {
+      const pItem = reclassDetails.plantilla_item_number || reclassDetails.item_no;
+      if (pItem) {
+        const gcCheck = await pool.query(
+          `SELECT id FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+          [pItem],
+        );
+        if (gcCheck.rows.length > 0) {
+          reclassGcId = gcCheck.rows[0].id;
+        }
+      }
+    }
+    const folderGcId = reclassGcId || applicantId;
+    const rootFolder = `reclass-${folderGcId}`;
+    const docFolder = (categoryKey || 'document').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const folderPath = `${rootFolder}/${docFolder}`;
+    const cleanOriginalName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fullBlobPath = `${folderPath}/${cleanOriginalName}`;
+
+    let finalBuffer = file.buffer;
+    if (file.mimetype === 'application/pdf') {
+      try {
+        finalBuffer = await compressPdf(file.buffer, 150);
+      } catch (err) {
+        console.warn('PDF compression skipped:', err);
+      }
+    }
+
+    // Upload to Azure blob in the AZURE_FOLDER_RECLASS container (agap-reclass)
+    const fileUrl = await uploadToReclassAzure(finalBuffer, fullBlobPath, file.mimetype);
+
+    let reclassApp = reclassDetails.reclass_application;
+    const plantillaItemNumber =
+      reclassDetails.plantilla_item_number ||
+      reclassDetails.item_no ||
+      reclassApp?.item_no ||
+      null;
+
+    // 1. Ensure reclass_applications record is created/inserted upon document upload if it doesn't already exist
+    if (!reclassApp) {
+      reclassApp = await this.ensureReclassificationApplication(
+        applicantId,
+        plantillaItemNumber,
+        pool,
+        reclassDetails.target_position || reclassDetails.reclass_position,
+        reclassDetails.division,
+      );
+    }
+
+    // 2. Save or update record in reclass_documents table (without dropped columns)
+    const existingDoc = await pool.query(
+      `SELECT id FROM reclass_documents 
+       WHERE (
+         (reclass_application_id IS NOT NULL AND reclass_application_id = $1)
+         OR (plantilla_item_number IS NOT NULL AND UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)))
+       ) AND UPPER(TRIM(document_title)) = UPPER(TRIM($3)) 
+       LIMIT 1`,
+      [reclassApp?.id || null, plantillaItemNumber || '', categoryTitle],
+    );
+
+    let savedDocRow: any;
+    if (existingDoc.rows.length > 0) {
+      const updateDocRes = await pool.query(
+        `UPDATE reclass_documents
+         SET reclass_application_id = $1,
+             plantilla_item_number = $2,
+             document_title = $3,
+             file_name = $4,
+             file_url = $5,
+             updated_at = NOW()
+         WHERE id = $6
+         RETURNING *`,
+        [
+          reclassApp?.id || null,
+          plantillaItemNumber,
+          categoryTitle,
+          file.originalname,
+          fileUrl,
+          existingDoc.rows[0].id,
+        ],
+      );
+      savedDocRow = updateDocRes.rows[0];
+    } else {
+      const insertDocRes = await pool.query(
+        `INSERT INTO reclass_documents (
+           reclass_application_id, plantilla_item_number,
+           document_title, file_name, file_url,
+           uploaded_at, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING *`,
+        [
+          reclassApp?.id || null,
+          plantillaItemNumber,
+          categoryTitle,
+          file.originalname,
+          fileUrl,
+        ],
+      );
+      savedDocRow = insertDocRes.rows[0];
+    }
+
+    // 3. Update reclass_applications updated_at timestamp if record exists
+    if (reclassApp?.id) {
+      await pool.query(
+        `UPDATE reclass_applications
+         SET updated_at = NOW()
+         WHERE id = $1`,
+        [reclassApp.id],
+      );
+    }
+
+    // 4. Log audit entry
+    await this.logDocumentAudit(
+      applicantId,
+      `Reclassification: ${categoryTitle}`,
+      fileUrl,
+      file.size,
+      null,
+    );
+
+    const updatedDocs = await this.getReclassDocuments(applicantId);
+
+    return {
+      success: true,
+      document: {
+        id: String(savedDocRow.id),
+        category_key: categoryKey,
+        category_title: savedDocRow.document_title,
+        file_name: savedDocRow.file_name,
+        file_url: savedDocRow.file_url,
+        uploaded_at: savedDocRow.uploaded_at,
+      },
+      documents: updatedDocs,
+    };
   }
 }
 
