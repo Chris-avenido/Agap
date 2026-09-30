@@ -2232,7 +2232,27 @@ class ApplicantsServiceClass {
       );
     }
 
-    // 4. Log audit entry
+    // 4. Update reclass_gc.reupload = true upon document upload
+    if (folderGcId) {
+      await pool.query(
+        `UPDATE reclass_gc
+         SET reupload = true,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [folderGcId],
+      );
+    }
+    if (plantillaItemNumber) {
+      await pool.query(
+        `UPDATE reclass_gc
+         SET reupload = true,
+             updated_at = NOW()
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
+        [plantillaItemNumber],
+      );
+    }
+
+    // 5. Log audit entry
     await this.logDocumentAudit(
       applicantId,
       `Reclassification: ${categoryTitle}`,

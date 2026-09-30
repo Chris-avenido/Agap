@@ -132,9 +132,18 @@ Executed schema migration into PostgreSQL:
     - **Step 3: Endorsed TO DBM RO**: Department of Budget and Management (DBM) Regional Office budget allocation & NOSCA issuance.
   - Highlights step states (`Completed` checkmark, `Active Stage` with pulsing indicator, or `Upcoming` queued status) with contextual descriptions and badges.
 
-### 15. Preserved Existing Functionality
+### 15. Jobseeker Direct Login Workflow
+- **Bypassed Confirmation Modal**: When a regular Jobseeker logs in, credentials are verified and the session is directly initialized in `localStorage`, navigating straight to the Applicant Dashboard without displaying the "Confirm Account Details" modal.
+- **Retained Reclassification Confirmation**: Incumbent counselors logging into the Reclassification Portal continue to review their DepEd plantilla credentials via the confirmation modal before proceeding.
+
+### 16. Incumbent Re-upload Flag (`reclass_gc.reupload = true`)
+- **Automatic Re-upload Flagging**: Whenever an incumbent or reclassification applicant uploads any credential document, the backend automatically updates the corresponding row in `reclass_gc` (`SET reupload = true, updated_at = NOW()`), notifying HRMO reviewers that new documents have been submitted.
+
+### 17. Preserved Existing Functionality
 - All existing Applicant, Vacancy, Address, and Auth routes were preserved untouched in accordance with `.agents/agents.md`.
 - Experience and training display rules preserved (`0` outputs `'None Required'`).
+
+
 
 
 

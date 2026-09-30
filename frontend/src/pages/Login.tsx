@@ -225,20 +225,8 @@ export default function Login() {
           plantilla_item_number: resData.data.plantilla_item_number || null,
           expiry: now.getTime() + 3 * 60 * 60 * 1000,
         };
-        setPendingConfirmation({
-          sessionItem,
-          confirmationData: {
-            id: applicantId,
-            applicant_number: resData.data.applicant_number,
-            full_name: resData.data.full_name,
-            first_name: resData.data.first_name,
-            middle_name: resData.data.middle_name,
-            surname: resData.data.surname,
-            email: resData.data.email,
-            registrant_type: resData.data.registrant_type || 'jobseeker',
-            plantilla_item_number: resData.data.plantilla_item_number || null,
-          }
-        });
+        localStorage.setItem('session_data', JSON.stringify(sessionItem));
+        navigate('/applicant-dashboard');
       } else {
         Swal.fire('Error', 'Invalid credentials', 'error');
       }
