@@ -9,12 +9,17 @@ interface ApplicantHeaderProps {
   firstName: string;
   lastName: string;
   photoUrl?: string | null;
+  isReclass?: boolean;
 }
 
-const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, photoUrl }) => {
+const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, photoUrl, isReclass: isReclassProp }) => {
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const sessionStr = typeof window !== 'undefined' ? localStorage.getItem('session_data') : null;
+  const sessionData = sessionStr ? JSON.parse(sessionStr) : {};
+  const isReclass = isReclassProp ?? (sessionData?.registrant_type === 'reclass');
 
   const handleLogout = () => {
     localStorage.removeItem('session_data');
@@ -126,6 +131,7 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, 
               {(firstName || lastName) ? `${firstName} ${lastName}`.trim() : 'APPLICANT'} <ChevronDown className="w-4 h-4" />
             </div>
             {(() => {
+              if (isReclass) return null;
               const sessionStr = localStorage.getItem('session_data');
               if (sessionStr) {
                 const session = JSON.parse(sessionStr);
@@ -140,8 +146,12 @@ const ApplicantHeader: React.FC<ApplicantHeaderProps> = ({ firstName, lastName, 
           {isProfileDropdownOpen && (
             <div className="absolute right-0 mt-3 w-56 bg-white rounded shadow-lg py-2 z-50 text-gray-700">
               <div className="absolute -top-2 right-6 w-4 h-4 bg-white rotate-45 transform border-l border-t border-gray-100"></div>
-              <button onClick={() => { setIsProfileDropdownOpen(false); setIsModalOpen(true); }} className="w-full text-left px-5 py-3 text-[13px] hover:bg-blue-50 hover:text-[#003366] uppercase font-medium relative z-10 transition-colors">My Profile</button>
-              <button onClick={handleChangePassword} className="w-full text-left px-5 py-3 text-[13px] hover:bg-blue-50 hover:text-[#003366] uppercase font-medium relative z-10 transition-colors">Change Password</button>
+              {!isReclass && (
+                <>
+                  <button onClick={() => { setIsProfileDropdownOpen(false); setIsModalOpen(true); }} className="w-full text-left px-5 py-3 text-[13px] hover:bg-blue-50 hover:text-[#003366] uppercase font-medium relative z-10 transition-colors">My Profile</button>
+                  <button onClick={handleChangePassword} className="w-full text-left px-5 py-3 text-[13px] hover:bg-blue-50 hover:text-[#003366] uppercase font-medium relative z-10 transition-colors">Change Password</button>
+                </>
+              )}
               <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-[13px] hover:bg-blue-50 hover:text-[#003366] uppercase font-medium relative z-10 transition-colors">Log Out</button>
             </div>
           )}

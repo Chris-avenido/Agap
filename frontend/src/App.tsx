@@ -13,7 +13,6 @@ import ApplicantDashboard from './pages/ApplicantDashboard';
 import PublicCareers from './pages/PublicCareers';
 import ApplicantJobList from './pages/ApplicantJobList';
 import ResetPassword from './pages/ResetPassword';
-
 import ApplicationPage from './pages/ApplicationPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -109,8 +108,6 @@ function App() {
           {/* Applicant Facing Routes (No Sidebar for Registration) */}
           <Route path="/applicant-dashboard" element={<ProtectedRoute><ApplicantDashboard /></ProtectedRoute>} />
           <Route path="/applicant-jobs" element={<ProtectedRoute><ApplicantJobList /></ProtectedRoute>} />
-
-
         </Routes>
       </SSOInterceptor>
     </BrowserRouter>

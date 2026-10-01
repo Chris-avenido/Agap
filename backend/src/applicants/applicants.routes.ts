@@ -41,17 +41,128 @@ router.post('/login', async (req, res) => {
     if (!applicant) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    const fullName = [applicant.first_name, applicant.middle_name, applicant.surname].filter(Boolean).join(' ') || applicant.first_name || 'Applicant';
     res.json({
       success: true,
       data: {
         id: applicant.id,
         applicant_number: applicant.applicant_number,
+        first_name: applicant.first_name,
+        middle_name: applicant.middle_name,
+        surname: applicant.surname,
+        full_name: fullName,
         email: applicant.email_address,
+        registrant_type: applicant.registrant_type || 'jobseeker',
+        plantilla_item_number: applicant.plantilla_item_number || null,
       },
     });
   } catch (error: any) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: error.message || 'Error logging in' });
+  }
+});
+
+router.get('/incumbent-locations', async (_req, res) => {
+  try {
+    const data = await ApplicantsService.getIncumbentLocations();
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error fetching incumbent locations:', error);
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching locations' });
+  }
+});
+
+router.get('/incumbent-info', async (req, res) => {
+  const { plantilla } = req.query;
+  if (!plantilla || typeof plantilla !== 'string') {
+    return res.status(400).json({ message: 'Plantilla is required' });
+  }
+  try {
+    const data = await ApplicantsService.getIncumbentInfoByPlantilla(plantilla);
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error fetching incumbent info:', error);
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching incumbent info' });
+  }
+});
+
+router.post('/reclass-login', async (req, res) => {
+  const { plantilla_item_number, full_name, target_position, region, division, current_position, is_existing } = req.body;
+  const isExistingBool = is_existing !== false && is_existing !== 'false';
+
+  if (isExistingBool && (!plantilla_item_number || !plantilla_item_number.trim())) {
+    return res
+      .status(400)
+      .json({ message: 'Plantilla Item Number is required for existing plantilla incumbents' });
+  }
+  if (!isExistingBool && (!full_name || !full_name.trim())) {
+    return res
+      .status(400)
+      .json({ message: 'Full Name is required for Non-Plantilla Reclassification' });
+  }
+  try {
+    const result = await ApplicantsService.reclassLogin(
+      plantilla_item_number ? plantilla_item_number.trim() : '',
+      full_name ? full_name.trim() : undefined,
+      target_position ? String(target_position).trim() : undefined,
+      region ? String(region).trim().toUpperCase() : undefined,
+      division ? String(division).trim().toUpperCase() : undefined,
+      current_position ? String(current_position).trim() : undefined,
+      isExistingBool,
+    );
+    const resolvedFullName =
+      result.reclass?.full_name ||
+      [result.session.first_name, result.session.middle_name, result.session.surname].filter(Boolean).join(' ') ||
+      (full_name ? full_name.trim() : '');
+
+    res.json({
+      success: true,
+      data: {
+        id: result.session.id,
+        applicant_number: result.session.applicant_number,
+        first_name: result.session.first_name,
+        middle_name: result.session.middle_name,
+        surname: result.session.surname,
+        full_name: resolvedFullName,
+        email: result.session.email_address,
+        registrant_type: result.session.registrant_type || 'reclass',
+        plantilla_item_number:
+          result.session.plantilla_item_number ||
+          result.reclass?.plantilla_item_number ||
+          (plantilla_item_number ? plantilla_item_number.trim().toUpperCase() : null),
+        current_position:
+          result.reclass?.current_position ||
+          (isExistingBool ? 'Guidance Counselor' : 'Guidance Counselor (Designate)'),
+        target_position:
+          result.reclass?.target_position ||
+          target_position ||
+          null,
+        region:
+          result.reclass?.region ||
+          (region ? String(region).trim().toUpperCase() : null),
+        division:
+          result.reclass?.division ||
+          (division ? String(division).trim().toUpperCase() : null),
+        school_name:
+          result.reclass?.school_name ||
+          null,
+        application_number:
+          result.reclass?.school_name ||
+          result.reclass?.application_number ||
+          null,
+        incumbent: result.reclass,
+        reclass_application: result.reclass?.reclass_application || null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in reclass-login:', error);
+    res
+      .status(401)
+      .json({ message: error.message || 'Verification failed' });
   }
 });
 
@@ -913,6 +1024,100 @@ router.get('/:id/print-pds', async (req, res, next) => {
       .send(
         `Error generating Personal Data Sheet: ${error.message} - ${error.stack}`,
       );
+  }
+});
+
+// POST /api/applicants/:id/verify-plantilla
+router.post('/:id/verify-plantilla', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { plantilla_item_number } = req.body;
+    if (!plantilla_item_number || !String(plantilla_item_number).trim()) {
+      return res.status(400).json({ message: 'Plantilla item number is required.' });
+    }
+    const reclassRecord = await ApplicantsService.verifyPlantillaItem(id, plantilla_item_number);
+    res.json({
+      success: true,
+      message: 'Plantilla item number verified successfully.',
+      data: reclassRecord,
+    });
+  } catch (error: any) {
+    console.error('Error verifying plantilla item number:', error);
+    res.status(404).json({ message: error.message || 'Plantilla item number not found.' });
+  }
+});
+
+// GET /api/applicants/:id/reclass-details
+router.get('/:id/reclass-details', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const reclassDetails = await ApplicantsService.getReclassDetails(id);
+    res.json({
+      success: true,
+      data: reclassDetails,
+    });
+  } catch (error: any) {
+    console.error('Error fetching reclass details:', error);
+    res.status(500).json({ message: error.message || 'Error fetching reclassification details.' });
+  }
+});
+
+// GET /api/applicants/:id/reclass-documents
+router.get('/:id/reclass-documents', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const documents = await ApplicantsService.getReclassDocuments(id);
+    res.json({
+      success: true,
+      data: documents,
+    });
+  } catch (error: any) {
+    console.error('Error fetching reclass documents:', error);
+    res.status(500).json({ message: error.message || 'Error fetching documents.' });
+  }
+});
+
+// POST /api/applicants/:id/reclass-documents
+router.post('/:id/reclass-documents', upload.single('file'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const file = (req as any).file;
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded.' });
+    }
+
+    const isPdf = file.mimetype === 'application/pdf' || (file.originalname && file.originalname.toLowerCase().endsWith('.pdf'));
+    if (!isPdf) {
+      return res.status(400).json({ message: 'Only PDF files (.pdf) are allowed for reclassification documents.' });
+    }
+
+    const { category_key, category_title, description } = req.body;
+    if (!category_key) {
+      return res.status(400).json({ message: 'Document category key is required.' });
+    }
+
+    const result = await ApplicantsService.uploadReclassDocument(
+      id,
+      category_key,
+      category_title || category_key,
+      file,
+      description,
+    );
+
+    res.json({
+      success: true,
+      message: `Document for "${category_title || category_key}" uploaded successfully.`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error uploading reclass document:', error);
+    res.status(500).json({ message: error.message || 'Error uploading document.' });
   }
 });
 
