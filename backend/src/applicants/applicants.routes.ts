@@ -99,6 +99,11 @@ router.post('/reclass-login', async (req, res) => {
       .status(400)
       .json({ message: 'Plantilla Item Number is required for existing plantilla incumbents' });
   }
+  if (!isExistingBool && (!plantilla_item_number || !plantilla_item_number.trim())) {
+    return res
+      .status(400)
+      .json({ message: 'Plantilla Item Number is required for Non-Plantilla / Designate Reclassification' });
+  }
   if (!isExistingBool && (!full_name || !full_name.trim())) {
     return res
       .status(400)

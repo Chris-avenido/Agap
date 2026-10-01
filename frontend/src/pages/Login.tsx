@@ -22,6 +22,7 @@ export default function Login() {
   const [reclassFullName, setReclassFullName] = useState('');
   const [incumbentStatus, setIncumbentStatus] = useState<'existing' | 'non_existing'>('existing');
   const [currentDesignation, setCurrentDesignation] = useState('Guidance Counselor (Designate)');
+  const [nonPlantillaItemNumber, setNonPlantillaItemNumber] = useState('');
   const [targetPosition, setTargetPosition] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
@@ -125,6 +126,11 @@ export default function Login() {
           Swal.fire('Required', 'Please enter your Full Name for Reclassification.', 'warning');
           return;
         }
+        const cleanNonPlantilla = nonPlantillaItemNumber.trim().toUpperCase();
+        if (!cleanNonPlantilla) {
+          Swal.fire('Required', 'Please enter your Plantilla Item Number for verification.', 'warning');
+          return;
+        }
         if (!selectedRegion) {
           Swal.fire('Required', 'Please select your Region for Reclassification.', 'warning');
           return;
@@ -146,7 +152,7 @@ export default function Login() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            plantilla_item_number: isExisting ? cleanPlantilla : '',
+            plantilla_item_number: isExisting ? cleanPlantilla : nonPlantillaItemNumber.trim().toUpperCase(),
             full_name: isExisting ? (cleanFullName || undefined) : cleanFullName,
             target_position: targetPosition || undefined,
             region: isExisting ? undefined : selectedRegion.trim().toUpperCase(),
@@ -164,7 +170,9 @@ export default function Login() {
             applicant_number: resData.data.applicant_number,
             email: resData.data.email,
             registrant_type: resData.data.registrant_type || 'reclass',
-            plantilla_item_number: isExisting ? (resData.data.plantilla_item_number || cleanPlantilla) : null,
+            plantilla_item_number: isExisting
+              ? (resData.data.plantilla_item_number || cleanPlantilla)
+              : (resData.data.plantilla_item_number || nonPlantillaItemNumber.trim().toUpperCase() || null),
             target_position: targetPosition || resData.data.target_position,
             region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
             division: resData.data.division || (selectedDivision || '').trim().toUpperCase(),
@@ -181,7 +189,9 @@ export default function Login() {
               surname: resData.data.surname,
               email: resData.data.email,
               registrant_type: 'reclass',
-              plantilla_item_number: isExisting ? (resData.data.plantilla_item_number || cleanPlantilla) : null,
+              plantilla_item_number: isExisting
+                ? (resData.data.plantilla_item_number || cleanPlantilla)
+                : (resData.data.plantilla_item_number || nonPlantillaItemNumber.trim().toUpperCase() || null),
               current_position: resData.data.current_position || (isExisting ? 'Guidance Counselor' : 'Guidance Counselor (Designate)'),
               target_position: targetPosition || resData.data.target_position,
               region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
@@ -552,6 +562,7 @@ export default function Login() {
                           onClick={() => {
                             setIncumbentStatus('existing');
                             setTargetPosition('');
+                            setNonPlantillaItemNumber('');
                           }}
                           className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
                             incumbentStatus === 'existing'
@@ -625,6 +636,28 @@ export default function Login() {
                           </div>
                           <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
                             Enter your official full name for reclassification assessment.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
+                            Plantilla Item Number <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Award className="h-5 w-5 text-[#0369a1]" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={nonPlantillaItemNumber}
+                              onChange={e => setNonPlantillaItemNumber(e.target.value.toUpperCase())}
+                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] font-mono uppercase tracking-wider"
+                              placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
+                            />
+                          </div>
+                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
+                            Your Plantilla Item Number will be verified against GMIS records before proceeding.
                           </p>
                         </div>
 

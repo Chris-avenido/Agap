@@ -486,6 +486,27 @@ class ApplicantsServiceClass {
         await this.batchLogDocumentAuditRecords(applyAuditRecords);
       }
 
+      // If applicant was invited for this job cluster, mark is_submitted = true in agap_invited
+      try {
+        const appRes = await pool.query('SELECT email_address, alternate_email FROM applicants WHERE id = $1', [applicantId]);
+        if (appRes.rows.length > 0 && jobClusterId) {
+          const emails = [appRes.rows[0].email_address, appRes.rows[0].alternate_email]
+            .filter(Boolean)
+            .map((e: string) => e.trim().toLowerCase());
+          if (emails.length > 0) {
+            await pool.query(
+              `UPDATE agap_invited 
+               SET is_submitted = true, updated_at = NOW() 
+               WHERE (job_cluster_id = $1 OR job_cluster_id::text = $1::text) 
+                 AND LOWER(TRIM(email)) = ANY($2::text[])`,
+              [jobClusterId, emails],
+            );
+          }
+        }
+      } catch (invErr) {
+        console.warn('Could not update agap_invited is_submitted status:', invErr);
+      }
+
       console.log(
         `[DEBUG] applyJob INSERT successful. Returning row:`,
         result.rows[0],
@@ -1891,18 +1912,130 @@ class ApplicantsServiceClass {
         }
       } else {
         // Non-plantilla / Designate path
+        if (!normalizedPlantilla) {
+          throw new Error('Plantilla Item Number is required for Non-Plantilla / Designate Reclassification.');
+        }
+
+        // Check if plantilla number exists in gmis_gc_items.psi_cd
+        let gmisItem: any = null;
+        try {
+          const gmisRes = await client.query(
+            `SELECT * FROM gmis_gc_items 
+             WHERE UPPER(TRIM(psi_cd)) = UPPER(TRIM($1))
+             LIMIT 1`,
+            [normalizedPlantilla],
+          );
+          if (gmisRes.rows.length === 0) {
+            throw new Error('Plantilla Item Number not found in GMIS records (gmis_gc_items). Please verify your Plantilla Item Number.');
+          }
+          gmisItem = gmisRes.rows[0];
+        } catch (gmisErr: any) {
+          if (gmisErr.message && gmisErr.message.includes('not found in GMIS records')) {
+            throw gmisErr;
+          }
+          console.error('Error checking gmis_gc_items:', gmisErr);
+          throw new Error(gmisErr.message || 'Error validating Plantilla Item Number in GMIS records.');
+        }
+
         const { surname, firstName, middleName } = parseIncumbentName(cleanInputName);
+
+        // Check if existing in reclass_gc by item_no
+        const existingGcRes = await client.query(
+          `SELECT * FROM reclass_gc
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalizedPlantilla],
+        );
+
+        if (existingGcRes.rows.length > 0) {
+          incumbent = existingGcRes.rows[0];
+          // Update details if provided
+          const incUpdates: string[] = [];
+          const incParams: any[] = [];
+          let pIdx = 1;
+
+          if (targetPosition && targetPosition.trim()) {
+            incUpdates.push(`reclass_position = $${pIdx++}`);
+            incParams.push(targetPosition.trim());
+            incumbent.reclass_position = targetPosition.trim();
+          }
+          if (region && region.trim()) {
+            const upperRegion = region.trim().toUpperCase();
+            incUpdates.push(`region = $${pIdx++}`);
+            incParams.push(upperRegion);
+            incumbent.region = upperRegion;
+          }
+          if (division && division.trim()) {
+            const upperDivision = division.trim().toUpperCase();
+            incUpdates.push(`division = $${pIdx++}`);
+            incParams.push(upperDivision);
+            incumbent.division = upperDivision;
+          }
+
+          if (incUpdates.length > 0) {
+            incUpdates.push('updated_at = NOW()');
+            incParams.push(incumbent.id);
+            await client.query(
+              `UPDATE reclass_gc
+               SET ${incUpdates.join(', ')}
+               WHERE id = $${pIdx}`,
+              incParams,
+            );
+          }
+        } else {
+          // Insert new record into reclass_gc
+          const gcRegion = (region ? region.trim().toUpperCase() : null) || (gmisItem?.region ? String(gmisItem.region).trim().toUpperCase() : null);
+          const gcDivision = (division ? division.trim().toUpperCase() : null) || (gmisItem?.division ? String(gmisItem.division).trim().toUpperCase() : null);
+          const gcSchoolId = gmisItem?.school_id || null;
+          const gcSchoolName = gmisItem?.school_name || null;
+          const gcCurrentPos = currentPosition || gmisItem?.current_position || 'Guidance Counselor (Designate)';
+          const gcTargetPos = targetPosition || 'School Counselor Associate I';
+          const gcFirstName = firstName || gmisItem?.first_name || '';
+          const gcLastName = surname || gmisItem?.last_name || '';
+
+          const insertGcRes = await client.query(
+            `INSERT INTO reclass_gc (
+              item_no, first_name, last_name, region, division,
+              school_id, school_name, current_position, reclass_position,
+              stage_of_reclassification, is_test, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'For Review', false, NOW(), NOW())
+            RETURNING *`,
+            [
+              normalizedPlantilla,
+              gcFirstName,
+              gcLastName,
+              gcRegion,
+              gcDivision,
+              gcSchoolId,
+              gcSchoolName,
+              gcCurrentPos,
+              gcTargetPos,
+            ],
+          );
+          incumbent = insertGcRes.rows[0];
+        }
+
+        // Find or create applicant
         const appRes = await client.query(
           `SELECT * FROM applicants 
-           WHERE UPPER(TRIM(COALESCE(surname, ''))) = UPPER(TRIM($1))
-             AND UPPER(TRIM(COALESCE(first_name, ''))) = UPPER(TRIM($2))
-             AND registrant_type = 'reclass'
+           WHERE (
+             (UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)))
+             OR (UPPER(TRIM(COALESCE(surname, ''))) = UPPER(TRIM($2)) AND UPPER(TRIM(COALESCE(first_name, ''))) = UPPER(TRIM($3)))
+           )
+           AND registrant_type = 'reclass'
            LIMIT 1`,
-          [surname, firstName],
+          [normalizedPlantilla, surname, firstName],
         );
 
         if (appRes.rows.length > 0) {
           applicant = appRes.rows[0];
+          if (!applicant.plantilla_item_number && normalizedPlantilla) {
+            await client.query(
+              `UPDATE applicants SET plantilla_item_number = $1, updated_at = NOW() WHERE id = $2`,
+              [normalizedPlantilla, applicant.id],
+            );
+            applicant.plantilla_item_number = normalizedPlantilla;
+          }
         } else {
           await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
           const lastApplicant = await client.query(
@@ -1922,24 +2055,26 @@ class ApplicantsServiceClass {
             `INSERT INTO applicants (
               applicant_number, surname, first_name, middle_name,
               email_address, registrant_type, plantilla_item_number, is_test
-            ) VALUES ($1, $2, $3, $4, $5, 'reclass', NULL, false)
+            ) VALUES ($1, $2, $3, $4, $5, 'reclass', $6, false)
             RETURNING *`,
-            [newApplicantNumber, surname, firstName, middleName, placeholderEmail],
+            [newApplicantNumber, surname, firstName, middleName, placeholderEmail, normalizedPlantilla],
           );
           applicant = insertAppRes.rows[0];
         }
 
-        incumbent = {
-          id: null,
-          first_name: firstName,
-          last_name: surname,
-          current_position: currentPosition || 'Guidance Counselor (Designate)',
-          reclass_position: targetPosition || 'School Counselor Associate I',
-          region: region ? region.trim().toUpperCase() : null,
-          division: division ? division.trim().toUpperCase() : null,
-          item_no: null,
-          is_existing: false,
-        };
+        if (!incumbent) {
+          incumbent = {
+            id: null,
+            first_name: firstName,
+            last_name: surname,
+            current_position: currentPosition || 'Guidance Counselor (Designate)',
+            reclass_position: targetPosition || 'School Counselor Associate I',
+            region: region ? region.trim().toUpperCase() : null,
+            division: division ? division.trim().toUpperCase() : null,
+            item_no: normalizedPlantilla,
+            is_existing: false,
+          };
+        }
       }
 
       // 5. Look up existing reclass_applications record if any (DO NOT INSERT ON LOGIN)

@@ -58,6 +58,39 @@ pool
         CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       `);
 
+      // Ensure gmis_gc_items table exists matching GMIS schema
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS gmis_gc_items (
+          id SERIAL PRIMARY KEY,
+          psi_cd VARCHAR(150) UNIQUE,
+          item_no VARCHAR(150),
+          current_position VARCHAR(255),
+          first_name VARCHAR(150),
+          last_name VARCHAR(150),
+          region VARCHAR(255),
+          division VARCHAR(255),
+          school_id VARCHAR(50),
+          school_name VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_psi_cd ON gmis_gc_items(psi_cd);
+      `);
+
+      // Ensure agap_invited table exists
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS agap_invited (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email TEXT,
+          job_cluster_id UUID,
+          is_submitted BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_agap_invited_email ON agap_invited(email);
+        CREATE INDEX IF NOT EXISTS idx_agap_invited_job_cluster_id ON agap_invited(job_cluster_id);
+      `);
+
       // Ensure reclass_applications table exists matching production columns
       await client.query(`
         CREATE TABLE IF NOT EXISTS reclass_applications (

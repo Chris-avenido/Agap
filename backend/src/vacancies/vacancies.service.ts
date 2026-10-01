@@ -46,7 +46,7 @@ export class VacanciesService {
         EXISTS (
           SELECT 1 FROM applications a 
           WHERE (a.applicant_id = ${appNumIdIndex} OR a.applicant_id::text = ${appNumIdIndex}::text)
-            AND a.job_cluster_id = c.id
+            AND (a.job_cluster_id = c.id OR a.job_cluster_id::text = c.id::text)
         )
       )`;
     }
@@ -54,21 +54,14 @@ export class VacanciesService {
     if (applicantEmails.length > 0) {
       queryParams.push(applicantEmails);
       const emailParamIndex = `$${queryParams.length}`;
-      allowedEmailCondition = `(
-        v.allowed_emails IS NOT NULL 
-        AND jsonb_typeof(v.allowed_emails) = 'array' 
-        AND EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(v.allowed_emails) AS elem 
-          WHERE LOWER(TRIM(elem)) = ANY(${emailParamIndex}::text[])
-        )
-      )`;
       hasAllowedEmailClause = `(
         EXISTS (
-          SELECT 1 FROM vacancies v 
-          WHERE v.job_cluster_id = c.id 
-            AND ${allowedEmailCondition}
+          SELECT 1 FROM agap_invited ai 
+          WHERE (ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
+            AND LOWER(TRIM(ai.email)) = ANY(${emailParamIndex}::text[])
         )
       )`;
+      allowedEmailCondition = hasAllowedEmailClause;
     }
 
     const vacancyCondition = `(
@@ -86,13 +79,13 @@ export class VacanciesService {
         )
       `;
     } else {
-      // Regular applicant / Public: DO NOT display BHROD & SED under CENTRAL OFFICE and DO NOT display test vacancies (unless explicitly permitted via allowed_emails)
+      // Regular applicant / Public: DO NOT display BHROD & SED under CENTRAL OFFICE and DO NOT display test vacancies (unless explicitly permitted via agap_invited)
       filterCondition = `
         AND (
           ${hasAllowedEmailClause}
           OR NOT (
             (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))
-            OR (EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.is_test IS TRUE))
+            OR (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE))
           )
         )
       `;
@@ -106,13 +99,13 @@ export class VacanciesService {
         c.region as "region",
         c.division as "division",
         p.salary_grade as "salaryGrade",
-        (SELECT COUNT(*) FROM vacancies v WHERE v.job_cluster_id = c.id AND ${vacancyCondition})::int as "vacantItemCount",
-        (SELECT MIN(posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id AND ${vacancyCondition}) as "posting_start",
-        (SELECT MAX(posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id AND ${vacancyCondition}) as "posting_end",
+        (SELECT COUNT(*) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition})::int as "vacantItemCount",
+        (SELECT MIN(posting_start) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition}) as "posting_start",
+        (SELECT MAX(posting_end) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition}) as "posting_end",
         ${hasAllowedEmailClause} as "has_allowed_email_access",
         (EXISTS (
           SELECT 1 FROM vacancies v 
-          WHERE v.job_cluster_id = c.id 
+          WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
             AND v.status = 'open' 
             AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
         )) as "has_open_vacancies",
@@ -122,19 +115,19 @@ export class VacanciesService {
         p.years_experience as "min_years_experience",
         p.training_hours as "min_training_hours",
         p.eligibility_required,
-        (EXISTS (SELECT 1 FROM vacancies v WHERE v.job_cluster_id = c.id AND v.is_test IS TRUE)) as "is_test"
+        (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE)) as "is_test"
       FROM job_clusters c
       JOIN positions p ON c.position_id = p.id
       WHERE EXISTS (
         SELECT 1 FROM vacancies v 
-        WHERE v.job_cluster_id = c.id 
+        WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
           AND ${vacancyCondition}
       )
       AND NOT (
         -- If cluster has NO open vacancies (status is closed / expired)
         NOT EXISTS (
           SELECT 1 FROM vacancies v 
-          WHERE v.job_cluster_id = c.id 
+          WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
             AND v.status = 'open' 
             AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
         )
@@ -197,15 +190,31 @@ export class VacanciesService {
 
   static async getAgapLocations(applicantId?: string | number | null) {
     let isTestApplicant = false;
+    const applicantEmails: string[] = [];
+
     if (applicantId) {
       const numId = Number(applicantId);
       if (!isNaN(numId)) {
         const appRes = await pool.query(
-          'SELECT is_test FROM applicants WHERE id = $1',
+          'SELECT is_test, email_address, alternate_email FROM applicants WHERE id = $1',
           [numId],
         );
-        if (appRes.rows.length > 0 && appRes.rows[0].is_test === true) {
-          isTestApplicant = true;
+        if (appRes.rows.length > 0) {
+          if (appRes.rows[0].is_test === true) {
+            isTestApplicant = true;
+          }
+          if (appRes.rows[0].email_address) {
+            const email = String(appRes.rows[0].email_address).trim().toLowerCase();
+            if (email && !applicantEmails.includes(email)) {
+              applicantEmails.push(email);
+            }
+          }
+          if (appRes.rows[0].alternate_email) {
+            const altEmail = String(appRes.rows[0].alternate_email).trim().toLowerCase();
+            if (altEmail && !applicantEmails.includes(altEmail)) {
+              applicantEmails.push(altEmail);
+            }
+          }
         }
       }
     }
@@ -233,6 +242,9 @@ export class VacanciesService {
     ]);
 
     const divisionsByRegion: Record<string, string[]> = {};
+    const regions: string[] = regionsResult.rows.map((r) => r.region);
+    const divisions: string[] = divisionsResult.rows.map((r) => r.division);
+
     regdivResult.rows.forEach((r) => {
       if (!divisionsByRegion[r.region]) divisionsByRegion[r.region] = [];
       if (r.division && !divisionsByRegion[r.region].includes(r.division)) {
@@ -240,9 +252,36 @@ export class VacanciesService {
       }
     });
 
+    // If applicant has invited clusters in agap_invited, also include those regions and divisions in the available locations
+    if (applicantEmails.length > 0) {
+      const invitedLocs = await pool.query(
+        `SELECT DISTINCT c.region, c.division 
+         FROM agap_invited ai
+         JOIN job_clusters c ON (ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
+         WHERE LOWER(TRIM(ai.email)) = ANY($1::text[]) AND c.region IS NOT NULL AND c.division IS NOT NULL`,
+        [applicantEmails],
+      );
+      invitedLocs.rows.forEach((r) => {
+        const reg = String(r.region).trim();
+        const div = String(r.division).trim();
+        if (reg && !regions.includes(reg)) {
+          regions.push(reg);
+        }
+        if (div && !divisions.includes(div)) {
+          divisions.push(div);
+        }
+        if (reg) {
+          if (!divisionsByRegion[reg]) divisionsByRegion[reg] = [];
+          if (div && !divisionsByRegion[reg].includes(div)) {
+            divisionsByRegion[reg].push(div);
+          }
+        }
+      });
+    }
+
     return {
-      regions: regionsResult.rows.map((r) => r.region),
-      divisions: divisionsResult.rows.map((r) => r.division),
+      regions,
+      divisions,
       divisionsByRegion,
     };
   }
