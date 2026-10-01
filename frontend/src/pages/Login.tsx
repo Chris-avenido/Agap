@@ -199,7 +199,25 @@ export default function Login() {
             }
           });
         } else {
-          Swal.fire('Verification Failed', resData.message || (isExisting ? 'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.' : 'Verification failed. Please try again.'), 'error');
+          const errMsg = resData.message || (isExisting ? 'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.' : 'Verification failed. Please try again.');
+          if (errMsg.includes('Plantilla Incumbent')) {
+            Swal.fire({
+              title: 'Already Registered',
+              text: errMsg,
+              icon: 'info',
+              confirmButtonColor: '#0369a1',
+              confirmButtonText: 'Log In as Plantilla Incumbent',
+            }).then((result) => {
+              if (result.isConfirmed) {
+                setIncumbentStatus('existing');
+                setPlantillaNumber(nonPlantillaItemNumber);
+              }
+            });
+          } else if (errMsg.toLowerCase().includes('no records found')) {
+            Swal.fire('No Records Found', errMsg, 'error');
+          } else {
+            Swal.fire('Verification Failed', errMsg, 'error');
+          }
         }
       } catch (err) {
         console.error('Reclass login error:', err);
@@ -395,7 +413,7 @@ export default function Login() {
             {!isRegistering && (
               <>
                 {portalType === 'reclass' ? (
-                  <div className="mb-5 bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                  <div className="mb-5 bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center shadow-sm">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-[#0369a1] text-white flex items-center justify-center shadow-sm">
                         <Award className="w-4 h-4" />
@@ -405,13 +423,6 @@ export default function Login() {
                         <p className="text-[11px] text-gray-500 font-medium">Guidance Counselor Gateway</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/careers')}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
-                    >
-                      Change
-                    </button>
                   </div>
                 ) : (
                   <div className="mb-4 bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center gap-2">
@@ -607,7 +618,7 @@ export default function Login() {
                             value={plantillaNumber}
                             onChange={e => setPlantillaNumber(e.target.value.toUpperCase())}
                             className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
-                            placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
+                            placeholder="XXXX-XXXXX-XXXX-XXXXXX-XXXX"
                           />
                         </div>
                         <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
@@ -631,7 +642,7 @@ export default function Login() {
                               value={reclassFullName}
                               onChange={e => setReclassFullName(e.target.value)}
                               className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
-                              placeholder="e.g. Maria Cecilia Hinayhinay"
+                              placeholder="Lastname, Firstname"
                             />
                           </div>
                           <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
@@ -653,7 +664,7 @@ export default function Login() {
                               value={nonPlantillaItemNumber}
                               onChange={e => setNonPlantillaItemNumber(e.target.value.toUpperCase())}
                               className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] font-mono uppercase tracking-wider"
-                              placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
+                              placeholder="XXXX-XXXXX-XXXX-XXXXXX-XXXX"
                             />
                           </div>
                           <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
@@ -878,17 +889,7 @@ export default function Login() {
                       Register here
                     </button>
                   </div>
-                ) : (
-                  <div className="mt-4 text-center text-xs text-gray-500">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/careers')}
-                      className="font-semibold text-gray-500 hover:text-[#0369a1] transition-colors focus:outline-none"
-                    >
-                      ← Back to Careers Portal
-                    </button>
-                  </div>
-                )}
+                ) : null}
               </form>
             )}
           </div>

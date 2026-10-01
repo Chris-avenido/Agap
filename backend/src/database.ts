@@ -58,23 +58,37 @@ pool
         CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       `);
 
-      // Ensure gmis_gc_items table exists matching GMIS schema
+      // Ensure gmis_gc_items table exists matching GMIS production schema
       await client.query(`
         CREATE TABLE IF NOT EXISTS gmis_gc_items (
           id SERIAL PRIMARY KEY,
-          psi_cd VARCHAR(150) UNIQUE,
+          uacs_fpap_dsc VARCHAR(255),
+          org_cd REAL,
+          org_dsc VARCHAR(255),
+          uacs_oper_dsc VARCHAR(255),
+          division VARCHAR(255),
+          region VARCHAR(255),
+          step_inc INTEGER,
+          pop_dsc VARCHAR(255),
+          pos_dsc VARCHAR(255),
+          sal_grd INTEGER,
+          psi_cd VARCHAR(150),
+          last_name VARCHAR(150),
+          first_name VARCHAR(150),
+          mid_name VARCHAR(150),
+          f_pos VARCHAR(150),
+          pos_cat VARCHAR(150),
+          yr_crtd INTEGER,
           item_no VARCHAR(150),
           current_position VARCHAR(255),
-          first_name VARCHAR(150),
-          last_name VARCHAR(150),
-          region VARCHAR(255),
-          division VARCHAR(255),
           school_id VARCHAR(50),
           school_name VARCHAR(255),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_psi_cd ON gmis_gc_items(psi_cd);
+        CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_region ON gmis_gc_items(region);
+        CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_division ON gmis_gc_items(division);
       `);
 
       // Ensure agap_invited table exists

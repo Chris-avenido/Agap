@@ -1835,7 +1835,7 @@ class ApplicantsServiceClass {
         }
 
         // 2. If Full Name is provided, verify matching against incumbent record
-        if (cleanInputName && !isIncumbentNameMatching(cleanInputName, incumbentFullName)) {
+        if (cleanInputName && !isIncumbentNameMatching(cleanInputName, incumbentFullName, incumbent.first_name, incumbent.last_name)) {
           throw new Error('The Full Name provided does not match our incumbent records for this Plantilla Item Number.');
         }
 
@@ -1916,104 +1916,67 @@ class ApplicantsServiceClass {
           throw new Error('Plantilla Item Number is required for Non-Plantilla / Designate Reclassification.');
         }
 
-        // Check if plantilla number exists in gmis_gc_items.psi_cd
-        let gmisItem: any = null;
-        try {
-          const gmisRes = await client.query(
-            `SELECT * FROM gmis_gc_items 
-             WHERE UPPER(TRIM(psi_cd)) = UPPER(TRIM($1))
-             LIMIT 1`,
-            [normalizedPlantilla],
-          );
-          if (gmisRes.rows.length === 0) {
-            throw new Error('Plantilla Item Number not found in GMIS records (gmis_gc_items). Please verify your Plantilla Item Number.');
-          }
-          gmisItem = gmisRes.rows[0];
-        } catch (gmisErr: any) {
-          if (gmisErr.message && gmisErr.message.includes('not found in GMIS records')) {
-            throw gmisErr;
-          }
-          console.error('Error checking gmis_gc_items:', gmisErr);
-          throw new Error(gmisErr.message || 'Error validating Plantilla Item Number in GMIS records.');
-        }
+        // 1. Check if plantilla number exists in gmis_gc_items.psi_cd
+        const gmisRes = await client.query(
+          `SELECT * FROM gmis_gc_items 
+           WHERE UPPER(TRIM(psi_cd)) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalizedPlantilla],
+        );
+        const gmisExists = gmisRes.rows.length > 0;
+        const gmisItem = gmisExists ? gmisRes.rows[0] : null;
 
-        const { surname, firstName, middleName } = parseIncumbentName(cleanInputName);
-
-        // Check if existing in reclass_gc by item_no
+        // 2. Check if already existing in reclass_gc by item_no
         const existingGcRes = await client.query(
           `SELECT * FROM reclass_gc
            WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
            LIMIT 1`,
           [normalizedPlantilla],
         );
+        const gcExists = existingGcRes.rows.length > 0;
 
-        if (existingGcRes.rows.length > 0) {
-          incumbent = existingGcRes.rows[0];
-          // Update details if provided
-          const incUpdates: string[] = [];
-          const incParams: any[] = [];
-          let pIdx = 1;
-
-          if (targetPosition && targetPosition.trim()) {
-            incUpdates.push(`reclass_position = $${pIdx++}`);
-            incParams.push(targetPosition.trim());
-            incumbent.reclass_position = targetPosition.trim();
-          }
-          if (region && region.trim()) {
-            const upperRegion = region.trim().toUpperCase();
-            incUpdates.push(`region = $${pIdx++}`);
-            incParams.push(upperRegion);
-            incumbent.region = upperRegion;
-          }
-          if (division && division.trim()) {
-            const upperDivision = division.trim().toUpperCase();
-            incUpdates.push(`division = $${pIdx++}`);
-            incParams.push(upperDivision);
-            incumbent.division = upperDivision;
-          }
-
-          if (incUpdates.length > 0) {
-            incUpdates.push('updated_at = NOW()');
-            incParams.push(incumbent.id);
-            await client.query(
-              `UPDATE reclass_gc
-               SET ${incUpdates.join(', ')}
-               WHERE id = $${pIdx}`,
-              incParams,
-            );
-          }
-        } else {
-          // Insert new record into reclass_gc
-          const gcRegion = (region ? region.trim().toUpperCase() : null) || (gmisItem?.region ? String(gmisItem.region).trim().toUpperCase() : null);
-          const gcDivision = (division ? division.trim().toUpperCase() : null) || (gmisItem?.division ? String(gmisItem.division).trim().toUpperCase() : null);
-          const gcSchoolId = gmisItem?.school_id || null;
-          const gcSchoolName = gmisItem?.school_name || null;
-          const gcCurrentPos = currentPosition || gmisItem?.current_position || 'Guidance Counselor (Designate)';
-          const gcTargetPos = targetPosition || 'School Counselor Associate I';
-          const gcFirstName = firstName || gmisItem?.first_name || '';
-          const gcLastName = surname || gmisItem?.last_name || '';
-
-          const insertGcRes = await client.query(
-            `INSERT INTO reclass_gc (
-              item_no, first_name, last_name, region, division,
-              school_id, school_name, current_position, reclass_position,
-              stage_of_reclassification, is_test, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'For Review', false, NOW(), NOW())
-            RETURNING *`,
-            [
-              normalizedPlantilla,
-              gcFirstName,
-              gcLastName,
-              gcRegion,
-              gcDivision,
-              gcSchoolId,
-              gcSchoolName,
-              gcCurrentPos,
-              gcTargetPos,
-            ],
-          );
-          incumbent = insertGcRes.rows[0];
+        // Case A: If already existing in reclass_gc -> Prompt user to log in via Plantilla Incumbent
+        if (gcExists) {
+          throw new Error('This Plantilla Item Number is already registered in incumbent records. Please log in using the "Plantilla Incumbent" option.');
         }
+
+        // Case B: If not existing in both gmis_gc_items and reclass_gc -> No records found
+        if (!gmisExists && !gcExists) {
+          throw new Error('No records found for this Plantilla Item Number in DepEd GMIS records. Please verify your Plantilla Item Number.');
+        }
+
+        // Case C: If existing in gmis_gc_items and NOT in reclass_gc -> Insert new data in reclass_gc
+        const { surname, firstName, middleName } = parseIncumbentName(cleanInputName);
+
+        const gcRegion = (region ? region.trim().toUpperCase() : null) || (gmisItem?.region ? String(gmisItem.region).trim().toUpperCase() : null);
+        const gcDivision = (division ? division.trim().toUpperCase() : null) || (gmisItem?.division ? String(gmisItem.division).trim().toUpperCase() : null);
+        const gcSchoolId = gmisItem?.school_id || null;
+        const gcSchoolName = gmisItem?.school_name || null;
+        const gcCurrentPos = currentPosition || gmisItem?.pos_dsc || gmisItem?.current_position || 'Guidance Counselor (Designate)';
+        const gcTargetPos = targetPosition || 'School Counselor Associate I';
+        const gcFirstName = firstName || gmisItem?.first_name || '';
+        const gcLastName = surname || gmisItem?.last_name || '';
+
+        const insertGcRes = await client.query(
+          `INSERT INTO reclass_gc (
+            item_no, first_name, last_name, region, division,
+            school_id, school_name, current_position, reclass_position,
+            stage_of_reclassification, is_test, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'For Review', false, NOW(), NOW())
+          RETURNING *`,
+          [
+            normalizedPlantilla,
+            gcFirstName,
+            gcLastName,
+            gcRegion,
+            gcDivision,
+            gcSchoolId,
+            gcSchoolName,
+            gcCurrentPos,
+            gcTargetPos,
+          ],
+        );
+        incumbent = insertGcRes.rows[0];
 
         // Find or create applicant
         const appRes = await client.query(
@@ -2421,28 +2384,74 @@ function cleanNameString(str: string): string {
     .trim();
 }
 
-function isIncumbentNameMatching(inputName: string, dbFullName: string): boolean {
-  if (!inputName || !dbFullName) return false;
-  const cleanInput = cleanNameString(inputName);
-  const cleanDb = cleanNameString(dbFullName);
-  if (!cleanInput || !cleanDb) return false;
+function tokenizeName(str: string): string[] {
+  const clean = cleanNameString(str);
+  if (!clean) return [];
+  return clean.split(' ').filter(Boolean);
+}
 
-  // 1. Direct clean match (e.g. "HINAYHINAY, MARIA CECILIA" or "HINAYHINAY MARIA CECILIA")
+function isIncumbentNameMatching(
+  inputName: string,
+  dbFullName: string,
+  dbFirstName?: string,
+  dbLastName?: string,
+): boolean {
+  if (!inputName) return false;
+  const cleanInput = cleanNameString(inputName);
+  if (!cleanInput) return false;
+
+  const dbFirst = cleanNameString(dbFirstName || '');
+  const dbLast = cleanNameString(dbLastName || '');
+  const cleanDb = cleanNameString(dbFullName || `${dbFirst} ${dbLast}`);
+
+  if (!cleanDb && !dbFirst && !dbLast) return false;
+
+  // 1. Direct clean match
   if (cleanInput === cleanDb) return true;
 
-  // 2. If DB has comma: "SURNAME, FIRSTNAME [MIDDLENAME]"
-  if (dbFullName.includes(',')) {
+  // 2. Format variations: First Last, Last First
+  if (dbFirst && dbLast) {
+    const firstLast = cleanNameString(`${dbFirst} ${dbLast}`);
+    const lastFirst = cleanNameString(`${dbLast} ${dbFirst}`);
+    if (cleanInput === firstLast || cleanInput === lastFirst) return true;
+  }
+
+  // 3. If dbFullName has comma
+  if (dbFullName && dbFullName.includes(',')) {
     const [dbSurnameRaw, ...dbRestRaw] = dbFullName.split(',');
     const cleanSurname = cleanNameString(dbSurnameRaw);
     const cleanRest = cleanNameString(dbRestRaw.join(' '));
 
-    // Form: "FIRSTNAME SURNAME"
     const firstThenLast = cleanNameString(`${cleanRest} ${cleanSurname}`);
-    if (cleanInput === firstThenLast) return true;
-
-    // Form: "SURNAME FIRSTNAME" without comma
     const lastThenFirst = cleanNameString(`${cleanSurname} ${cleanRest}`);
-    if (cleanInput === lastThenFirst) return true;
+    if (cleanInput === firstThenLast || cleanInput === lastThenFirst) return true;
+  }
+
+  // 4. Token-based matching
+  const inputTokens = tokenizeName(cleanInput);
+  const firstTokens = dbFirst ? tokenizeName(dbFirst) : (dbFullName ? tokenizeName(dbFullName).slice(0, -1) : []);
+  const lastTokens = dbLast ? tokenizeName(dbLast) : (dbFullName ? [tokenizeName(dbFullName).pop() || ''] : []);
+
+  // Check if all last_name tokens are in input
+  const allLastTokensInInput = lastTokens.length > 0 && lastTokens.every(t => inputTokens.includes(t));
+  // Check if all first_name tokens are in input
+  const allFirstTokensInInput = firstTokens.length > 0 && firstTokens.every(t => inputTokens.includes(t) || inputTokens.some(it => it.startsWith(t)));
+
+  if (allLastTokensInInput && allFirstTokensInInput) return true;
+
+  // Check if at least last_name and primary first name token are in input
+  if (allLastTokensInInput && firstTokens.length > 0) {
+    const primaryFirst = firstTokens[0];
+    if (inputTokens.includes(primaryFirst) || inputTokens.some(it => it.startsWith(primaryFirst))) {
+      return true;
+    }
+  }
+
+  // Check reverse: if all input tokens are part of DB name (ignoring single char middle initial)
+  const nonInitialInputTokens = inputTokens.filter(t => t.length > 1);
+  const dbTokens = tokenizeName(cleanDb);
+  if (nonInitialInputTokens.length >= 2 && nonInitialInputTokens.every(t => dbTokens.includes(t))) {
+    return true;
   }
 
   return false;

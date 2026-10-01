@@ -100,7 +100,7 @@ export default function PlantillaGateModal({ applicantId, onVerified }: Plantill
                   setItemNumber(e.target.value.toUpperCase());
                   setErrorMsg('');
                 }}
-                placeholder="e.g. OSEC-DECSB-GCO1-540001-2015"
+                placeholder="XXXX-XXXXX-XXXX-XXXXXX-XXXX"
                 className="w-full px-4 py-3 text-sm font-mono tracking-wide rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-all placeholder:font-sans placeholder:text-xs text-gray-800 uppercase"
               />
               <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-gray-400">
