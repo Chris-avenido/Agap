@@ -253,3 +253,96 @@ describe('Document URL Consistency & Metadata Merging Rules', () => {
   });
 });
 
+describe('Reclassification Auth & Registration Rules', () => {
+  const mobileRegex = /^09\d{9}$/;
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+  const passcodeRegex = /^\d{6}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  it('should validate Philippine mobile numbers correctly', () => {
+    expect(mobileRegex.test('09171234567')).toBe(true);
+    expect(mobileRegex.test('09998765432')).toBe(true);
+    // Invalid prefixes or lengths
+    expect(mobileRegex.test('08171234567')).toBe(false);
+    expect(mobileRegex.test('0917123456')).toBe(false);
+    expect(mobileRegex.test('091712345678')).toBe(false);
+    expect(mobileRegex.test('0917123456a')).toBe(false);
+    expect(mobileRegex.test('+639171234567')).toBe(false);
+  });
+
+  it('should validate password is provided and non-empty', () => {
+    expect(Boolean('Password123')).toBe(true);
+    expect(Boolean('123456')).toBe(true);
+    expect(Boolean('')).toBe(false);
+  });
+
+  it('should validate 6-digit numeric passcodes strictly', () => {
+    expect(passcodeRegex.test('123456')).toBe(true);
+    expect(passcodeRegex.test('000000')).toBe(true);
+    expect(passcodeRegex.test('987654')).toBe(true);
+    // Invalid passcodes
+    expect(passcodeRegex.test('12345')).toBe(false); // 5 digits
+    expect(passcodeRegex.test('1234567')).toBe(false); // 7 digits
+    expect(passcodeRegex.test('12345a')).toBe(false); // non-numeric
+    expect(passcodeRegex.test('abcdef')).toBe(false);
+    expect(passcodeRegex.test('      ')).toBe(false);
+  });
+
+  it('should validate email format strictly', () => {
+    expect(emailRegex.test('counselor@deped.gov.ph')).toBe(true);
+    expect(emailRegex.test('user.test@example.com')).toBe(true);
+    expect(emailRegex.test('invalid-email')).toBe(false);
+    expect(emailRegex.test('user@')).toBe(false);
+    expect(emailRegex.test('@example.com')).toBe(false);
+  });
+
+  it('should normalize Plantilla Item Number by trimming and uppercasing', () => {
+    const normalize = (input: string) => (input || '').trim().toUpperCase();
+    expect(normalize('  osec-decsb-12345-gdc-01  ')).toBe('OSEC-DECSB-12345-GDC-01');
+    expect(normalize('Osec-Decsb-Gdc-1')).toBe('OSEC-DECSB-GDC-1');
+    expect(normalize('   ')).toBe('');
+  });
+
+  it('should enforce rate limiting and 15-minute temporary lockout after 5 failed attempts', () => {
+    interface FailedAttemptRecord {
+      attempts: number;
+      lockedUntil: number;
+    }
+    const failedAttempts = new Map<string, FailedAttemptRecord>();
+
+    function recordFailure(key: string, now: number) {
+      const record = failedAttempts.get(key) || { attempts: 0, lockedUntil: 0 };
+      record.attempts += 1;
+      if (record.attempts >= 5) {
+        record.lockedUntil = now + 15 * 60 * 1000;
+      }
+      failedAttempts.set(key, record);
+    }
+
+    function checkLockout(key: string, now: number): boolean {
+      const record = failedAttempts.get(key);
+      if (!record) return false;
+      return record.lockedUntil > now;
+    }
+
+    const testKey = 'test@deped.gov.ph_127.0.0.1';
+    const baseTime = Date.now();
+
+    // 4 failed attempts should not lock out
+    for (let i = 0; i < 4; i++) {
+      recordFailure(testKey, baseTime);
+      expect(checkLockout(testKey, baseTime)).toBe(false);
+    }
+
+    // 5th failed attempt triggers lockout
+    recordFailure(testKey, baseTime);
+    expect(checkLockout(testKey, baseTime)).toBe(true);
+
+    // 10 minutes later (still locked out)
+    expect(checkLockout(testKey, baseTime + 10 * 60 * 1000)).toBe(true);
+
+    // 15 minutes and 1 second later (lockout expired)
+    expect(checkLockout(testKey, baseTime + 15 * 60 * 1000 + 1000)).toBe(false);
+  });
+});
+

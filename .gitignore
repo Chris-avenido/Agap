@@ -3,6 +3,10 @@
 .env.prod.tmp
 .env.server
 
-# Database backups (keep dump archives local-only)
+# Database backups (keep heavy dump archives and original db local-only)
 database/backups/
 *.sql.gz
+*.db.orig
+*.orig
+*.db-shm
+*.db-wal

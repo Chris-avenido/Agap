@@ -1,14 +1,11 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import multer from 'multer';
 import { ApplicantsService } from './applicants.service';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 const APPLICANT_SESSION_TTL_MS = 3 * 60 * 60 * 1000;
-import {
-  uploadToAzure,
-  downloadFromAzure,
-} from '../utils/azureStorage';
+import { uploadToAzure, downloadFromAzure } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
 import {
   SsoAuthenticationError,
@@ -41,7 +38,12 @@ router.post('/login', async (req, res) => {
     if (!applicant) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    const fullName = [applicant.first_name, applicant.middle_name, applicant.surname].filter(Boolean).join(' ') || applicant.first_name || 'Applicant';
+    const fullName =
+      [applicant.first_name, applicant.middle_name, applicant.surname]
+        .filter(Boolean)
+        .join(' ') ||
+      applicant.first_name ||
+      'Applicant';
     res.json({
       success: true,
       data: {
@@ -90,84 +92,266 @@ router.get('/incumbent-info', async (req, res) => {
   }
 });
 
-router.post('/reclass-login', async (req, res) => {
-  const { plantilla_item_number, full_name, target_position, region, division, current_position, is_existing } = req.body;
-  const isExistingBool = is_existing !== false && is_existing !== 'false';
+// In-memory rate limiter for failed Reclassification login attempts
+interface FailedAttemptRecord {
+  attempts: number;
+  lockedUntil: number;
+}
+const reclassFailedAttempts = new Map<string, FailedAttemptRecord>();
 
-  if (isExistingBool && (!plantilla_item_number || !plantilla_item_number.trim())) {
-    return res
-      .status(400)
-      .json({ message: 'Plantilla Item Number is required for existing plantilla incumbents' });
+function getAttemptKey(email: string, req: Request): string {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  return `${(email || '').trim().toLowerCase()}_${ip}`;
+}
+
+function checkRateLimit(key: string): { locked: boolean; remainingMinutes?: number } {
+  const record = reclassFailedAttempts.get(key);
+  if (!record) return { locked: false };
+  if (record.lockedUntil > Date.now()) {
+    const remainingMinutes = Math.ceil((record.lockedUntil - Date.now()) / (60 * 1000));
+    return { locked: true, remainingMinutes };
   }
-  if (!isExistingBool && (!plantilla_item_number || !plantilla_item_number.trim())) {
-    return res
-      .status(400)
-      .json({ message: 'Plantilla Item Number is required for Non-Plantilla / Designate Reclassification' });
+  if (record.lockedUntil > 0 && record.lockedUntil <= Date.now()) {
+    reclassFailedAttempts.delete(key);
   }
-  if (!isExistingBool && (!full_name || !full_name.trim())) {
-    return res
-      .status(400)
-      .json({ message: 'Full Name is required for Non-Plantilla Reclassification' });
+  return { locked: false };
+}
+
+function recordFailedAttempt(key: string): void {
+  const record = reclassFailedAttempts.get(key) || { attempts: 0, lockedUntil: 0 };
+  record.attempts += 1;
+  if (record.attempts >= 5) {
+    record.lockedUntil = Date.now() + 15 * 60 * 1000; // 15-minute lockout
   }
+  reclassFailedAttempts.set(key, record);
+}
+
+function clearFailedAttempts(key: string): void {
+  reclassFailedAttempts.delete(key);
+}
+
+router.post('/reclass-verify-item', async (req, res) => {
   try {
-    const result = await ApplicantsService.reclassLogin(
-      plantilla_item_number ? plantilla_item_number.trim() : '',
-      full_name ? full_name.trim() : undefined,
-      target_position ? String(target_position).trim() : undefined,
-      region ? String(region).trim().toUpperCase() : undefined,
-      division ? String(division).trim().toUpperCase() : undefined,
-      current_position ? String(current_position).trim() : undefined,
-      isExistingBool,
-    );
-    const resolvedFullName =
-      result.reclass?.full_name ||
-      [result.session.first_name, result.session.middle_name, result.session.surname].filter(Boolean).join(' ') ||
-      (full_name ? full_name.trim() : '');
+    const { item_number } = req.body;
+    if (!item_number || typeof item_number !== 'string' || !item_number.trim()) {
+      return res.status(400).json({
+        status: 'not_found',
+        message: 'Plantilla Item Number is required.',
+      });
+    }
 
-    res.json({
+    const result = await ApplicantsService.verifyReclassItemNumber(item_number);
+    if (result.status === 'not_found') {
+      return res.status(404).json(result);
+    }
+    if (result.status === 'already_registered') {
+      return res.status(409).json(result);
+    }
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Error verifying plantilla item:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error verifying plantilla item',
+    });
+  }
+});
+
+router.post('/reclass-register', async (req, res) => {
+  try {
+    const {
+      item_number,
+      first_name,
+      middle_name,
+      last_name,
+      mobile_number,
+      email,
+      password,
+      passcode,
+    } = req.body;
+
+    if (
+      !item_number ||
+      !first_name ||
+      !last_name ||
+      !mobile_number ||
+      !email ||
+      !password ||
+      !passcode
+    ) {
+      return res
+        .status(400)
+        .json({ message: 'All required fields must be provided.' });
+    }
+
+    const cleanMobile = String(mobile_number).trim();
+    if (!/^09\d{9}$/.test(cleanMobile)) {
+      return res.status(400).json({
+        message:
+          'Mobile number must be an 11-digit Philippine mobile number starting with 09.',
+      });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid email address format.' });
+    }
+
+    if (!password || !String(password).trim()) {
+      return res.status(400).json({
+        message: 'Password is required.',
+      });
+    }
+
+    const cleanPasscode = String(passcode).trim();
+    if (!/^\d{6}$/.test(cleanPasscode)) {
+      return res
+        .status(400)
+        .json({ message: 'Passcode must be exactly 6 numeric digits.' });
+    }
+
+    const regResult = await ApplicantsService.registerReclassAccount({
+      item_number: String(item_number),
+      first_name: String(first_name),
+      middle_name: middle_name ? String(middle_name) : undefined,
+      last_name: String(last_name),
+      mobile_number: cleanMobile,
+      email: cleanEmail,
+      password: String(password),
+      passcode: cleanPasscode,
+    });
+
+    return res.status(201).json({
       success: true,
-      data: {
-        id: result.session.id,
-        applicant_number: result.session.applicant_number,
-        first_name: result.session.first_name,
-        middle_name: result.session.middle_name,
-        surname: result.session.surname,
-        full_name: resolvedFullName,
-        email: result.session.email_address,
-        registrant_type: result.session.registrant_type || 'reclass',
-        plantilla_item_number:
-          result.session.plantilla_item_number ||
-          result.reclass?.plantilla_item_number ||
-          (plantilla_item_number ? plantilla_item_number.trim().toUpperCase() : null),
-        current_position:
-          result.reclass?.current_position ||
-          (isExistingBool ? 'Guidance Counselor' : 'Guidance Counselor (Designate)'),
-        target_position:
-          result.reclass?.target_position ||
-          target_position ||
-          null,
-        region:
-          result.reclass?.region ||
-          (region ? String(region).trim().toUpperCase() : null),
-        division:
-          result.reclass?.division ||
-          (division ? String(division).trim().toUpperCase() : null),
-        school_name:
-          result.reclass?.school_name ||
-          null,
-        application_number:
-          result.reclass?.school_name ||
-          result.reclass?.application_number ||
-          null,
-        incumbent: result.reclass,
-        reclass_application: result.reclass?.reclass_application || null,
-      },
+      token: regResult.token,
+      user: regResult.user,
+      data: regResult.user,
+    });
+  } catch (error: any) {
+    console.error('Error in reclass-register:', error);
+    const statusCode =
+      error.statusCode || (error.code === '23505' ? 409 : 400);
+    return res.status(statusCode).json({
+      message: error.message || 'Registration failed.',
+    });
+  }
+});
+
+router.post('/reclass-login', async (req, res) => {
+  const { email, loginMethod, password, passcode, plantilla_item_number } =
+    req.body;
+
+  // Legacy fallback if only plantilla_item_number is sent without email
+  if (!email && plantilla_item_number) {
+    try {
+      const result = await ApplicantsService.reclassLogin(
+        plantilla_item_number.trim(),
+        req.body.full_name,
+        req.body.target_position,
+        req.body.region,
+        req.body.division,
+        req.body.current_position,
+        req.body.is_existing !== false && req.body.is_existing !== 'false',
+      );
+      return res.json({
+        success: true,
+        data: {
+          id: result.session.id,
+          applicant_number: result.session.applicant_number,
+          first_name: result.session.first_name,
+          middle_name: result.session.middle_name,
+          surname: result.session.surname,
+          full_name:
+            result.reclass?.full_name ||
+            [
+              result.session.first_name,
+              result.session.middle_name,
+              result.session.surname,
+            ]
+              .filter(Boolean)
+              .join(' ') ||
+            'Applicant',
+          email: result.session.email_address,
+          registrant_type: 'reclass',
+          plantilla_item_number:
+            result.session.plantilla_item_number ||
+            result.reclass?.plantilla_item_number ||
+            plantilla_item_number.trim().toUpperCase(),
+          current_position:
+            result.reclass?.current_position || 'Guidance Counselor',
+          target_position: result.reclass?.target_position || null,
+          region: result.reclass?.region || null,
+          division: result.reclass?.division || null,
+          school_name: result.reclass?.school_name || null,
+          application_number: result.reclass?.school_name || null,
+          incumbent: result.reclass,
+          reclass_application: result.reclass?.reclass_application || null,
+        },
+      });
+    } catch (legacyErr: any) {
+      return res
+        .status(401)
+        .json({ message: legacyErr.message || 'Invalid credentials' });
+    }
+  }
+
+  if (!email || !String(email).trim()) {
+    return res.status(400).json({ message: 'Email address is required.' });
+  }
+
+  const method = loginMethod === 'passcode' ? 'passcode' : 'password';
+  const credential = method === 'passcode' ? passcode : password;
+
+  if (!credential || !String(credential).trim()) {
+    return res.status(400).json({
+      message:
+        method === 'passcode'
+          ? '6-digit passcode is required.'
+          : 'Password is required.',
+    });
+  }
+
+  const attemptKey = getAttemptKey(email, req);
+  const rateLimitStatus = checkRateLimit(attemptKey);
+  if (rateLimitStatus.locked) {
+    return res.status(429).json({
+      message: `Account is temporarily locked due to repeated failed attempts. Please try again in ${rateLimitStatus.remainingMinutes || 15} minutes.`,
+    });
+  }
+
+  try {
+    const authResult = await ApplicantsService.authenticateReclassAccount(
+      String(email).trim(),
+      String(credential).trim(),
+      method,
+    );
+
+    if (!authResult) {
+      recordFailedAttempt(attemptKey);
+      const updatedStatus = checkRateLimit(attemptKey);
+      if (updatedStatus.locked) {
+        return res.status(429).json({
+          message:
+            'Too many failed login attempts. Your account is temporarily locked for 15 minutes.',
+        });
+      }
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    clearFailedAttempts(attemptKey);
+
+    return res.json({
+      success: true,
+      token: authResult.token,
+      user: authResult.user,
+      data: authResult.user,
     });
   } catch (error: any) {
     console.error('Error in reclass-login:', error);
-    res
-      .status(401)
-      .json({ message: error.message || 'Verification failed' });
+    recordFailedAttempt(attemptKey);
+    return res.status(401).json({ message: 'Invalid credentials' });
   }
 });
 
@@ -576,7 +760,7 @@ router.post('/:id/documents', upload.array('files'), async (req, res, next) => {
   try {
     const applicantId = id;
     const files = (req as any).files;
-    let rawDocNames = req.body.documentNames ?? req.body['documentNames[]'];
+    const rawDocNames = req.body.documentNames ?? req.body['documentNames[]'];
     let documentNames: string[] = [];
 
     if (Array.isArray(rawDocNames)) {
@@ -796,9 +980,7 @@ router.post('/:id/photo', upload.single('photo'), async (req, res, next) => {
     }
 
     const oldPhotoUrl =
-      otherInfo.photoUrl ||
-      otherInfo.documents?.profile_photo ||
-      null;
+      otherInfo.photoUrl || otherInfo.documents?.profile_photo || null;
 
     const ext = file.originalname.split('.').pop();
     const applicantNumber = applicant.applicant_number || `ID-${applicantId}`;
@@ -1038,9 +1220,14 @@ router.post('/:id/verify-plantilla', async (req, res, next) => {
     const id = parseInt(req.params.id, 10);
     const { plantilla_item_number } = req.body;
     if (!plantilla_item_number || !String(plantilla_item_number).trim()) {
-      return res.status(400).json({ message: 'Plantilla item number is required.' });
+      return res
+        .status(400)
+        .json({ message: 'Plantilla item number is required.' });
     }
-    const reclassRecord = await ApplicantsService.verifyPlantillaItem(id, plantilla_item_number);
+    const reclassRecord = await ApplicantsService.verifyPlantillaItem(
+      id,
+      plantilla_item_number,
+    );
     res.json({
       success: true,
       message: 'Plantilla item number verified successfully.',
@@ -1048,7 +1235,9 @@ router.post('/:id/verify-plantilla', async (req, res, next) => {
     });
   } catch (error: any) {
     console.error('Error verifying plantilla item number:', error);
-    res.status(404).json({ message: error.message || 'Plantilla item number not found.' });
+    res
+      .status(404)
+      .json({ message: error.message || 'Plantilla item number not found.' });
   }
 });
 
@@ -1063,7 +1252,37 @@ router.get('/:id/reclass-details', async (req, res, next) => {
     });
   } catch (error: any) {
     console.error('Error fetching reclass details:', error);
-    res.status(500).json({ message: error.message || 'Error fetching reclassification details.' });
+    res.status(500).json({
+      message: error.message || 'Error fetching reclassification details.',
+    });
+  }
+});
+
+// PUT /api/applicants/:id/reclass-target-position
+router.put('/:id/reclass-target-position', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const { target_position } = req.body;
+    if (!target_position || !String(target_position).trim()) {
+      return res.status(400).json({ message: 'Target position is required.' });
+    }
+    const updated = await ApplicantsService.updateTargetPosition(
+      id,
+      String(target_position).trim(),
+    );
+    res.json({
+      success: true,
+      message: 'Target reclassification position updated successfully.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error updating target position:', error);
+    res.status(500).json({
+      message: error.message || 'Error updating target reclassification position.',
+    });
   }
 });
 
@@ -1081,49 +1300,64 @@ router.get('/:id/reclass-documents', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching reclass documents:', error);
-    res.status(500).json({ message: error.message || 'Error fetching documents.' });
+    res
+      .status(500)
+      .json({ message: error.message || 'Error fetching documents.' });
   }
 });
 
 // POST /api/applicants/:id/reclass-documents
-router.post('/:id/reclass-documents', upload.single('file'), async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'Invalid applicant ID.' });
-    }
-    const file = (req as any).file;
-    if (!file) {
-      return res.status(400).json({ message: 'No file uploaded.' });
-    }
+router.post(
+  '/:id/reclass-documents',
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid applicant ID.' });
+      }
+      const file = (req as any).file;
+      if (!file) {
+        return res.status(400).json({ message: 'No file uploaded.' });
+      }
 
-    const isPdf = file.mimetype === 'application/pdf' || (file.originalname && file.originalname.toLowerCase().endsWith('.pdf'));
-    if (!isPdf) {
-      return res.status(400).json({ message: 'Only PDF files (.pdf) are allowed for reclassification documents.' });
+      const isPdf =
+        file.mimetype === 'application/pdf' ||
+        (file.originalname && file.originalname.toLowerCase().endsWith('.pdf'));
+      if (!isPdf) {
+        return res.status(400).json({
+          message:
+            'Only PDF files (.pdf) are allowed for reclassification documents.',
+        });
+      }
+
+      const { category_key, category_title, description } = req.body;
+      if (!category_key) {
+        return res
+          .status(400)
+          .json({ message: 'Document category key is required.' });
+      }
+
+      const result = await ApplicantsService.uploadReclassDocument(
+        id,
+        category_key,
+        category_title || category_key,
+        file,
+        description,
+      );
+
+      res.json({
+        success: true,
+        message: `Document for "${category_title || category_key}" uploaded successfully.`,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('Error uploading reclass document:', error);
+      res
+        .status(500)
+        .json({ message: error.message || 'Error uploading document.' });
     }
-
-    const { category_key, category_title, description } = req.body;
-    if (!category_key) {
-      return res.status(400).json({ message: 'Document category key is required.' });
-    }
-
-    const result = await ApplicantsService.uploadReclassDocument(
-      id,
-      category_key,
-      category_title || category_key,
-      file,
-      description,
-    );
-
-    res.json({
-      success: true,
-      message: `Document for "${category_title || category_key}" uploaded successfully.`,
-      data: result,
-    });
-  } catch (error: any) {
-    console.error('Error uploading reclass document:', error);
-    res.status(500).json({ message: error.message || 'Error uploading document.' });
-  }
-});
+  },
+);
 
 export default router;

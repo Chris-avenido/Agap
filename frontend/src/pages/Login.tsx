@@ -1,39 +1,28 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, MapPin } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
-import LoginConfirmationModal, { type LoginConfirmationData } from '../components/LoginConfirmationModal';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type') as 'jobseeker' | 'reclass' | null;
   const [portalType, setPortalType] = useState<'jobseeker' | 'reclass'>(
     typeParam === 'reclass' ? 'reclass' : 'jobseeker'
   );
   const [loading, setLoading] = useState(false);
+
+  // Jobseeker Login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'password' | 'passcode'>('password');
-  const [plantillaNumber, setPlantillaNumber] = useState('');
-  const [reclassFullName, setReclassFullName] = useState('');
-  const [incumbentStatus, setIncumbentStatus] = useState<'existing' | 'non_existing'>('existing');
-  const [currentDesignation, setCurrentDesignation] = useState('Guidance Counselor (Designate)');
-  const [nonPlantillaItemNumber, setNonPlantillaItemNumber] = useState('');
-  const [targetPosition, setTargetPosition] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
-  const [selectedDivision, setSelectedDivision] = useState('');
-  const [regionsList, setRegionsList] = useState<string[]>([]);
-  const [divisionsByRegion, setDivisionsByRegion] = useState<Record<string, string[]>>({});
-  const [pendingConfirmation, setPendingConfirmation] = useState<{
-    sessionItem: any;
-    confirmationData: LoginConfirmationData;
-  } | null>(null);
 
-  // Registration state
+  // Jobseeker Registration state
   const [isRegistering, setIsRegistering] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -41,37 +30,49 @@ export default function Login() {
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/applicants/incumbent-locations`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.data) {
-          setRegionsList(d.data.regions || []);
-          setDivisionsByRegion(d.data.divisionsByRegion || {});
-        }
-      })
-      .catch(err => console.error('Error fetching incumbent locations:', err));
-  }, []);
+  // Reclassification Login state
+  const [reclassView, setReclassView] = useState<'login' | 'register_step_a'>('login');
+  const [reclassEmail, setReclassEmail] = useState('');
+  const [reclassPassword, setReclassPassword] = useState('');
+  const [reclassPasscode, setReclassPasscode] = useState('');
+  const [showReclassPassword, setShowReclassPassword] = useState(false);
+  const [reclassLoginMethod, setReclassLoginMethod] = useState<'password' | 'passcode'>('password');
+  const [reclassLoginError, setReclassLoginError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const cleanPlantilla = plantillaNumber.trim().toUpperCase();
-    if (cleanPlantilla.length >= 8) {
-      const timer = setTimeout(async () => {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/incumbent-info?plantilla=${encodeURIComponent(cleanPlantilla)}`);
-          const json = await res.json();
-          if (json.success && json.data) {
-            if (json.data.region) setSelectedRegion(json.data.region);
-            if (json.data.division) setSelectedDivision(json.data.division);
-            if (json.data.target_position) setTargetPosition(json.data.target_position);
-          }
-        } catch {
-          // ignore
-        }
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-  }, [plantillaNumber]);
+  // Reclassification Registration Step A
+  const [stepAPlantilla, setStepAPlantilla] = useState('');
+  const [stepAError, setStepAError] = useState<string | null>(null);
+  const [stepAIsAlreadyRegistered, setStepAIsAlreadyRegistered] = useState(false);
+  const [stepAVerifying, setStepAVerifying] = useState(false);
+
+  // Reclassification Registration Step B Modal
+  const [isStepBModalOpen, setIsStepBModalOpen] = useState(false);
+  const [gmisDetails, setGmisDetails] = useState<{
+    itemNumber: string;
+    designation: string;
+    region: string;
+    division: string;
+    schoolName: string;
+  }>({
+    itemNumber: '',
+    designation: '',
+    region: '',
+    division: '',
+    schoolName: '',
+  });
+
+  const [stepBFirstName, setStepBFirstName] = useState('');
+  const [stepBMiddleName, setStepBMiddleName] = useState('');
+  const [stepBLastName, setStepBLastName] = useState('');
+  const [stepBMobile, setStepBMobile] = useState('');
+  const [stepBEmail, setStepBEmail] = useState('');
+  const [stepBPassword, setStepBPassword] = useState('');
+  const [stepBConfirmPassword, setStepBConfirmPassword] = useState('');
+  const [stepBPasscode, setStepBPasscode] = useState('');
+  const [showStepBPassword, setShowStepBPassword] = useState(false);
+  const [showStepBConfirmPassword, setShowStepBConfirmPassword] = useState(false);
+  const [stepBError, setStepBError] = useState<string | null>(null);
+  const [stepBRegistering, setStepBRegistering] = useState(false);
 
   useEffect(() => {
     if (typeParam === 'reclass' || typeParam === 'jobseeker') {
@@ -95,139 +96,210 @@ export default function Login() {
     }
   }, [navigate]);
 
-  const handleConfirmLogin = () => {
-    if (pendingConfirmation) {
-      localStorage.setItem('session_data', JSON.stringify(pendingConfirmation.sessionItem));
-      setPendingConfirmation(null);
-      navigate('/applicant-dashboard');
-    }
-  };
-
-  const handleCancelLogin = () => {
-    localStorage.removeItem('session_data');
-    setPendingConfirmation(null);
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  // Handle Reclass Login
+  const handleReclassLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setReclassLoginError(null);
 
-    if (portalType === 'reclass') {
-      const isExisting = incumbentStatus === 'existing';
-      const cleanPlantilla = plantillaNumber.trim().toUpperCase();
-      const cleanFullName = reclassFullName.trim();
-
-      if (isExisting) {
-        if (!cleanPlantilla) {
-          Swal.fire('Required', 'Please enter your Plantilla Item Number for Reclassification.', 'warning');
-          return;
-        }
-      } else {
-        if (!cleanFullName) {
-          Swal.fire('Required', 'Please enter your Full Name for Reclassification.', 'warning');
-          return;
-        }
-        const cleanNonPlantilla = nonPlantillaItemNumber.trim().toUpperCase();
-        if (!cleanNonPlantilla) {
-          Swal.fire('Required', 'Please enter your Plantilla Item Number for verification.', 'warning');
-          return;
-        }
-        if (!selectedRegion) {
-          Swal.fire('Required', 'Please select your Region for Reclassification.', 'warning');
-          return;
-        }
-        if (!selectedDivision) {
-          Swal.fire('Required', 'Please select your Division for Reclassification.', 'warning');
-          return;
-        }
-        if (!targetPosition) {
-          Swal.fire('Required', 'Please select your Target Position for Reclassification.', 'warning');
-          return;
-        }
-      }
-
-      setLoading(true);
-
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/reclass-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            plantilla_item_number: isExisting ? cleanPlantilla : nonPlantillaItemNumber.trim().toUpperCase(),
-            full_name: isExisting ? (cleanFullName || undefined) : cleanFullName,
-            target_position: targetPosition || undefined,
-            region: isExisting ? undefined : selectedRegion.trim().toUpperCase(),
-            division: isExisting ? undefined : selectedDivision.trim().toUpperCase(),
-            current_position: isExisting ? undefined : (currentDesignation || 'Guidance Counselor (Designate)'),
-            is_existing: isExisting,
-          })
-        });
-
-        const resData = await response.json();
-        if (response.ok && resData.success) {
-          const now = new Date();
-          const sessionItem = {
-            id: resData.data.id,
-            applicant_number: resData.data.applicant_number,
-            email: resData.data.email,
-            registrant_type: resData.data.registrant_type || 'reclass',
-            plantilla_item_number: isExisting
-              ? (resData.data.plantilla_item_number || cleanPlantilla)
-              : (resData.data.plantilla_item_number || nonPlantillaItemNumber.trim().toUpperCase() || null),
-            target_position: targetPosition || resData.data.target_position,
-            region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
-            division: resData.data.division || (selectedDivision || '').trim().toUpperCase(),
-            expiry: now.getTime() + 3 * 60 * 60 * 1000,
-          };
-          setPendingConfirmation({
-            sessionItem,
-            confirmationData: {
-              id: resData.data.id,
-              applicant_number: resData.data.applicant_number,
-              full_name: resData.data.full_name || cleanFullName,
-              first_name: resData.data.first_name,
-              middle_name: resData.data.middle_name,
-              surname: resData.data.surname,
-              email: resData.data.email,
-              registrant_type: 'reclass',
-              plantilla_item_number: isExisting
-                ? (resData.data.plantilla_item_number || cleanPlantilla)
-                : (resData.data.plantilla_item_number || nonPlantillaItemNumber.trim().toUpperCase() || null),
-              current_position: resData.data.current_position || (isExisting ? 'Guidance Counselor' : 'Guidance Counselor (Designate)'),
-              target_position: targetPosition || resData.data.target_position,
-              region: resData.data.region || (selectedRegion || '').trim().toUpperCase(),
-              division: resData.data.division || (selectedDivision || '').trim().toUpperCase(),
-            }
-          });
-        } else {
-          const errMsg = resData.message || (isExisting ? 'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.' : 'Verification failed. Please try again.');
-          if (errMsg.includes('Plantilla Incumbent')) {
-            Swal.fire({
-              title: 'Already Registered',
-              text: errMsg,
-              icon: 'info',
-              confirmButtonColor: '#0369a1',
-              confirmButtonText: 'Log In as Plantilla Incumbent',
-            }).then((result) => {
-              if (result.isConfirmed) {
-                setIncumbentStatus('existing');
-                setPlantillaNumber(nonPlantillaItemNumber);
-              }
-            });
-          } else if (errMsg.toLowerCase().includes('no records found')) {
-            Swal.fire('No Records Found', errMsg, 'error');
-          } else {
-            Swal.fire('Verification Failed', errMsg, 'error');
-          }
-        }
-      } catch (err) {
-        console.error('Reclass login error:', err);
-        Swal.fire('Error', 'Unable to connect to the server.', 'error');
-      } finally {
-        setLoading(false);
-      }
+    const cleanEmail = reclassEmail.trim();
+    if (!cleanEmail) {
+      setReclassLoginError('Invalid email or credentials');
       return;
     }
 
+    if (reclassLoginMethod === 'password' && !reclassPassword) {
+      setReclassLoginError('Invalid email or credentials');
+      return;
+    }
+
+    if (reclassLoginMethod === 'passcode' && (!reclassPasscode || !/^\d{6}$/.test(reclassPasscode.trim()))) {
+      setReclassLoginError('Invalid email or credentials');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          loginMethod: reclassLoginMethod,
+          password: reclassLoginMethod === 'password' ? reclassPassword : undefined,
+          passcode: reclassLoginMethod === 'passcode' ? reclassPasscode.trim() : undefined,
+        }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const user = resData.user || resData.data;
+        const now = new Date();
+        const sessionItem = {
+          id: user.id,
+          applicant_number: user.applicant_number,
+          email: user.email,
+          registrant_type: 'reclass',
+          plantilla_item_number: user.plantilla_item_number,
+          current_position: user.current_position,
+          target_position: user.target_position,
+          region: user.region,
+          division: user.division,
+          expiry: now.getTime() + 3 * 60 * 60 * 1000,
+          token: resData.token,
+        };
+        localStorage.setItem('session_data', JSON.stringify(sessionItem));
+        navigate('/applicant-dashboard');
+      } else {
+        if (response.status === 429) {
+          setReclassLoginError(resData.message || 'Account temporarily locked out. Please try again later.');
+        } else {
+          setReclassLoginError('Invalid email or credentials');
+        }
+      }
+    } catch (err) {
+      console.error('Reclass login error:', err);
+      setReclassLoginError('Invalid email or credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Registration Step A: Item Number Check
+  const handleStepAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStepAError(null);
+    setStepAIsAlreadyRegistered(false);
+
+    const cleanPlantilla = stepAPlantilla.trim().toUpperCase();
+    if (!cleanPlantilla) {
+      setStepAError('Please enter your Plantilla Item Number.');
+      return;
+    }
+
+    setStepAVerifying(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-verify-item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_number: cleanPlantilla }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.status === 'valid') {
+        setGmisDetails({
+          itemNumber: resData.data.item_number || cleanPlantilla,
+          designation: resData.data.current_position || 'Guidance Counselor',
+          region: resData.data.region || 'N/A',
+          division: resData.data.division || 'N/A',
+          schoolName: resData.data.school_name || '',
+        });
+        if (reclassEmail && !stepBEmail) {
+          setStepBEmail(reclassEmail);
+        }
+        setStepBError(null);
+        setIsStepBModalOpen(true);
+      } else if (resData.status === 'already_registered' || response.status === 409) {
+        setStepAIsAlreadyRegistered(true);
+        setStepAError('This Plantilla Item Number is already registered. Please sign in.');
+      } else {
+        setStepAError('Plantilla Item Number not found in GMIS records.');
+      }
+    } catch (err) {
+      console.error('Step A verification error:', err);
+      setStepAError('Unable to connect to the server. Please try again.');
+    } finally {
+      setStepAVerifying(false);
+    }
+  };
+
+  // Handle Registration Step B: Modal Submit
+  const handleStepBRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStepBError(null);
+
+    if (!stepBFirstName.trim() || !stepBLastName.trim()) {
+      setStepBError('First Name and Last Name are required.');
+      return;
+    }
+
+    const cleanMobile = stepBMobile.trim();
+    if (!/^09\d{9}$/.test(cleanMobile)) {
+      setStepBError('Mobile number must be an 11-digit Philippine mobile number starting with 09 (e.g. 09XXXXXXXXX).');
+      return;
+    }
+
+    const cleanEmail = stepBEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setStepBError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!stepBPassword || !stepBPassword.trim()) {
+      setStepBError('Password is required.');
+      return;
+    }
+
+    if (stepBPassword !== stepBConfirmPassword) {
+      setStepBError('Passwords do not match.');
+      return;
+    }
+
+    const cleanPasscode = stepBPasscode.trim();
+    if (!/^\d{6}$/.test(cleanPasscode)) {
+      setStepBError('Passcode must be exactly 6 numeric digits.');
+      return;
+    }
+
+    setStepBRegistering(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_number: gmisDetails.itemNumber,
+          first_name: stepBFirstName.trim(),
+          middle_name: stepBMiddleName.trim() || undefined,
+          last_name: stepBLastName.trim(),
+          mobile_number: cleanMobile,
+          email: cleanEmail,
+          password: stepBPassword,
+          passcode: cleanPasscode,
+        }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const user = resData.user || resData.data;
+        const now = new Date();
+        const sessionItem = {
+          id: user.id,
+          applicant_number: user.applicant_number,
+          email: user.email,
+          registrant_type: 'reclass',
+          plantilla_item_number: user.plantilla_item_number || gmisDetails.itemNumber,
+          current_position: user.current_position || gmisDetails.designation,
+          region: user.region || gmisDetails.region,
+          division: user.division || gmisDetails.division,
+          expiry: now.getTime() + 3 * 60 * 60 * 1000,
+          token: resData.token,
+        };
+        localStorage.setItem('session_data', JSON.stringify(sessionItem));
+        setIsStepBModalOpen(false);
+        navigate('/applicant-dashboard');
+      } else {
+        setStepBError(resData.message || 'Registration failed. Please check your information.');
+      }
+    } catch (err) {
+      console.error('Step B registration error:', err);
+      setStepBError('Unable to connect to the server. Please try again.');
+    } finally {
+      setStepBRegistering(false);
+    }
+  };
+
+  // Jobseeker login
+  const handleJobseekerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!email.trim() || !password) {
       Swal.fire('Required', 'Please enter your username/email and password.', 'warning');
       return;
@@ -235,10 +307,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_address: email, password, loginMethod })
+        body: JSON.stringify({ email_address: email, password, loginMethod }),
       });
 
       if (response.ok) {
@@ -280,10 +352,10 @@ export default function Login() {
 
     if (fpEmail) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/forgot-password`, {
+        const response = await fetch(`${API_BASE_URL}/api/applicants/forgot-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: fpEmail })
+          body: JSON.stringify({ email: fpEmail }),
         });
         const data = await response.json();
         if (response.ok) {
@@ -297,9 +369,9 @@ export default function Login() {
     }
   };
 
+  // Jobseeker register
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validate all required fields before submitting
     if (!firstName.trim() || !lastName.trim()) {
       Swal.fire('Error', 'First name and last name are required.', 'error');
       return;
@@ -327,7 +399,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants`, {
+      const response = await fetch(`${API_BASE_URL}/api/applicants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -336,7 +408,7 @@ export default function Login() {
           email_address: regEmail,
           password: regPassword,
           registrant_type: 'jobseeker',
-        })
+        }),
       });
 
       const resData = await response.json();
@@ -356,7 +428,7 @@ export default function Login() {
           title: 'Success',
           text: 'Account created successfully!',
           timer: 1500,
-          showConfirmButton: false
+          showConfirmButton: false,
         }).then(() => {
           navigate('/applicant-dashboard');
         });
@@ -376,7 +448,7 @@ export default function Login() {
       {/* Back Button */}
       <button 
         onClick={() => navigate('/')} 
-        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium cursor-pointer"
       >
         <ArrowLeft className="w-5 h-5" /> Back
       </button>
@@ -395,13 +467,19 @@ export default function Login() {
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-[var(--ink)] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            {isRegistering ? 'Create an Account' : portalType === 'reclass' ? 'Reclassification Login' : 'Welcome back!'}
+            {isRegistering
+              ? 'Create an Account'
+              : portalType === 'reclass'
+              ? (reclassView === 'register_step_a' ? 'Reclassification Registration' : 'Reclassification Login')
+              : 'Welcome back!'}
           </h2>
           <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
             {isRegistering
               ? 'Join AGAP Portal to start your application'
               : portalType === 'reclass'
-              ? 'Sign in using your Plantilla Item Number and credentials'
+              ? (reclassView === 'register_step_a'
+                  ? 'Verify your Plantilla Item Number to begin registration'
+                  : 'Sign in using your email and password or 6-digit passcode')
               : 'Sign in to access your account'}
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]/70">
@@ -409,7 +487,7 @@ export default function Login() {
           </p>
 
           <div className="mt-8">
-            {/* Dedicated Gateway Header / Info — Jobseeker Portal tab is NOT displayed in Reclassification */}
+            {/* Gateway Header Badge */}
             {!isRegistering && (
               <>
                 {portalType === 'reclass' ? (
@@ -433,6 +511,7 @@ export default function Login() {
               </>
             )}
 
+            {/* FORM 1: Jobseeker Registration Form */}
             {isRegistering ? (
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="flex gap-4">
@@ -501,7 +580,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -525,12 +604,11 @@ export default function Login() {
                   </div>
                 </div>
 
-                {/* Submit button: standard registration */}
                 <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors disabled:opacity-60"
+                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors disabled:opacity-60 cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4 shrink-0" />
                     {loading ? 'Creating Account...' : 'Create Account'}
@@ -542,364 +620,352 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => { setIsRegistering(false); setShowPassword(false); }}
-                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
+                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none cursor-pointer"
                   >
                     Sign in here
                   </button>
                 </div>
               </form>
-            ) : (
-              <form onSubmit={handleLogin} className="space-y-6">
-                {portalType === 'reclass' ? (
-                  /* Reclassification: Full Name + Plantilla Item Number / Non-Plantilla */
-                  <div className="bg-[#f0f9ff]/80 border border-[#bae6fd] rounded-xl p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#0369a1] flex items-center gap-1.5">
-                        <Award className="w-4 h-4 text-[#0369a1]" /> Incumbent Credentials
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#0369a1] bg-[#e0f2fe] px-2.5 py-0.5 rounded-full border border-[#bae6fd]">
-                        DepEd Incumbent
-                      </span>
-                    </div>
-
-                    {/* Incumbent Status Tabs: Existing Plantilla Holder vs Non-Plantilla / Designate */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#0369a1] uppercase tracking-wider mb-1.5">
-                        Incumbent Status
-                      </label>
-                      <div className="p-1 bg-[#e0f2fe] rounded-xl flex gap-1 border border-[#bae6fd]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIncumbentStatus('existing');
-                            setTargetPosition('');
-                            setNonPlantillaItemNumber('');
-                          }}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
-                            incumbentStatus === 'existing'
-                              ? 'bg-[#0369a1] text-white shadow-sm'
-                              : 'text-[#0369a1] hover:text-[#02527e] hover:bg-white/60'
-                          }`}
-                        >
-                          <Award className="w-3.5 h-3.5" />
-                          <span>Plantilla Incumbent</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIncumbentStatus('non_existing');
-                            setPlantillaNumber('');
-                          }}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
-                            incumbentStatus === 'non_existing'
-                              ? 'bg-[#0369a1] text-white shadow-sm'
-                              : 'text-[#0369a1] hover:text-[#02527e] hover:bg-white/60'
-                          }`}
-                        >
-                          <User className="w-3.5 h-3.5" />
-                          <span>Non-Plantilla / Designate</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {incumbentStatus === 'existing' ? (
-                      /* Existing Plantilla Incumbent: Login using Plantilla Item Number only */
-                      <div>
-                        <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                          Plantilla Item Number
-                        </label>
-                        <div className="relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Award className="h-5 w-5 text-[#0369a1]" />
-                          </div>
-                          <input
-                            type="text"
-                            required
-                            value={plantillaNumber}
-                            onChange={e => setPlantillaNumber(e.target.value.toUpperCase())}
-                            className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
-                            placeholder="XXXX-XXXXX-XXXX-XXXXXX-XXXX"
-                          />
-                        </div>
-                        <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                          Enter your official DepEd Plantilla Item Number. Your Full Name, Station/Division, and Plantilla records will be automatically loaded from <strong>reclass_gc</strong>.
-                        </p>
-                      </div>
-                    ) : (
-                      /* Non-Plantilla / Designate */
-                      <>
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Full Name
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <User className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <input
-                              type="text"
-                              required
-                              value={reclassFullName}
-                              onChange={e => setReclassFullName(e.target.value)}
-                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
-                              placeholder="Lastname, Firstname"
-                            />
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            Enter your official full name for reclassification assessment.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Plantilla Item Number <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Award className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <input
-                              type="text"
-                              required
-                              value={nonPlantillaItemNumber}
-                              onChange={e => setNonPlantillaItemNumber(e.target.value.toUpperCase())}
-                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] font-mono uppercase tracking-wider"
-                              placeholder="XXXX-XXXXX-XXXX-XXXXXX-XXXX"
-                            />
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            Your Plantilla Item Number will be verified against GMIS records before proceeding.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Current Designation / Position
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Briefcase className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <input
-                              type="text"
-                              value={currentDesignation}
-                              onChange={e => setCurrentDesignation(e.target.value)}
-                              className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)]"
-                              placeholder="e.g. Guidance Counselor (Designate) or Teacher I"
-                            />
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            For teacher-designates, contract of service, or non-plantilla guidance counselors.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Region
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <MapPin className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <select
-                              required
-                              value={selectedRegion}
-                              onChange={e => {
-                                setSelectedRegion(e.target.value);
-                                setSelectedDivision('');
-                              }}
-                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
-                            >
-                              <option value="">Select Region</option>
-                              {regionsList.map(r => (
-                                <option key={r} value={r}>{r}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            Select your DepEd regional office.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Division
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Building2 className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <select
-                              required
-                              value={selectedDivision}
-                              onChange={e => setSelectedDivision(e.target.value)}
-                              disabled={!selectedRegion}
-                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer disabled:opacity-60 disabled:bg-gray-50"
-                            >
-                              <option value="">{selectedRegion ? 'Select Division' : 'Select Region First'}</option>
-                              {(divisionsByRegion[selectedRegion] || []).map(d => (
-                                <option key={d} value={d}>{d}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            Select your DepEd schools division office.
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[#0369a1] mb-1">
-                            Target Position
-                          </label>
-                          <div className="relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Briefcase className="h-5 w-5 text-[#0369a1]" />
-                            </div>
-                            <select
-                              required
-                              value={targetPosition}
-                              onChange={e => setTargetPosition(e.target.value)}
-                              className="block w-full pl-10 pr-8 sm:text-sm border-gray-300 rounded-md border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors bg-white text-[var(--ink)] cursor-pointer"
-                            >
-                              <option value="">Select Target Position</option>
-                              <option value="School Counselor Associate I">School Counselor Associate I</option>
-                              <option value="School Counselor Associate II">School Counselor Associate II</option>
-                              <option value="School Counselor Associate III">School Counselor Associate III</option>
-                              <option value="School Counselor Associate IV">School Counselor Associate IV</option>
-                            </select>
-                          </div>
-                          <p className="text-[11px] text-[#0369a1]/80 mt-1 leading-normal">
-                            Select your target position for reclassification.
-                          </p>
-                        </div>
-                      </>
-                    )}
+            ) : portalType === 'reclass' ? (
+              /* RECLASSIFICATION FLOW */
+              reclassView === 'register_step_a' ? (
+                /* STEP A: PLANTILLA ITEM NUMBER CHECK */
+                <form onSubmit={handleStepAVerify} className="space-y-5">
+                  <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-4 text-xs text-sky-800 leading-relaxed">
+                    <p className="font-semibold mb-1">Step 1 of 2: GMIS Verification</p>
+                    <p>Enter your official DepEd Plantilla Item Number. We will verify your record against the GMIS database before proceeding to account registration.</p>
                   </div>
-                ) : (
-                  /* Jobseeker: Username and Password */
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--ink)]">Username</label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-[var(--muted)]" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={email}
-                          onChange={e => setEmail(e.target.value)}
-                          className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                          placeholder="Enter your username or email"
-                        />
+
+                  {stepAError && (
+                    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                        <span className="font-medium">{stepAError}</span>
                       </div>
+                      {stepAIsAlreadyRegistered && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReclassView('login');
+                            setStepAError(null);
+                            setStepAIsAlreadyRegistered(false);
+                          }}
+                          className="self-start text-xs font-bold text-[#0369a1] hover:underline cursor-pointer ml-6"
+                        >
+                          Proceed to Sign in &rarr;
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-bold text-[#0369a1] mb-1.5">
+                      Plantilla Item Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Award className="h-5 w-5 text-[#0369a1]" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={stepAPlantilla}
+                        onChange={e => {
+                          setStepAPlantilla(e.target.value.toUpperCase());
+                          setStepAError(null);
+                          setStepAIsAlreadyRegistered(false);
+                        }}
+                        className="block w-full pl-10 pr-3 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
+                        placeholder="XXXX-XXXXX-XXXX-XXXXXXX-XXXX"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      Format: Standard 4 to 5 segments separated by hyphens (e.g. OSEC-DECSB-GDC-...).
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={stepAVerifying}
+                      className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      {stepAVerifying ? 'Verifying Item Number...' : 'Verify Item Number'}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReclassView('login');
+                        setStepAError(null);
+                        setStepAIsAlreadyRegistered(false);
+                      }}
+                      className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                    >
+                      Sign in here
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* RECLASSIFICATION DEFAULT: ACCOUNT LOGIN */
+                <form onSubmit={handleReclassLogin} className="space-y-5">
+                  {reclassLoginError && (
+                    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                      <span className="font-medium">{reclassLoginError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--ink)]">Email Address</label>
+                    <div className="mt-1 relative rounded-lg shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-[var(--muted)]" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={reclassEmail}
+                        onChange={e => {
+                          setReclassEmail(e.target.value);
+                          setReclassLoginError(null);
+                        }}
+                        className="block w-full pl-10 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors"
+                        placeholder="name@deped.gov.ph"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Tabs for Password vs 6-Digit Passcode */}
+                    <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReclassLoginMethod('password');
+                          setReclassLoginError(null);
+                        }}
+                        className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${
+                          reclassLoginMethod === 'password'
+                            ? 'bg-white text-[#0369a1] shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReclassLoginMethod('passcode');
+                          setReclassLoginError(null);
+                        }}
+                        className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${
+                          reclassLoginMethod === 'passcode'
+                            ? 'bg-white text-[#0369a1] shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        6-Digit Passcode
+                      </button>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex bg-gray-100 p-1 rounded-lg">
-                        <button
-                          type="button"
-                          onClick={() => { setLoginMethod('password'); setPassword(''); }}
-                          className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors ${loginMethod === 'password' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                          Password
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
-                          className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors ${loginMethod === 'passcode' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                          6-Digit Passcode
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--ink)]">
-                          {loginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Lock className="h-5 w-5 text-[var(--muted)]" />
-                          </div>
-                          <input
-                            type={loginMethod === 'password' ? (showPassword ? 'text' : 'password') : 'text'}
-                            required
-                            maxLength={loginMethod === 'passcode' ? 6 : undefined}
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                            placeholder={loginMethod === 'password' ? '••••••••' : 'Enter 6-digit passcode'}
-                          />
-                          {loginMethod === 'password' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--ink)]">
+                        {reclassLoginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
+                      </label>
+                      <div className="mt-1 relative rounded-lg shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-[var(--muted)]" />
+                        </div>
+                        {reclassLoginMethod === 'password' ? (
+                          <>
+                            <input
+                              type={showReclassPassword ? 'text' : 'password'}
+                              required
+                              value={reclassPassword}
+                              onChange={e => {
+                                setReclassPassword(e.target.value);
+                                setReclassLoginError(null);
+                              }}
+                              className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors"
+                              placeholder="••••••••"
+                            />
                             <button
                               type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors"
+                              onClick={() => setShowReclassPassword(!showReclassPassword)}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
                             >
-                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              {showReclassPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
-                          )}
-                        </div>
+                          </>
+                        ) : (
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={6}
+                            required
+                            value={reclassPasscode}
+                            onChange={e => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              setReclassPasscode(val);
+                              setReclassLoginError(null);
+                            }}
+                            className="block w-full pl-10 pr-4 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors tracking-widest font-mono text-center font-bold"
+                            placeholder="••••••"
+                          />
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <input
-                          id="remember-me"
-                          type="checkbox"
-                          className="h-4 w-4 text-[var(--blue)] focus:ring-[var(--blue)] border-gray-300 rounded cursor-pointer"
-                        />
-                        <label htmlFor="remember-me" className="ml-2 block text-sm text-[var(--ink)] cursor-pointer">
-                          Remember me
-                        </label>
-                      </div>
-                      <div className="text-sm">
-                        <a href="#" onClick={handleForgotPassword} className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors">
-                          Forgot your password?
-                        </a>
-                      </div>
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      {loading ? 'Signing in...' : 'Sign in'}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReclassView('register_step_a');
+                        setStepAPlantilla('');
+                        setStepAError(null);
+                        setStepAIsAlreadyRegistered(false);
+                      }}
+                      className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                    >
+                      Register
+                    </button>
+                  </div>
+                </form>
+              )
+            ) : (
+              /* FORM 3: Jobseeker Login Form */
+              <form onSubmit={handleJobseekerLogin} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--ink)]">Username</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-[var(--muted)]" />
                     </div>
-                  </>
-                )}
+                    <input
+                      type="text"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      placeholder="Enter your username or email"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setLoginMethod('password'); setPassword(''); }}
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors cursor-pointer ${loginMethod === 'password' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      Password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors cursor-pointer ${loginMethod === 'passcode' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      6-Digit Passcode
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--ink)]">
+                      {loginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-[var(--muted)]" />
+                      </div>
+                      <input
+                        type={loginMethod === 'password' ? (showPassword ? 'text' : 'password') : 'text'}
+                        required
+                        maxLength={loginMethod === 'passcode' ? 6 : undefined}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                        placeholder={loginMethod === 'password' ? '••••••••' : 'Enter 6-digit passcode'}
+                      />
+                      {loginMethod === 'password' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="remember-me"
+                      type="checkbox"
+                      className="h-4 w-4 text-[var(--blue)] focus:ring-[var(--blue)] border-gray-300 rounded cursor-pointer"
+                    />
+                    <label htmlFor="remember-me" className="ml-2 block text-sm text-[var(--ink)] cursor-pointer">
+                      Remember me
+                    </label>
+                  </div>
+                  <div className="text-sm">
+                    <a href="#" onClick={handleForgotPassword} className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors">
+                      Forgot your password?
+                    </a>
+                  </div>
+                </div>
 
                 <div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-colors ${
-                      portalType === 'reclass'
-                        ? 'bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1]'
-                        : 'bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851]'
-                    }`}
+                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors disabled:opacity-60 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4" />
-                    {loading ? 'Verifying...' : portalType === 'reclass' ? 'Access Reclassification' : 'Sign in'}
+                    {loading ? 'Verifying...' : 'Sign in'}
                   </button>
                 </div>
 
-                {portalType !== 'reclass' ? (
-                  <div className="mt-4 text-center text-sm text-[var(--muted)]">
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => { setIsRegistering(true); setShowPassword(false); }}
-                      className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none"
-                    >
-                      Register here
-                    </button>
-                  </div>
-                ) : null}
+                <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setIsRegistering(true); setShowPassword(false); }}
+                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none cursor-pointer"
+                  >
+                    Register here
+                  </button>
+                </div>
               </form>
             )}
           </div>
         </div>
       </div>
+
+      {/* Right Column Branding Banner */}
       <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--navy-2)] to-[var(--navy)] opacity-90"></div>
-        {/* Placeholder for building watermark image if available */}
-        <div className="absolute inset-0 bg-[url('/path-to-your-watermark.png')] bg-bottom bg-no-repeat bg-contain opacity-10 mix-blend-overlay"></div>
-        
         <div className="relative z-10 flex flex-col items-center justify-center text-white p-12 text-center max-w-3xl mt-[-80px]">
           <div className="w-24 h-24 bg-[#0a386c] rounded-[24px] flex items-center justify-center mb-10 shadow-[0_10px_40px_rgba(0,0,0,0.2)]">
             <Building2 className="w-12 h-12 text-[#fbbf24]" />
@@ -950,13 +1016,243 @@ export default function Login() {
         </div>
       </div>
 
-      {pendingConfirmation && (
-        <LoginConfirmationModal
-          isOpen={!!pendingConfirmation}
-          data={pendingConfirmation.confirmationData}
-          onConfirm={handleConfirmLogin}
-          onCancel={handleCancelLogin}
-        />
+      {/* REGISTRATION STEP B MODAL (NON-DISMISSIBLE) */}
+      {isStepBModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-gray-100 overflow-hidden my-8">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#0369a1] to-[#0284c7] p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base tracking-tight leading-tight">Reclassification Registration</h3>
+                  <p className="text-xs text-sky-100">Step 2 of 2: Create Account Credentials</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full border border-white/20">
+                GMIS Verified
+              </span>
+            </div>
+
+            <form onSubmit={handleStepBRegister} className="p-6 space-y-5">
+              {/* GMIS Read-Only Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+                  <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>GMIS Plantilla Details (Read-only)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Plantilla Item Number:</span>
+                    <span className="font-mono font-bold text-[#0369a1] break-all">{gmisDetails.itemNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Current Designation:</span>
+                    <span className="font-semibold text-slate-800">{gmisDetails.designation || 'Guidance Counselor'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Region:</span>
+                    <span className="font-semibold text-slate-800">{gmisDetails.region || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[11px]">Division:</span>
+                    <span className="font-semibold text-slate-800">{gmisDetails.division || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {stepBError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span className="font-medium">{stepBError}</span>
+                </div>
+              )}
+
+              {/* Names row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={stepBFirstName}
+                    onChange={e => setStepBFirstName(e.target.value)}
+                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                    placeholder="Juan"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Middle Name <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={stepBMiddleName}
+                    onChange={e => setStepBMiddleName(e.target.value)}
+                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                    placeholder="Protacio"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={stepBLastName}
+                    onChange={e => setStepBLastName(e.target.value)}
+                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                    placeholder="Dela Cruz"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Number & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-3.5 w-3.5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={11}
+                      value={stepBMobile}
+                      onChange={e => setStepBMobile(e.target.value.replace(/\D/g, ''))}
+                      className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                      placeholder="09XXXXXXXXX"
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-400 mt-0.5 block">11-digit PH mobile</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-3.5 w-3.5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      value={stepBEmail}
+                      onChange={e => setStepBEmail(e.target.value)}
+                      className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                      placeholder="name@deped.gov.ph"
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-400 mt-0.5 block">Unique login email</span>
+                </div>
+              </div>
+
+              {/* Password & Confirm Password */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <input
+                      type={showStepBPassword ? 'text' : 'password'}
+                      required
+                      value={stepBPassword}
+                      onChange={e => setStepBPassword(e.target.value)}
+                      className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStepBPassword(!showStepBPassword)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      {showStepBPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative rounded-lg shadow-sm">
+                    <input
+                      type={showStepBConfirmPassword ? 'text' : 'password'}
+                      required
+                      value={stepBConfirmPassword}
+                      onChange={e => setStepBConfirmPassword(e.target.value)}
+                      className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStepBConfirmPassword(!showStepBConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      {showStepBConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 6-Digit Passcode */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  6-Digit Passcode <span className="text-red-500">*</span>
+                </label>
+                <div className="relative rounded-lg shadow-sm max-w-xs">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    required
+                    value={stepBPasscode}
+                    onChange={e => setStepBPasscode(e.target.value.replace(/\D/g, ''))}
+                    className="block w-full text-sm border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none tracking-widest font-mono text-center font-bold"
+                    placeholder="••••••"
+                  />
+                </div>
+                <span className="text-[10px] text-gray-400 mt-0.5 block">Used for quick 6-digit passcode login</span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStepBModalOpen(false);
+                    setReclassView('login');
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  Back to login
+                </button>
+                <button
+                  type="submit"
+                  disabled={stepBRegistering}
+                  className="px-6 py-2.5 text-xs font-bold text-white bg-[#0369a1] hover:bg-[#02527e] rounded-lg shadow-sm transition-colors disabled:opacity-60 cursor-pointer flex items-center gap-1.5"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  {stepBRegistering ? 'Registering Account...' : 'Register'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

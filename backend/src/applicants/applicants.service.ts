@@ -7,11 +7,23 @@ import { sendPasswordResetEmail } from '../utils/mailer';
 import { uploadToAzure, uploadToReclassAzure } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
 
+export interface ReclassRegisterDto {
+  item_number: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  mobile_number: string;
+  email: string;
+  password: string;
+  passcode: string;
+}
+
 function parseAndSanitizeDate(dateInput: any): Date | null {
   if (!dateInput) return null;
-  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) return dateInput;
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime()))
+    return dateInput;
   if (typeof dateInput !== 'string') return null;
-  
+
   let str = dateInput.trim();
   if (!str || str.toLowerCase() === 'n/a') return null;
 
@@ -30,7 +42,8 @@ function parseAndSanitizeDate(dateInput: any): Date | null {
 
   const d = new Date(str);
   if (isNaN(d.getTime())) return null;
-  if (d.getFullYear() < 1900 || d.getFullYear() > new Date().getFullYear() + 1) return null;
+  if (d.getFullYear() < 1900 || d.getFullYear() > new Date().getFullYear() + 1)
+    return null;
   return d;
 }
 
@@ -43,7 +56,10 @@ function calculateExperience(workExpList: any[]): number {
     if (fromRaw && toRaw) {
       let from = parseAndSanitizeDate(fromRaw);
       let to: Date | null = null;
-      if (typeof toRaw === 'string' && toRaw.trim().toLowerCase() === 'present') {
+      if (
+        typeof toRaw === 'string' &&
+        toRaw.trim().toLowerCase() === 'present'
+      ) {
         to = new Date();
       } else {
         to = parseAndSanitizeDate(toRaw);
@@ -325,7 +341,9 @@ class ApplicantsServiceClass {
 
     let isMatch = false;
     if (loginMethod === 'passcode') {
-      isMatch = Boolean(applicant.passcode && applicant.passcode === password_raw);
+      isMatch = Boolean(
+        applicant.passcode && applicant.passcode === password_raw,
+      );
     } else if (loginMethod === 'password') {
       if (applicant.password_hash) {
         isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
@@ -455,7 +473,10 @@ class ApplicantsServiceClass {
       const allDocs: Record<string, string> = {};
       if (otherInfo.documents && typeof otherInfo.documents === 'object') {
         for (const [key, val] of Object.entries(otherInfo.documents)) {
-          const normKey = key === 'Personal Data Sheet' ? 'Notarized Personal Data Sheet' : key;
+          const normKey =
+            key === 'Personal Data Sheet'
+              ? 'Notarized Personal Data Sheet'
+              : key;
           allDocs[normKey] = val as string;
         }
       }
@@ -465,17 +486,24 @@ class ApplicantsServiceClass {
       if (swornDocument) {
         allDocs['Sworn Declaration'] = swornDocument;
       }
-      if (otherInfo.photoUrl && !allDocs['Profile Photo'] && !allDocs['profile_photo']) {
+      if (
+        otherInfo.photoUrl &&
+        !allDocs['Profile Photo'] &&
+        !allDocs['profile_photo']
+      ) {
         allDocs['Profile Photo'] = otherInfo.photoUrl;
       }
 
       const batchNumber = await this.getNextBatchNumber(applicantId);
       const applyAuditRecords = Object.entries(allDocs)
-        .filter(([_, docUrl]) => typeof docUrl === 'string' && docUrl.trim().length > 0)
+        .filter(
+          ([_, docUrl]) =>
+            typeof docUrl === 'string' && docUrl.trim().length > 0,
+        )
         .map(([docName, docUrl]) => ({
           applicantId,
           docType: docName,
-          newBlobUrl: docUrl as string,
+          newBlobUrl: docUrl,
           affectedCount: 1,
           applicationId: appId,
           isOpen: true,
@@ -488,9 +516,15 @@ class ApplicantsServiceClass {
 
       // If applicant was invited for this job cluster, mark is_submitted = true in agap_invited
       try {
-        const appRes = await pool.query('SELECT email_address, alternate_email FROM applicants WHERE id = $1', [applicantId]);
+        const appRes = await pool.query(
+          'SELECT email_address, alternate_email FROM applicants WHERE id = $1',
+          [applicantId],
+        );
         if (appRes.rows.length > 0 && jobClusterId) {
-          const emails = [appRes.rows[0].email_address, appRes.rows[0].alternate_email]
+          const emails = [
+            appRes.rows[0].email_address,
+            appRes.rows[0].alternate_email,
+          ]
             .filter(Boolean)
             .map((e: string) => e.trim().toLowerCase());
           if (emails.length > 0) {
@@ -504,7 +538,10 @@ class ApplicantsServiceClass {
           }
         }
       } catch (invErr) {
-        console.warn('Could not update agap_invited is_submitted status:', invErr);
+        console.warn(
+          'Could not update agap_invited is_submitted status:',
+          invErr,
+        );
       }
 
       console.log(
@@ -621,7 +658,8 @@ class ApplicantsServiceClass {
         lastApplicant.rows.length > 0 &&
         lastApplicant.rows[0].applicant_number
       ) {
-        const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+        const match =
+          lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
         if (match) {
           nextApplicantNum = parseInt(match[1], 10) + 1;
         }
@@ -669,7 +707,9 @@ class ApplicantsServiceClass {
           data.residential_address
             ? JSON.stringify(data.residential_address)
             : null,
-          data.permanent_address ? JSON.stringify(data.permanent_address) : null,
+          data.permanent_address
+            ? JSON.stringify(data.permanent_address)
+            : null,
           data.telephone_no || null,
           data.mobile_no || null,
           email,
@@ -680,7 +720,9 @@ class ApplicantsServiceClass {
           JSON.stringify(data.learning_and_development || []),
           JSON.stringify(data.other_information || {}),
           questionnaire_responses,
-          data.family_background ? JSON.stringify(data.family_background) : null,
+          data.family_background
+            ? JSON.stringify(data.family_background)
+            : null,
           data.family_background?.spouse?.surname || null,
           data.family_background?.spouse?.first_name || null,
           data.family_background?.spouse?.middle_name || null,
@@ -1184,7 +1226,9 @@ class ApplicantsServiceClass {
     const db = client || pool;
     if (client) {
       // Transaction-level advisory lock on applicant ID
-      await client.query('SELECT pg_advisory_xact_lock($1)', [Number(applicantId)]);
+      await client.query('SELECT pg_advisory_xact_lock($1)', [
+        Number(applicantId),
+      ]);
     }
 
     const res = await db.query(
@@ -1312,7 +1356,12 @@ class ApplicantsServiceClass {
     uploadedDocs: Array<{ docName: string; url: string }>,
   ) {
     if (uploadedDocs.length === 0) {
-      return { success: true, affectedApplications: 0, batchNumber: 0, documents: {} };
+      return {
+        success: true,
+        affectedApplications: 0,
+        batchNumber: 0,
+        documents: {},
+      };
     }
 
     const client = await pool.connect();
@@ -1524,10 +1573,7 @@ class ApplicantsServiceClass {
     return result.rows[0] || null;
   }
 
-  async getLatestDocumentAudits(
-    applicantId: string | number,
-    client?: any,
-  ) {
+  async getLatestDocumentAudits(applicantId: string | number, client?: any) {
     const db = client || pool;
     const result = await db.query(
       `SELECT DISTINCT ON (document_type)
@@ -1609,7 +1655,10 @@ class ApplicantsServiceClass {
     }
 
     const gcId = incumbent?.id || null;
-    const itemNo = normalizedPlantilla || incumbent?.item_no || (applicantId ? `APP-${applicantId}` : '');
+    const itemNo =
+      normalizedPlantilla ||
+      incumbent?.item_no ||
+      (applicantId ? `APP-${applicantId}` : '');
 
     // 2. Check if reclass_applications record exists by reclass_gc_id or item_no
     let existingAppRes: any = null;
@@ -1642,7 +1691,9 @@ class ApplicantsServiceClass {
         params.push(targetPosition);
         reclassApp.reclass_position = targetPosition;
       }
-      const upperDivision = division ? division.trim().toUpperCase() : undefined;
+      const upperDivision = division
+        ? division.trim().toUpperCase()
+        : undefined;
       if (upperDivision && reclassApp.division !== upperDivision) {
         updates.push(`division = $${paramIdx++}`);
         params.push(upperDivision);
@@ -1664,7 +1715,8 @@ class ApplicantsServiceClass {
     // 3. Insert new record matching production columns
     const curPos = incumbent?.current_position || 'Guidance Counselor';
     const reg = (incumbent?.region || '').trim().toUpperCase() || null;
-    const div = (division || incumbent?.division || '').trim().toUpperCase() || null;
+    const div =
+      (division || incumbent?.division || '').trim().toUpperCase() || null;
     const schId = incumbent?.school_id || null;
     const schName = incumbent?.school_name || null;
     const recPos = targetPosition || incumbent?.reclass_position || null;
@@ -1684,7 +1736,9 @@ class ApplicantsServiceClass {
   }
 
   async verifyPlantillaItem(applicantId: number, plantillaItemNumber: string) {
-    const normalized = String(plantillaItemNumber || '').trim().toUpperCase();
+    const normalized = String(plantillaItemNumber || '')
+      .trim()
+      .toUpperCase();
     if (!normalized) {
       throw new Error('Plantilla item number is required.');
     }
@@ -1704,7 +1758,9 @@ class ApplicantsServiceClass {
         [normalized],
       );
       if (reclassRes.rows.length === 0) {
-        throw new Error('Plantilla item number not found. Please verify and try again.');
+        throw new Error(
+          'Plantilla item number not found. Please verify and try again.',
+        );
       }
     }
 
@@ -1773,18 +1829,528 @@ class ApplicantsServiceClass {
 
     if (!incumbent && !reclassApp) return null;
 
-    const fullName = incumbent ? `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim() : null;
+    const fullName = incumbent
+      ? `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim()
+      : null;
+
+    const currentPosition =
+      reclassApp?.current_position ||
+      incumbent?.current_position ||
+      'Guidance Counselor';
+    const targetPosition =
+      reclassApp?.reclass_position || incumbent?.reclass_position || null;
+    const indicativePosition =
+      incumbent?.indicative_position ||
+      reclassApp?.indicative_position ||
+      targetPosition ||
+      'School Counselor II';
+
+    const getSalaryGradeForPosition = (posName?: string | null): string | null => {
+      if (!posName) return null;
+      const upper = posName.toUpperCase().trim();
+
+      // School Counselor Associate track
+      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE V')) return '15';
+      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE IV')) return '14';
+      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE III')) return '13';
+      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE II')) return '12';
+      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE I')) return '11';
+
+      // School Counselor track
+      if (upper.includes('SCHOOL COUNSELOR IV')) return '19';
+      if (upper.includes('SCHOOL COUNSELOR III')) return '16';
+      if (upper.includes('SCHOOL COUNSELOR II')) return '13';
+      if (upper.includes('SCHOOL COUNSELOR I')) return '11';
+
+      // Incumbent Guidance track
+      if (upper.includes('GUIDANCE SERVICES SPECIALIST II')) return '18';
+      if (upper.includes('GUIDANCE SERVICES SPECIALIST I')) return '16';
+      if (upper.includes('GUIDANCE COORDINATOR III')) return '16';
+      if (upper.includes('GUIDANCE COORDINATOR II')) return '15';
+      if (upper.includes('GUIDANCE COORDINATOR I')) return '14';
+      if (upper.includes('GUIDANCE COUNSELOR III')) return '13';
+      if (upper.includes('GUIDANCE COUNSELOR II')) return '12';
+      if (upper.includes('GUIDANCE COUNSELOR I') || upper === 'GUIDANCE COUNSELOR') return '11';
+      return null;
+    };
+
+    const initialPosition =
+      incumbent?.reclass_position ||
+      'School Counselor II';
+
+    // Count uploaded reclass documents
+    const plantilla = incumbent?.item_no || plantillaItemNumber;
+    const reclassAppId = reclassApp?.id;
+    let docCount = 0;
+    if (reclassAppId && plantilla) {
+      const cRes = await pool.query(
+        `SELECT COUNT(DISTINCT document_title) as cnt FROM reclass_documents 
+         WHERE reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2))`,
+        [reclassAppId, plantilla],
+      );
+      docCount = parseInt(cRes.rows[0]?.cnt || '0', 10);
+    } else if (plantilla) {
+      const cRes = await pool.query(
+        `SELECT COUNT(DISTINCT document_title) as cnt FROM reclass_documents 
+         WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))`,
+        [plantilla],
+      );
+      docCount = parseInt(cRes.rows[0]?.cnt || '0', 10);
+    }
+
+    let stageOfReclass = incumbent?.stage_of_reclassification || 'UPDATING OF DOCUMENTS';
+    const isEndorsed =
+      stageOfReclass.toUpperCase().includes('RO') ||
+      stageOfReclass.toUpperCase().includes('DBM');
+    if (!isEndorsed) {
+      if (docCount >= 8) {
+        stageOfReclass = 'FOR REVIEW';
+      } else {
+        stageOfReclass = 'UPDATING OF DOCUMENTS';
+      }
+    }
 
     return {
       ...(incumbent || {}),
       full_name: fullName,
       plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
-      target_position: reclassApp?.reclass_position || incumbent?.reclass_position || null,
-      current_position: reclassApp?.current_position || incumbent?.current_position || 'Guidance Counselor',
-      application_number: reclassApp?.school_name || incumbent?.school_name || null,
+      target_position: targetPosition,
+      current_position: currentPosition,
+      salary_grade:
+        incumbent?.salary_grade ||
+        reclassApp?.salary_grade ||
+        getSalaryGradeForPosition(currentPosition) ||
+        null,
+      application_number:
+        reclassApp?.school_name || incumbent?.school_name || null,
       school_name: reclassApp?.school_name || incumbent?.school_name || null,
-      evaluation_status: incumbent?.qs_status || incumbent?.stage_of_reclassification || 'For Review',
+      evaluation_status:
+        incumbent?.qs_status ||
+        stageOfReclass,
+      stage_of_reclassification: stageOfReclass,
+      initial_assessment_position: initialPosition,
+      initial_assessment_salary_grade:
+        getSalaryGradeForPosition(initialPosition) || '13',
+      documents_count: docCount,
+      required_documents_count: 8,
+      submission_deadline: 'October 31, 2026',
+      indicative_position: indicativePosition,
+      indicative_salary_grade:
+        incumbent?.indicative_salary_grade ||
+        reclassApp?.indicative_salary_grade ||
+        getSalaryGradeForPosition(indicativePosition) ||
+        null,
       reclass_application: reclassApp || null,
+    };
+  }
+
+  async updateTargetPosition(applicantId: number, targetPosition: string) {
+    const cleanPosition = (targetPosition || '').trim();
+    if (!cleanPosition) {
+      throw new Error('Target reclassification position is required.');
+    }
+
+    const appRes = await pool.query(
+      `SELECT plantilla_item_number FROM applicants WHERE id = $1`,
+      [applicantId],
+    );
+    const plantilla = appRes.rows[0]?.plantilla_item_number;
+
+    if (plantilla) {
+      await pool.query(
+        `UPDATE reclass_gc SET reclass_position = $1, updated_at = NOW() WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($2))`,
+        [cleanPosition, plantilla],
+      );
+
+      await pool.query(
+        `UPDATE reclass_applications SET reclass_position = $1, updated_at = NOW() WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($2))`,
+        [cleanPosition, plantilla],
+      );
+    }
+
+    return this.getReclassDetails(applicantId);
+  }
+
+  async verifyReclassItemNumber(itemNumber: string) {
+    const normalized = (itemNumber || '').trim().toUpperCase();
+    if (!normalized) {
+      return {
+        status: 'not_found',
+        message: 'Plantilla Item Number is required.',
+      };
+    }
+
+    // 1. Verify existence in GMIS reclass_gc records
+    const incRes = await pool.query(
+      `SELECT * FROM reclass_gc 
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
+       LIMIT 1`,
+      [normalized],
+    );
+
+    if (incRes.rows.length === 0) {
+      return {
+        status: 'not_found',
+        message: 'Plantilla Item Number not found in GMIS records.',
+      };
+    }
+
+    // 2. Check if already registered in applicants table
+    const appRes = await pool.query(
+      `SELECT id FROM applicants 
+       WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+       LIMIT 1`,
+      [normalized],
+    );
+
+    if (appRes.rows.length > 0) {
+      return {
+        status: 'already_registered',
+        message: 'This Plantilla Item Number is already registered.',
+      };
+    }
+
+    const inc = incRes.rows[0];
+    return {
+      status: 'valid',
+      data: {
+        item_number: inc.item_no || normalized,
+        current_position: inc.current_position || 'Guidance Counselor',
+        region: inc.region || '',
+        division: inc.division || '',
+        school_name: inc.school_name || '',
+      },
+    };
+  }
+
+  async registerReclassAccount(data: ReclassRegisterDto) {
+    const normalizedItemNo = (data.item_number || '').trim().toUpperCase();
+    const cleanFirstName = (data.first_name || '').trim();
+    const cleanMiddleName = (data.middle_name || '').trim() || null;
+    const cleanLastName = (data.last_name || '').trim();
+    const cleanMobile = (data.mobile_number || '').trim();
+    const cleanEmail = (data.email || '').trim().toLowerCase();
+    const password = data.password;
+    const passcode = (data.passcode || '').trim();
+
+    if (!normalizedItemNo) {
+      throw new Error('Plantilla Item Number is required.');
+    }
+    if (!cleanFirstName || !cleanLastName) {
+      throw new Error('First name and last name are required.');
+    }
+    if (!cleanMobile || !/^09\d{9}$/.test(cleanMobile)) {
+      throw new Error(
+        'Mobile number must be an 11-digit Philippine mobile number (09XXXXXXXXX).',
+      );
+    }
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new Error('Invalid email address format.');
+    }
+    if (!password || !String(password).trim()) {
+      throw new Error('Password is required.');
+    }
+    if (!passcode || !/^\d{6}$/.test(passcode)) {
+      throw new Error('Passcode must be exactly 6 numeric digits.');
+    }
+
+    // 1. Verify against GMIS records in reclass_gc
+    const incRes = await pool.query(
+      `SELECT * FROM reclass_gc 
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
+       LIMIT 1`,
+      [normalizedItemNo],
+    );
+    if (incRes.rows.length === 0) {
+      throw new Error('Plantilla Item Number not found in GMIS records.');
+    }
+    const inc = incRes.rows[0];
+
+    // 2. Check uniqueness in applicants
+    const existingItem = await pool.query(
+      `SELECT id FROM applicants 
+       WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+       LIMIT 1`,
+      [normalizedItemNo],
+    );
+    if (existingItem.rows.length > 0) {
+      const err: any = new Error(
+        'This Plantilla Item Number is already registered.',
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const existingEmail = await pool.query(
+      `SELECT id FROM applicants 
+       WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+          OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+       LIMIT 1`,
+      [cleanEmail],
+    );
+    if (existingEmail.rows.length > 0) {
+      const err: any = new Error(
+        'This email address is already registered.',
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // 3. Hash password and passcode via bcryptjs
+    const password_hash = await bcrypt.hash(password, 10);
+    const passcode_hash = await bcrypt.hash(passcode, 10);
+
+    // 4. Insert into database inside transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
+
+      const lastApplicant = await client.query(
+        `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+      );
+      let nextApplicantNum = 1;
+      if (
+        lastApplicant.rows.length > 0 &&
+        lastApplicant.rows[0].applicant_number
+      ) {
+        const match =
+          lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+        if (match) {
+          nextApplicantNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+
+      const designation = inc.current_position || 'Guidance Counselor';
+      const region = inc.region || null;
+      const division = inc.division || null;
+
+      const insertRes = await client.query(
+        `INSERT INTO applicants (
+          applicant_number, surname, first_name, middle_name,
+          email_address, email, password_hash, passcode_hash, passcode,
+          mobile_no, mobile_number, registrant_type, plantilla_item_number,
+          current_designation, region, division, is_test, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4,
+          $5, $5, $6, $7, $8,
+          $9, $9, 'reclass', $10,
+          $11, $12, $13, false, NOW(), NOW()
+        ) RETURNING *`,
+        [
+          newApplicantNumber,
+          cleanLastName,
+          cleanFirstName,
+          cleanMiddleName,
+          cleanEmail,
+          password_hash,
+          passcode_hash,
+          passcode,
+          cleanMobile,
+          normalizedItemNo,
+          designation,
+          region,
+          division,
+        ],
+      );
+      const applicant = insertRes.rows[0];
+
+      if (!inc.email) {
+        await client.query(
+          `UPDATE reclass_gc SET email = $1, updated_at = NOW() WHERE id = $2`,
+          [cleanEmail, inc.id],
+        );
+      }
+
+      await client.query('COMMIT');
+
+      const secret = process.env.JWT_SECRET || 'fallback_secret';
+      const token = jwt.sign(
+        {
+          id: applicant.id,
+          uid: applicant.id,
+          applicant_number: applicant.applicant_number,
+          email: applicant.email_address,
+          role: 'reclass',
+          registrant_type: 'reclass',
+        },
+        secret,
+        { expiresIn: '8h' },
+      );
+
+      const resolvedFullName = [
+        applicant.first_name,
+        applicant.middle_name,
+        applicant.surname,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return {
+        token,
+        user: {
+          id: applicant.id,
+          applicant_number: applicant.applicant_number,
+          first_name: applicant.first_name,
+          middle_name: applicant.middle_name,
+          surname: applicant.surname,
+          full_name: resolvedFullName,
+          email: applicant.email_address,
+          registrant_type: 'reclass',
+          plantilla_item_number: applicant.plantilla_item_number,
+          current_position: designation,
+          region,
+          division,
+        },
+      };
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      if (err.code === '23505') {
+        const dupErr: any = new Error(
+          'Plantilla Item Number or Email is already registered.',
+        );
+        dupErr.statusCode = 409;
+        throw dupErr;
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async authenticateReclassAccount(
+    email: string,
+    credential: string,
+    method: 'password' | 'passcode',
+  ) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail || !credential) {
+      return null;
+    }
+
+    const appRes = await pool.query(
+      `SELECT * FROM applicants 
+       WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+          OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+       LIMIT 1`,
+      [cleanEmail],
+    );
+
+    if (appRes.rows.length === 0) {
+      return null;
+    }
+
+    const applicant = appRes.rows[0];
+    let isMatch = false;
+
+    if (method === 'passcode') {
+      if (applicant.passcode_hash) {
+        isMatch = await bcrypt.compare(credential, applicant.passcode_hash);
+      } else if (applicant.passcode) {
+        if (applicant.passcode.startsWith('$2')) {
+          isMatch = await bcrypt.compare(credential, applicant.passcode);
+        } else {
+          isMatch = applicant.passcode === credential;
+        }
+      }
+    } else {
+      if (applicant.password_hash) {
+        isMatch = await bcrypt.compare(credential, applicant.password_hash);
+      }
+    }
+
+    if (!isMatch) {
+      return null;
+    }
+
+    // Query incumbent and reclass details
+    let incumbent: any = null;
+    if (applicant.plantilla_item_number) {
+      const incRes = await pool.query(
+        `SELECT * FROM reclass_gc 
+         WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
+         LIMIT 1`,
+        [applicant.plantilla_item_number],
+      );
+      if (incRes.rows.length > 0) {
+        incumbent = incRes.rows[0];
+      }
+    }
+
+    let reclassApp: any = null;
+    if (incumbent?.id) {
+      const appByGc = await pool.query(
+        `SELECT * FROM reclass_applications WHERE reclass_gc_id = $1 ORDER BY id DESC LIMIT 1`,
+        [incumbent.id],
+      );
+      if (appByGc.rows.length > 0) {
+        reclassApp = appByGc.rows[0];
+      }
+    }
+    if (!reclassApp && applicant.plantilla_item_number) {
+      const appByItem = await pool.query(
+        `SELECT * FROM reclass_applications WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) ORDER BY id DESC LIMIT 1`,
+        [applicant.plantilla_item_number],
+      );
+      if (appByItem.rows.length > 0) {
+        reclassApp = appByItem.rows[0];
+      }
+    }
+
+    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    const token = jwt.sign(
+      {
+        id: applicant.id,
+        uid: applicant.id,
+        applicant_number: applicant.applicant_number,
+        email: applicant.email_address,
+        role: 'reclass',
+        registrant_type: 'reclass',
+      },
+      secret,
+      { expiresIn: '8h' },
+    );
+
+    const resolvedFullName =
+      [applicant.first_name, applicant.middle_name, applicant.surname]
+        .filter(Boolean)
+        .join(' ') ||
+      (incumbent?.first_name
+        ? `${incumbent.first_name} ${incumbent.last_name || ''}`.trim()
+        : 'Applicant');
+
+    const user = {
+      id: applicant.id,
+      applicant_number: applicant.applicant_number,
+      first_name: applicant.first_name,
+      middle_name: applicant.middle_name,
+      surname: applicant.surname,
+      full_name: resolvedFullName,
+      email: applicant.email_address,
+      registrant_type: 'reclass',
+      plantilla_item_number: applicant.plantilla_item_number,
+      current_position:
+        incumbent?.current_position ||
+        applicant.current_designation ||
+        'Guidance Counselor',
+      target_position:
+        reclassApp?.reclass_position ||
+        incumbent?.reclass_position ||
+        null,
+      region: incumbent?.region || applicant.region || null,
+      division: incumbent?.division || applicant.division || null,
+      school_name: incumbent?.school_name || null,
+      application_number:
+        incumbent?.school_name || incumbent?.application_number || null,
+      incumbent,
+      reclass_application: reclassApp,
+    };
+
+    return {
+      token,
+      applicant,
+      user,
     };
   }
 
@@ -1797,14 +2363,18 @@ class ApplicantsServiceClass {
     currentPosition?: string,
     isExisting: boolean = true,
   ) {
-    const normalizedPlantilla = (plantillaItemNumber || '').trim().toUpperCase();
+    const normalizedPlantilla = (plantillaItemNumber || '')
+      .trim()
+      .toUpperCase();
     const cleanInputName = (inputFullName || '').trim();
 
     if (isExisting && !normalizedPlantilla) {
       throw new Error('Plantilla Item Number is required.');
     }
     if (!isExisting && !cleanInputName) {
-      throw new Error('Full Name is required for Non-Plantilla Reclassification.');
+      throw new Error(
+        'Full Name is required for Non-Plantilla Reclassification.',
+      );
     }
 
     const client = await pool.connect();
@@ -1824,19 +2394,38 @@ class ApplicantsServiceClass {
         );
 
         if (incRes.rows.length === 0) {
-          throw new Error('Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.');
+          throw new Error(
+            'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.',
+          );
         }
 
         incumbent = incRes.rows[0];
-        const incumbentFullName = `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim();
+        const incumbentFullName =
+          `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim();
 
-        if ((!incumbent.last_name && !incumbent.first_name) || incumbent.last_name === '#N/A' || incumbentFullName === '') {
-          throw new Error('This Plantilla Item is currently unassigned or vacant in DepEd records.');
+        if (
+          (!incumbent.last_name && !incumbent.first_name) ||
+          incumbent.last_name === '#N/A' ||
+          incumbentFullName === ''
+        ) {
+          throw new Error(
+            'This Plantilla Item is currently unassigned or vacant in DepEd records.',
+          );
         }
 
         // 2. If Full Name is provided, verify matching against incumbent record
-        if (cleanInputName && !isIncumbentNameMatching(cleanInputName, incumbentFullName, incumbent.first_name, incumbent.last_name)) {
-          throw new Error('The Full Name provided does not match our incumbent records for this Plantilla Item Number.');
+        if (
+          cleanInputName &&
+          !isIncumbentNameMatching(
+            cleanInputName,
+            incumbentFullName,
+            incumbent.first_name,
+            incumbent.last_name,
+          )
+        ) {
+          throw new Error(
+            'The Full Name provided does not match our incumbent records for this Plantilla Item Number.',
+          );
         }
 
         // 3. Find or create applicant strictly by plantilla_item_number
@@ -1855,8 +2444,12 @@ class ApplicantsServiceClass {
             `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
           );
           let nextApplicantNum = 1;
-          if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
-            const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+          if (
+            lastApplicant.rows.length > 0 &&
+            lastApplicant.rows[0].applicant_number
+          ) {
+            const match =
+              lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
             if (match) {
               nextApplicantNum = parseInt(match[1], 10) + 1;
             }
@@ -1872,7 +2465,13 @@ class ApplicantsServiceClass {
               email_address, registrant_type, plantilla_item_number, is_test
             ) VALUES ($1, $2, $3, $4, 'reclass', $5, false)
             RETURNING *`,
-            [newApplicantNumber, surname, firstName, placeholderEmail, normalizedPlantilla],
+            [
+              newApplicantNumber,
+              surname,
+              firstName,
+              placeholderEmail,
+              normalizedPlantilla,
+            ],
           );
           applicant = insertAppRes.rows[0];
         }
@@ -1913,7 +2512,9 @@ class ApplicantsServiceClass {
       } else {
         // Non-plantilla / Designate path
         if (!normalizedPlantilla) {
-          throw new Error('Plantilla Item Number is required for Non-Plantilla / Designate Reclassification.');
+          throw new Error(
+            'Plantilla Item Number is required for Non-Plantilla / Designate Reclassification.',
+          );
         }
 
         // 1. Check if plantilla number exists in gmis_gc_items.psi_cd
@@ -1937,22 +2538,39 @@ class ApplicantsServiceClass {
 
         // Case A: If already existing in reclass_gc -> Prompt user to log in via Plantilla Incumbent
         if (gcExists) {
-          throw new Error('This Plantilla Item Number is already registered in incumbent records. Please log in using the "Plantilla Incumbent" option.');
+          throw new Error(
+            'This Plantilla Item Number is already registered in incumbent records. Please log in using the "Plantilla Incumbent" option.',
+          );
         }
 
         // Case B: If not existing in both gmis_gc_items and reclass_gc -> No records found
         if (!gmisExists && !gcExists) {
-          throw new Error('No records found for this Plantilla Item Number in DepEd GMIS records. Please verify your Plantilla Item Number.');
+          throw new Error(
+            'No records found for this Plantilla Item Number in DepEd GMIS records. Please verify your Plantilla Item Number.',
+          );
         }
 
         // Case C: If existing in gmis_gc_items and NOT in reclass_gc -> Insert new data in reclass_gc
-        const { surname, firstName, middleName } = parseIncumbentName(cleanInputName);
+        const { surname, firstName, middleName } =
+          parseIncumbentName(cleanInputName);
 
-        const gcRegion = (region ? region.trim().toUpperCase() : null) || (gmisItem?.region ? String(gmisItem.region).trim().toUpperCase() : null);
-        const gcDivision = (division ? division.trim().toUpperCase() : null) || (gmisItem?.division ? String(gmisItem.division).trim().toUpperCase() : null);
+        const gcRegion =
+          (region ? region.trim().toUpperCase() : null) ||
+          (gmisItem?.region
+            ? String(gmisItem.region).trim().toUpperCase()
+            : null);
+        const gcDivision =
+          (division ? division.trim().toUpperCase() : null) ||
+          (gmisItem?.division
+            ? String(gmisItem.division).trim().toUpperCase()
+            : null);
         const gcSchoolId = gmisItem?.school_id || null;
         const gcSchoolName = gmisItem?.school_name || null;
-        const gcCurrentPos = currentPosition || gmisItem?.pos_dsc || gmisItem?.current_position || 'Guidance Counselor (Designate)';
+        const gcCurrentPos =
+          currentPosition ||
+          gmisItem?.pos_dsc ||
+          gmisItem?.current_position ||
+          'Guidance Counselor (Designate)';
         const gcTargetPos = targetPosition || 'School Counselor Associate I';
         const gcFirstName = firstName || gmisItem?.first_name || '';
         const gcLastName = surname || gmisItem?.last_name || '';
@@ -2005,8 +2623,12 @@ class ApplicantsServiceClass {
             `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
           );
           let nextApplicantNum = 1;
-          if (lastApplicant.rows.length > 0 && lastApplicant.rows[0].applicant_number) {
-            const match = lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+          if (
+            lastApplicant.rows.length > 0 &&
+            lastApplicant.rows[0].applicant_number
+          ) {
+            const match =
+              lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
             if (match) {
               nextApplicantNum = parseInt(match[1], 10) + 1;
             }
@@ -2020,7 +2642,14 @@ class ApplicantsServiceClass {
               email_address, registrant_type, plantilla_item_number, is_test
             ) VALUES ($1, $2, $3, $4, $5, 'reclass', $6, false)
             RETURNING *`,
-            [newApplicantNumber, surname, firstName, middleName, placeholderEmail, normalizedPlantilla],
+            [
+              newApplicantNumber,
+              surname,
+              firstName,
+              middleName,
+              placeholderEmail,
+              normalizedPlantilla,
+            ],
           );
           applicant = insertAppRes.rows[0];
         }
@@ -2030,7 +2659,8 @@ class ApplicantsServiceClass {
             id: null,
             first_name: firstName,
             last_name: surname,
-            current_position: currentPosition || 'Guidance Counselor (Designate)',
+            current_position:
+              currentPosition || 'Guidance Counselor (Designate)',
             reclass_position: targetPosition || 'School Counselor Associate I',
             region: region ? region.trim().toUpperCase() : null,
             division: division ? division.trim().toUpperCase() : null,
@@ -2064,7 +2694,9 @@ class ApplicantsServiceClass {
 
       await client.query('COMMIT');
 
-      const incumbentFullName = `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim() || cleanInputName;
+      const incumbentFullName =
+        `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim() ||
+        cleanInputName;
 
       return {
         session: {
@@ -2080,12 +2712,26 @@ class ApplicantsServiceClass {
         reclass: {
           ...(incumbent || {}),
           full_name: incumbentFullName,
-          plantilla_item_number: normalizedPlantilla || incumbent?.item_no || null,
-          target_position: reclassApp?.reclass_position || incumbent?.reclass_position || targetPosition || null,
-          current_position: reclassApp?.current_position || incumbent?.current_position || currentPosition || 'Guidance Counselor',
-          application_number: reclassApp?.school_name || incumbent?.school_name || null,
-          school_name: reclassApp?.school_name || incumbent?.school_name || null,
-          evaluation_status: incumbent?.qs_status || incumbent?.stage_of_reclassification || 'For Review',
+          plantilla_item_number:
+            normalizedPlantilla || incumbent?.item_no || null,
+          target_position:
+            reclassApp?.reclass_position ||
+            incumbent?.reclass_position ||
+            targetPosition ||
+            null,
+          current_position:
+            reclassApp?.current_position ||
+            incumbent?.current_position ||
+            currentPosition ||
+            'Guidance Counselor',
+          application_number:
+            reclassApp?.school_name || incumbent?.school_name || null,
+          school_name:
+            reclassApp?.school_name || incumbent?.school_name || null,
+          evaluation_status:
+            incumbent?.qs_status ||
+            incumbent?.stage_of_reclassification ||
+            'For Review',
           reclass_application: reclassApp || null,
         },
       };
@@ -2107,8 +2753,12 @@ class ApplicantsServiceClass {
     const regions: string[] = [];
     const divisionsByRegion: Record<string, string[]> = {};
     for (const row of result.rows) {
-      const reg = String(row.region || '').trim().toUpperCase();
-      const div = String(row.division || '').trim().toUpperCase();
+      const reg = String(row.region || '')
+        .trim()
+        .toUpperCase();
+      const div = String(row.division || '')
+        .trim()
+        .toUpperCase();
       if (!divisionsByRegion[reg]) {
         divisionsByRegion[reg] = [];
         regions.push(reg);
@@ -2121,7 +2771,9 @@ class ApplicantsServiceClass {
   }
 
   async getIncumbentInfoByPlantilla(plantilla: string) {
-    const normalized = String(plantilla || '').trim().toUpperCase();
+    const normalized = String(plantilla || '')
+      .trim()
+      .toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
       `SELECT region, division, reclass_position as target_position, current_position, first_name, last_name, school_name
@@ -2141,7 +2793,8 @@ class ApplicantsServiceClass {
   async getReclassDocuments(applicantId: number) {
     const reclassDetails = await this.getReclassDetails(applicantId);
     const reclassAppId = reclassDetails?.reclass_application?.id || null;
-    const plantillaItemNumber = reclassDetails?.plantilla_item_number || reclassDetails?.item_no || null;
+    const plantillaItemNumber =
+      reclassDetails?.plantilla_item_number || reclassDetails?.item_no || null;
 
     let docsRes: any = { rows: [] };
     if (reclassAppId && plantillaItemNumber) {
@@ -2164,27 +2817,40 @@ class ApplicantsServiceClass {
     }
 
     const keyByTitle: Record<string, string> = {
-      'reclassification form / rftp': 'reclass_form',
+      'letter of intent': 'letter_of_intent',
+      'personal data sheet (pds)': 'pds',
       'personal data sheet': 'pds',
-      'service records & appointment': 'service_records',
-      'academic credentials': 'academic_credentials',
+      'proof of eligibility': 'proof_of_eligibility',
+      'scholastic / academic record': 'academic_record',
+      'scholastic/academic record': 'academic_record',
+      'academic credentials': 'academic_record',
+      'updated service record': 'service_record',
+      'service record': 'service_record',
+      'service records & appointment': 'service_record',
+      'certificate/s of relevant training': 'training_certs',
       'training certificates': 'training_certs',
-      'performance ratings': 'performance_ratings',
-      'administrative supporting documents': 'admin_support',
-      'reclass_form': 'reclass_form',
-      'pds': 'pds',
-      'service_records': 'service_records',
-      'academic_credentials': 'academic_credentials',
-      'training_certs': 'training_certs',
-      'performance_ratings': 'performance_ratings',
-      'admin_support': 'admin_support',
+      'checklist of requirements & omnibus sworn statement': 'omnibus_sworn_statement',
+      'checklist of requirements and omnibus sworn statement': 'omnibus_sworn_statement',
+      'administrative supporting documents': 'omnibus_sworn_statement',
+      'performance rating': 'performance_rating',
+      'performance ratings': 'performance_rating',
+      'reclassification form / rftp': 'letter_of_intent',
+      letter_of_intent: 'letter_of_intent',
+      pds: 'pds',
+      proof_of_eligibility: 'proof_of_eligibility',
+      academic_record: 'academic_record',
+      service_record: 'service_record',
+      training_certs: 'training_certs',
+      omnibus_sworn_statement: 'omnibus_sworn_statement',
+      performance_rating: 'performance_rating',
     };
 
     if (docsRes.rows.length > 0) {
       return docsRes.rows.map((row: any) => {
         const title = row.document_title || '';
         const lowerTitle = title.trim().toLowerCase();
-        const categoryKey = keyByTitle[lowerTitle] || lowerTitle.replace(/[^a-z0-9_-]/g, '_');
+        const categoryKey =
+          keyByTitle[lowerTitle] || lowerTitle.replace(/[^a-z0-9_-]/g, '_');
 
         return {
           id: String(row.id),
@@ -2206,7 +2872,12 @@ class ApplicantsServiceClass {
     applicantId: number,
     categoryKey: string,
     categoryTitle: string,
-    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    file: {
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+      size: number;
+    },
     description?: string,
   ) {
     const reclassDetails = await this.getReclassDetails(applicantId);
@@ -2220,7 +2891,8 @@ class ApplicantsServiceClass {
       reclassGcId = reclassDetails.reclass_application.reclass_gc_id;
     }
     if (!reclassGcId) {
-      const pItem = reclassDetails.plantilla_item_number || reclassDetails.item_no;
+      const pItem =
+        reclassDetails.plantilla_item_number || reclassDetails.item_no;
       if (pItem) {
         const gcCheck = await pool.query(
           `SELECT id FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
@@ -2233,9 +2905,14 @@ class ApplicantsServiceClass {
     }
     const folderGcId = reclassGcId || applicantId;
     const rootFolder = `reclass-${folderGcId}`;
-    const docFolder = (categoryKey || 'document').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const docFolder = (categoryKey || 'document')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '_');
     const folderPath = `${rootFolder}/${docFolder}`;
-    const cleanOriginalName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const cleanOriginalName = file.originalname.replace(
+      /[^a-zA-Z0-9._-]/g,
+      '_',
+    );
     const fullBlobPath = `${folderPath}/${cleanOriginalName}`;
 
     let finalBuffer = file.buffer;
@@ -2248,7 +2925,11 @@ class ApplicantsServiceClass {
     }
 
     // Upload to Azure blob in the AZURE_FOLDER_RECLASS container (agap-reclass)
-    const fileUrl = await uploadToReclassAzure(finalBuffer, fullBlobPath, file.mimetype);
+    const fileUrl = await uploadToReclassAzure(
+      finalBuffer,
+      fullBlobPath,
+      file.mimetype,
+    );
 
     let reclassApp = reclassDetails.reclass_application;
     const plantillaItemNumber =
@@ -2361,6 +3042,28 @@ class ApplicantsServiceClass {
 
     const updatedDocs = await this.getReclassDocuments(applicantId);
 
+    // If all 8 required documents are submitted, advance stage from UPDATING OF DOCUMENTS to FOR REVIEW
+    if (updatedDocs.length >= 8) {
+      if (folderGcId) {
+        await pool.query(
+          `UPDATE reclass_gc
+           SET stage_of_reclassification = 'FOR REVIEW',
+               updated_at = NOW()
+           WHERE id = $1 AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS')`,
+          [folderGcId],
+        );
+      }
+      if (plantillaItemNumber) {
+        await pool.query(
+          `UPDATE reclass_gc
+           SET stage_of_reclassification = 'FOR REVIEW',
+               updated_at = NOW()
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS')`,
+          [plantillaItemNumber],
+        );
+      }
+    }
+
     return {
       success: true,
       document: {
@@ -2424,40 +3127,65 @@ function isIncumbentNameMatching(
 
     const firstThenLast = cleanNameString(`${cleanRest} ${cleanSurname}`);
     const lastThenFirst = cleanNameString(`${cleanSurname} ${cleanRest}`);
-    if (cleanInput === firstThenLast || cleanInput === lastThenFirst) return true;
+    if (cleanInput === firstThenLast || cleanInput === lastThenFirst)
+      return true;
   }
 
   // 4. Token-based matching
   const inputTokens = tokenizeName(cleanInput);
-  const firstTokens = dbFirst ? tokenizeName(dbFirst) : (dbFullName ? tokenizeName(dbFullName).slice(0, -1) : []);
-  const lastTokens = dbLast ? tokenizeName(dbLast) : (dbFullName ? [tokenizeName(dbFullName).pop() || ''] : []);
+  const firstTokens = dbFirst
+    ? tokenizeName(dbFirst)
+    : dbFullName
+      ? tokenizeName(dbFullName).slice(0, -1)
+      : [];
+  const lastTokens = dbLast
+    ? tokenizeName(dbLast)
+    : dbFullName
+      ? [tokenizeName(dbFullName).pop() || '']
+      : [];
 
   // Check if all last_name tokens are in input
-  const allLastTokensInInput = lastTokens.length > 0 && lastTokens.every(t => inputTokens.includes(t));
+  const allLastTokensInInput =
+    lastTokens.length > 0 && lastTokens.every((t) => inputTokens.includes(t));
   // Check if all first_name tokens are in input
-  const allFirstTokensInInput = firstTokens.length > 0 && firstTokens.every(t => inputTokens.includes(t) || inputTokens.some(it => it.startsWith(t)));
+  const allFirstTokensInInput =
+    firstTokens.length > 0 &&
+    firstTokens.every(
+      (t) =>
+        inputTokens.includes(t) || inputTokens.some((it) => it.startsWith(t)),
+    );
 
   if (allLastTokensInInput && allFirstTokensInInput) return true;
 
   // Check if at least last_name and primary first name token are in input
   if (allLastTokensInInput && firstTokens.length > 0) {
     const primaryFirst = firstTokens[0];
-    if (inputTokens.includes(primaryFirst) || inputTokens.some(it => it.startsWith(primaryFirst))) {
+    if (
+      inputTokens.includes(primaryFirst) ||
+      inputTokens.some((it) => it.startsWith(primaryFirst))
+    ) {
       return true;
     }
   }
 
   // Check reverse: if all input tokens are part of DB name (ignoring single char middle initial)
-  const nonInitialInputTokens = inputTokens.filter(t => t.length > 1);
+  const nonInitialInputTokens = inputTokens.filter((t) => t.length > 1);
   const dbTokens = tokenizeName(cleanDb);
-  if (nonInitialInputTokens.length >= 2 && nonInitialInputTokens.every(t => dbTokens.includes(t))) {
+  if (
+    nonInitialInputTokens.length >= 2 &&
+    nonInitialInputTokens.every((t) => dbTokens.includes(t))
+  ) {
     return true;
   }
 
   return false;
 }
 
-function parseIncumbentName(fullName: string): { surname: string; firstName: string; middleName: string | null } {
+function parseIncumbentName(fullName: string): {
+  surname: string;
+  firstName: string;
+  middleName: string | null;
+} {
   let surname = 'Incumbent';
   let firstName = 'Counselor';
   let middleName: string | null = null;
@@ -2491,4 +3219,3 @@ function parseIncumbentName(fullName: string): { surname: string; firstName: str
 }
 
 export const ApplicantsService = new ApplicantsServiceClass();
-
