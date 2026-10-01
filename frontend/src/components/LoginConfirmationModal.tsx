@@ -13,9 +13,12 @@ export interface LoginConfirmationData {
   plantilla_item_number?: string | null;
   current_position?: string | null;
   target_position?: string | null;
+  school_name?: string | null;
+  school_station?: string | null;
   region?: string | null;
   division?: string | null;
 }
+
 
 interface LoginConfirmationModalProps {
   isOpen: boolean;
@@ -41,7 +44,7 @@ export const LoginConfirmationModal: React.FC<LoginConfirmationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div 
+      <div
         className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all animate-scaleUp"
         role="dialog"
         aria-modal="true"

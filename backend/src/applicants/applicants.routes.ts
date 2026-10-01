@@ -1092,6 +1092,11 @@ router.post('/:id/reclass-documents', upload.single('file'), async (req, res) =>
       return res.status(400).json({ message: 'No file uploaded.' });
     }
 
+    const isPdf = file.mimetype === 'application/pdf' || (file.originalname && file.originalname.toLowerCase().endsWith('.pdf'));
+    if (!isPdf) {
+      return res.status(400).json({ message: 'Only PDF files (.pdf) are allowed for reclassification documents.' });
+    }
+
     const { category_key, category_title, description } = req.body;
     if (!category_key) {
       return res.status(400).json({ message: 'Document category key is required.' });

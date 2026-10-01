@@ -139,9 +139,13 @@ Executed schema migration into PostgreSQL:
 ### 16. Incumbent Re-upload Flag (`reclass_gc.reupload = true`)
 - **Automatic Re-upload Flagging**: Whenever an incumbent or reclassification applicant uploads any credential document, the backend automatically updates the corresponding row in `reclass_gc` (`SET reupload = true, updated_at = NOW()`), notifying HRMO reviewers that new documents have been submitted.
 
-### 17. Preserved Existing Functionality
-- All existing Applicant, Vacancy, Address, and Auth routes were preserved untouched in accordance with `.agents/agents.md`.
-- Experience and training display rules preserved (`0` outputs `'None Required'`).
+### 18. PDF-Only Enforcement for Reclassification Document Uploads
+- **Frontend Validation (`ReclassUploadModal.tsx`)**:
+  - Configured file input `accept` attribute strictly to `.pdf,application/pdf` (removed image MIME types).
+  - Added programmatic type validation in `handleFileSelect` rejecting any non-PDF files with a clear alert notice (`Swal.fire`).
+  - Updated document selection guidance message to state PDF format requirement clearly.
+- **Backend Validation (`applicants.routes.ts`)**:
+  - Enforced file MIME type / extension validation on `POST /api/applicants/:id/reclass-documents`, responding with HTTP 400 if a non-PDF file is submitted.
 
 
 

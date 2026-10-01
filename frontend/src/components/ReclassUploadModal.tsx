@@ -139,6 +139,13 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      Swal.fire('Invalid File Type', 'Only PDF files (.pdf) are allowed for reclassification documents.', 'warning');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 15 * 1024 * 1024) {
       Swal.fire('File Too Large', 'Please select a file smaller than 15MB.', 'warning');
       e.target.value = '';
@@ -317,7 +324,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           <div className="text-xs text-gray-600 bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <span>
-              Select your documents below. All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>.
+              Select your PDF documents below (PDF only, max 15MB). All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>.
             </span>
           </div>
 
@@ -432,7 +439,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               <RefreshCw className="w-3.5 h-3.5 text-gray-500" /> Change
                               <input
                                 type="file"
-                                accept=".pdf,image/png,image/jpeg,image/jpg"
+                                accept=".pdf,application/pdf"
                                 disabled={isSubmitting}
                                 className="hidden"
                                 onChange={(e) => handleFileSelect(req, e)}
@@ -472,7 +479,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               )}
                               <input
                                 type="file"
-                                accept=".pdf,image/png,image/jpeg,image/jpg"
+                                accept=".pdf,application/pdf"
                                 disabled={isSubmitting}
                                 className="hidden"
                                 onChange={(e) => handleFileSelect(req, e)}
