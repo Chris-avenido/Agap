@@ -1,8 +1,7 @@
 import './config/env';
 import { Pool } from 'pg';
-import { SqlitePool } from './database.sqlite';
 
-let activePool: any;
+let activePool: Pool;
 
 async function runSchemaMigrations(client: any) {
   try {
@@ -217,65 +216,43 @@ async function runSchemaMigrations(client: any) {
 }
 
 const connectionString = process.env.DATABASE_URL;
-const useLocalDb =
-  process.env.USE_LOCAL_DB === 'true' ||
-  !connectionString ||
-  connectionString.trim() === '' ||
-  connectionString.includes('your_database_url_here');
 
-if (useLocalDb) {
-  console.log(
-    '📦 USE_LOCAL_DB=true or no DATABASE_URL specified. Initializing Local SQLite Database (agap_production_backup.db)...',
-  );
-  activePool = new SqlitePool();
-  runSchemaMigrations(activePool).catch((err) =>
-    console.error('⚠️ SQLite schema migration error:', err),
-  );
-} else {
-  console.log('🌐 Connecting to PostgreSQL Database...');
-  const pgPool = new Pool({
-    connectionString,
-    ssl: connectionString?.includes('sslmode=require')
-      ? { rejectUnauthorized: false }
-      : undefined,
-    max: parseInt(process.env.PG_POOL_MAX || '20', 10),
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    keepAlive: true,
-  });
+console.log('🌐 Connecting to PostgreSQL Database...');
+const pgPool = new Pool({
+  connectionString,
+  ssl: connectionString?.includes('sslmode=require')
+    ? { rejectUnauthorized: false }
+    : undefined,
+  max: parseInt(process.env.PG_POOL_MAX || '20', 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,
+});
 
-  pgPool.on('error', (err: Error) => {
+pgPool.on('error', (err: Error) => {
+  console.error(
+    '⚠️ Idle PostgreSQL pool client error caught safely:',
+    err.message || err,
+  );
+});
+
+activePool = pgPool;
+
+pgPool
+  .connect()
+  .then(async (client) => {
+    console.log('✅ Successfully connected to Azure PostgreSQL Database natively!');
+    try {
+      await runSchemaMigrations(client);
+    } finally {
+      client.release();
+    }
+  })
+  .catch((error) => {
     console.error(
-      '⚠️ Idle PostgreSQL pool client error caught safely:',
-      err.message || err,
+      '⚠️ PostgreSQL connection probe warning (pool will retry queries on demand):',
+      error.message || error,
     );
   });
 
-  activePool = pgPool;
-
-  pgPool
-    .connect()
-    .then(async (client) => {
-      console.log('✅ Successfully connected to Azure PostgreSQL Database natively!');
-      try {
-        await runSchemaMigrations(client);
-      } finally {
-        client.release();
-      }
-    })
-    .catch((error) => {
-      console.error(
-        '⚠️ PostgreSQL connection probe warning (pool will retry queries on demand):',
-        error.message || error,
-      );
-    });
-}
-
-export const pool = new Proxy({} as any, {
-  get(_target, prop: string | symbol) {
-    if (activePool && typeof activePool[prop] === 'function') {
-      return activePool[prop].bind(activePool);
-    }
-    return activePool ? activePool[prop] : undefined;
-  },
-});
+export const pool = pgPool;
