@@ -1874,16 +1874,18 @@ class ApplicantsServiceClass {
       return null;
     };
 
-    const rawInitialPosition = incumbent?.reclass_position ? String(incumbent.reclass_position).trim() : '';
+    const rawInitialPosition = incumbent?.initial_assessment_position || incumbent?.initial_assessment
+      ? String(incumbent.initial_assessment_position || incumbent.initial_assessment).trim()
+      : '';
     const initialPosition =
       rawInitialPosition && rawInitialPosition.toUpperCase() !== 'N/A' && rawInitialPosition !== ''
         ? rawInitialPosition
-        : 'N/A';
+        : '';
 
     const initialSalaryGrade =
-      initialPosition !== 'N/A'
-        ? (getSalaryGradeForPosition(initialPosition) || 'N/A')
-        : 'N/A';
+      initialPosition
+        ? (getSalaryGradeForPosition(initialPosition) || '')
+        : '';
 
     // Count uploaded reclass documents
     const plantilla = incumbent?.item_no || plantillaItemNumber;

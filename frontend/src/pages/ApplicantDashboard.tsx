@@ -750,21 +750,21 @@ export default function ApplicantDashboard() {
 
               const rawInitial =
                 reclassData.initial_assessment_position ||
-                reclassData.reclass_position ||
+                reclassData.initial_assessment ||
                 '';
               const initialAssessment =
                 rawInitial && rawInitial.toUpperCase() !== 'N/A' && rawInitial.trim() !== ''
                   ? rawInitial.trim()
-                  : 'N/A';
+                  : '';
 
               const initialSalaryGrade =
-                initialAssessment !== 'N/A'
+                initialAssessment
                   ? (reclassData.initial_assessment_salary_grade && reclassData.initial_assessment_salary_grade !== 'N/A'
                       ? (reclassData.initial_assessment_salary_grade.startsWith('SG-')
                           ? reclassData.initial_assessment_salary_grade
                           : `SG-${reclassData.initial_assessment_salary_grade}`)
                       : getPositionSalaryGrade(initialAssessment))
-                  : 'N/A';
+                  : '';
 
               const uploadedDocsCount = reclassDocs.length;
               const TOTAL_MANDATORY_DOCS = 7;
@@ -798,7 +798,7 @@ export default function ApplicantDashboard() {
               let currentLabel = 'Updating of Documents';
               let stepBadge = 'Step 1 of 5: Updating of Documents';
               let defaultRemarks =
-                'Submit updated qualification documents if seeking re-assessment. Non-submission means your reclassification proceeds under your Initial Assessment.';
+                'Submit updated qualification documents if seeking re-assessment. Non-submission means your reclassification proceeds under your current plantilla record.';
 
               if (isReclassProper) {
                 currentStep = 5;
@@ -830,8 +830,8 @@ export default function ApplicantDashboard() {
                 stepBadge = 'Step 1 of 5: Updating of Documents';
                 defaultRemarks =
                   uploadedDocsCount === 0
-                    ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your Initial Assessment.'
-                    : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your Initial Assessment if no additional documents are submitted.`;
+                    ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your current plantilla record.'
+                    : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your current plantilla record if no additional documents are submitted.`;
               }
 
               return (
@@ -916,20 +916,21 @@ export default function ApplicantDashboard() {
                         </p>
                       </div>
 
-                      {/* Initial Assessment (Tentative Reclass from Previous Assessment) */}
-                      <div className="bg-gradient-to-br from-amber-50/70 to-sky-50/50 border-2 border-sky-300/80 rounded-xl p-3.5 shadow-xs relative">
+                      {/* Initial Assessment */}
+                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs relative">
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <p className="text-[11px] font-bold text-[#0369a1] uppercase tracking-wider">Initial Assessment</p>
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded font-mono">
-                            Tentative
-                          </span>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Initial Assessment</p>
                         </div>
-                        <p className="text-[14px] font-black text-[#022851] mt-0.5 break-words">
-                          {initialAssessment}
+                        <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words min-h-[22px]">
+                          {initialAssessment || ''}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[11px] font-bold text-[#0284c7]">{initialSalaryGrade}</span>
-                          <span className="text-[10px] text-gray-500">• Previous evaluation</span>
+                        <div className="flex items-center gap-1.5 mt-1 min-h-[18px]">
+                          {initialSalaryGrade ? (
+                            <>
+                              <span className="text-[11px] font-bold text-[#0284c7]">{initialSalaryGrade}</span>
+                              <span className="text-[10px] text-gray-500">• Previous evaluation</span>
+                            </>
+                          ) : null}
                         </div>
                       </div>
 
@@ -1033,8 +1034,8 @@ export default function ApplicantDashboard() {
                       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                       <p className="text-xs text-amber-900 font-medium leading-relaxed">
                         <strong>Important Notice:</strong> Non-submission of updated documents means <strong>no re-assessment will be initiated</strong>.
-                        {initialAssessment !== 'N/A' ? (
-                          <> Your reclassification will remain based on your <strong>Initial Assessment: {initialAssessment} ({initialSalaryGrade})</strong>.</>
+                        {initialAssessment ? (
+                          <> Your reclassification will remain based on your <strong>Initial Assessment: {initialAssessment} {initialSalaryGrade ? `(${initialSalaryGrade})` : ''}</strong>.</>
                         ) : (
                           <> Your reclassification will proceed under your current plantilla record.</>
                         )}
@@ -1093,18 +1094,20 @@ export default function ApplicantDashboard() {
                             <span className="font-extrabold text-amber-900 font-mono text-[10px]">{submissionDeadline}</span>
                           </div>
 
-                          {/* Tentative Initial Assessment highlight box */}
+                          {/* Initial Assessment highlight box */}
                           <div className="my-2 p-2 rounded-lg bg-sky-50/80 border border-sky-200/90 text-left">
                             <div className="flex items-center justify-between gap-1">
                               <span className="text-[9px] font-extrabold uppercase text-[#0369a1] tracking-wider">
                                 Initial Assessment
                               </span>
-                              <span className="text-[8px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded">
-                                {initialAssessment !== 'N/A' ? 'Previous Eval' : 'PAL Status'}
-                              </span>
+                              {initialAssessment ? (
+                                <span className="text-[8px] font-bold text-sky-800 bg-sky-100 px-1 py-0.2 rounded">
+                                  Previous Eval
+                                </span>
+                              ) : null}
                             </div>
-                            <p className="text-[11px] font-black text-[#022851] mt-0.5 truncate" title={initialAssessment}>
-                              {initialAssessment} {initialSalaryGrade !== 'N/A' ? `(${initialSalaryGrade})` : ''}
+                            <p className="text-[11px] font-black text-[#022851] mt-0.5 min-h-[16px] truncate" title={initialAssessment}>
+                              {initialAssessment ? `${initialAssessment} ${initialSalaryGrade ? `(${initialSalaryGrade})` : ''}` : ''}
                             </p>
                           </div>
 
