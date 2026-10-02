@@ -8,6 +8,7 @@
     "dev:full": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "backup": "node database/export-backup.js",
     "backup:export": "node database/export-backup.js",
-    "backup:verify": "node database/verify-backup.js"
+    "backup:verify": "node database/verify-backup.js",
+    "db:shrink": "node scripts/shrink_local_db.js"
   }
 }
