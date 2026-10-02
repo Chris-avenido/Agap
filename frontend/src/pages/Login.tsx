@@ -224,6 +224,13 @@ export default function Login() {
       return;
     }
 
+    const cleanFirstName = stepBFirstName.trim();
+    const cleanLastName = stepBLastName.trim();
+    if (!cleanFirstName || !cleanLastName) {
+      setStepBError('First Name and Last Name are required.');
+      return;
+    }
+
     const cleanEmail = stepBEmail.trim().toLowerCase();
     if (!cleanEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)) {
       setStepBError('Only official @deped.gov.ph email addresses are allowed (e.g. juan.delacruz@deped.gov.ph).');
@@ -719,6 +726,53 @@ export default function Login() {
                         </span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Incumbent First Name & Last Name */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative rounded-lg shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={stepBFirstName}
+                          onChange={e => {
+                            setStepBFirstName(e.target.value);
+                            setStepBError(null);
+                          }}
+                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
+                          placeholder="Juan"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative rounded-lg shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={stepBLastName}
+                          onChange={e => {
+                            setStepBLastName(e.target.value);
+                            setStepBError(null);
+                          }}
+                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
+                          placeholder="Dela Cruz"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* DepEd Email & Mobile Number */}

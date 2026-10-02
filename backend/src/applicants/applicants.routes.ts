@@ -172,6 +172,8 @@ router.post('/reclass-register', async (req, res) => {
 
     if (
       !item_number ||
+      !first_name ||
+      !last_name ||
       !mobile_number ||
       !email ||
       !password ||
@@ -179,7 +181,7 @@ router.post('/reclass-register', async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ message: 'All required fields must be provided.' });
+        .json({ message: 'All required fields (including First Name and Last Name) must be provided.' });
     }
 
     const cleanMobile = String(mobile_number).trim();

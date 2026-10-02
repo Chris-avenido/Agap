@@ -2091,6 +2091,9 @@ class ApplicantsServiceClass {
     if (!normalizedItemNo) {
       throw new Error('Plantilla Item Number is required.');
     }
+    if (!cleanFirstName || !cleanLastName) {
+      throw new Error('First Name and Last Name are required.');
+    }
     if (!cleanMobile || !/^09\d{9}$/.test(cleanMobile)) {
       throw new Error(
         'Mobile number must be an 11-digit Philippine mobile number (09XXXXXXXXX).',
@@ -2335,8 +2338,8 @@ class ApplicantsServiceClass {
           passcode = $4, 
           passcode_hash = $5, 
           mobile_number = $6, 
-          first_name = COALESCE(NULLIF(first_name, ''), $7),
-          last_name = COALESCE(NULLIF(last_name, ''), $8),
+          first_name = $7,
+          last_name = $8,
           updated_at = NOW() 
         WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($9)) 
            OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($9))
