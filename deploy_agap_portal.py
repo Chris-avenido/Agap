@@ -115,7 +115,7 @@ def main():
     remote_script = (
         f"sudo mkdir -p {REMOTE_ROOT} && "
         f"sudo chown -R {REMOTE_USER}:{REMOTE_USER} {REMOTE_ROOT} && "
-        f"sudo mv ~/{ARCHIVE_NAME} {REMOTE_ROOT}/ && "
+        f"([ -f ~/{ARCHIVE_NAME} ] && sudo mv ~/{ARCHIVE_NAME} {REMOTE_ROOT}/ || true) && "
         f"cd {REMOTE_ROOT} && "
         f"pm2 stop {PM2_NAME} 2>/dev/null || true && "
         f"sudo rm -rf backend frontend && "
@@ -125,6 +125,11 @@ def main():
         # Move frontend static files inside dist/ instead of renaming directory (prevents Nginx locks)
         f"mv frontend/dist/* dist/ && "
         f"rm -rf frontend && "
+        # Sync frontend static files to Nginx web root (/var/www/html/InsightED-AGAP/agap-portal/dist)
+        f"sudo mkdir -p /var/www/html/InsightED-AGAP/agap-portal/dist && "
+        f"sudo rm -rf /var/www/html/InsightED-AGAP/agap-portal/dist/* && "
+        f"sudo cp -r dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/ && "
+        f"sudo chown -R {REMOTE_USER}:{REMOTE_USER} /var/www/html/InsightED-AGAP/agap-portal && "
         # Install and build backend
         f"cd backend && "
         f"mkdir -p logs && "
@@ -138,7 +143,8 @@ def main():
         f"cd {REMOTE_ROOT} && "
         f"pm2 delete {PM2_NAME} 2>/dev/null || true && "
         f"pm2 start {ECOSYSTEM_CONFIG} && "
-        f"rm -f {ARCHIVE_NAME}"
+        f"rm -f {ARCHIVE_NAME} && "
+        f"sudo systemctl reload nginx 2>/dev/null || true"
     )
 
     ssh_cmd = f'ssh -o StrictHostKeyChecking=no {SSH_KEY_OPT} -o ConnectTimeout=10 {REMOTE_USER}@{REMOTE_HOST} "{remote_script}"'
