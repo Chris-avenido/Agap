@@ -60,6 +60,11 @@ async function runSchemaMigrations(client: any) {
         first_name VARCHAR(150),
         last_name VARCHAR(150),
         email VARCHAR(255),
+        password VARCHAR(255),
+        password_hash VARCHAR(255),
+        passcode VARCHAR(255),
+        passcode_hash VARCHAR(255),
+        mobile_number VARCHAR(50),
         region VARCHAR(255),
         division VARCHAR(255),
         school_id VARCHAR(50),
@@ -74,8 +79,15 @@ async function runSchemaMigrations(client: any) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS passcode VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS passcode_hash VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
@@ -253,15 +265,8 @@ if (useLocalDb) {
     })
     .catch((error) => {
       console.error(
-        '❌ Failed to connect to Azure PostgreSQL database:',
+        '⚠️ PostgreSQL connection probe warning (pool will retry queries on demand):',
         error.message || error,
-      );
-      console.log(
-        '🔄 Falling back to local SQLite database (agap_production_backup.db)...',
-      );
-      activePool = new SqlitePool();
-      runSchemaMigrations(activePool).catch((migErr) =>
-        console.error('⚠️ SQLite schema migration error:', migErr),
       );
     });
 }

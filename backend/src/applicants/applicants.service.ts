@@ -1874,9 +1874,16 @@ class ApplicantsServiceClass {
       return null;
     };
 
+    const rawInitialPosition = incumbent?.reclass_position ? String(incumbent.reclass_position).trim() : '';
     const initialPosition =
-      incumbent?.reclass_position ||
-      'School Counselor II';
+      rawInitialPosition && rawInitialPosition.toUpperCase() !== 'N/A' && rawInitialPosition !== ''
+        ? rawInitialPosition
+        : 'N/A';
+
+    const initialSalaryGrade =
+      initialPosition !== 'N/A'
+        ? (getSalaryGradeForPosition(initialPosition) || 'N/A')
+        : 'N/A';
 
     // Count uploaded reclass documents
     const plantilla = incumbent?.item_no || plantillaItemNumber;
@@ -1929,8 +1936,7 @@ class ApplicantsServiceClass {
         stageOfReclass,
       stage_of_reclassification: stageOfReclass,
       initial_assessment_position: initialPosition,
-      initial_assessment_salary_grade:
-        getSalaryGradeForPosition(initialPosition) || '13',
+      initial_assessment_salary_grade: initialSalaryGrade,
       documents_count: docCount,
       required_documents_count: 8,
       submission_deadline: 'October 31, 2026',
@@ -1980,37 +1986,82 @@ class ApplicantsServiceClass {
       };
     }
 
-    // 1. Verify existence in GMIS reclass_gc records
-    const incRes = await pool.query(
+    // 1. Verify existence in GMIS records: first check reclass_gc, then gmis_gc_items
+    let incRes = await pool.query(
       `SELECT * FROM reclass_gc 
        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
        LIMIT 1`,
       [normalized],
     );
 
-    if (incRes.rows.length === 0) {
+    let inc = incRes.rows[0] || null;
+
+    if (!inc) {
+      const gmisRes = await pool.query(
+        `SELECT * FROM gmis_gc_items 
+         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
+            OR UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+         LIMIT 1`,
+        [normalized],
+      );
+      if (gmisRes.rows.length > 0) {
+        const gmisItem = gmisRes.rows[0];
+        const insertGcRes = await pool.query(
+          `INSERT INTO reclass_gc (
+            item_no, first_name, last_name, region, division,
+            school_id, school_name, current_position, reclass_position,
+            stage_of_reclassification, is_test, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+          RETURNING *`,
+          [
+            normalized,
+            gmisItem.first_name || '',
+            gmisItem.last_name || '',
+            gmisItem.region || null,
+            gmisItem.division || null,
+            gmisItem.school_id || null,
+            gmisItem.school_name || null,
+            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+            'N/A',
+          ],
+        );
+        inc = insertGcRes.rows[0];
+      }
+    }
+
+    if (!inc) {
       return {
         status: 'not_found',
         message: 'Plantilla Item Number not found in GMIS records.',
       };
     }
 
-    // 2. Check if already registered in applicants table
+    // 2. Check if already registered in applicants table with real credentials
     const appRes = await pool.query(
-      `SELECT id FROM applicants 
+      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
        WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
        LIMIT 1`,
       [normalized],
     );
 
     if (appRes.rows.length > 0) {
-      return {
-        status: 'already_registered',
-        message: 'This Plantilla Item Number is already registered.',
-      };
+      const appRow = appRes.rows[0];
+      const hasRealEmail =
+        (appRow.email && appRow.email.trim()) ||
+        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+      const hasPassword =
+        appRow.password_hash ||
+        appRow.passcode_hash ||
+        (inc && (inc.password_hash || inc.passcode_hash));
+
+      if (hasRealEmail && hasPassword) {
+        return {
+          status: 'already_registered',
+          message: 'This Plantilla Item Number is already registered. Please sign in.',
+        };
+      }
     }
 
-    const inc = incRes.rows[0];
     return {
       status: 'valid',
       data: {
@@ -2019,6 +2070,10 @@ class ApplicantsServiceClass {
         region: inc.region || '',
         division: inc.division || '',
         school_name: inc.school_name || '',
+        first_name: inc.first_name || '',
+        last_name: inc.last_name || '',
+        email: inc.email || '',
+        mobile_number: inc.mobile_number || '',
       },
     };
   }
@@ -2036,16 +2091,13 @@ class ApplicantsServiceClass {
     if (!normalizedItemNo) {
       throw new Error('Plantilla Item Number is required.');
     }
-    if (!cleanFirstName || !cleanLastName) {
-      throw new Error('First name and last name are required.');
-    }
     if (!cleanMobile || !/^09\d{9}$/.test(cleanMobile)) {
       throw new Error(
         'Mobile number must be an 11-digit Philippine mobile number (09XXXXXXXXX).',
       );
     }
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      throw new Error('Invalid email address format.');
+    if (!cleanEmail || !cleanEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)) {
+      throw new Error('Only official @deped.gov.ph email addresses are allowed for Reclassification.');
     }
     if (!password || !String(password).trim()) {
       throw new Error('Password is required.');
@@ -2054,43 +2106,119 @@ class ApplicantsServiceClass {
       throw new Error('Passcode must be exactly 6 numeric digits.');
     }
 
-    // 1. Verify against GMIS records in reclass_gc
-    const incRes = await pool.query(
+    // 1. Verify against GMIS records in reclass_gc or gmis_gc_items
+    let incRes = await pool.query(
       `SELECT * FROM reclass_gc 
        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
        LIMIT 1`,
       [normalizedItemNo],
     );
-    if (incRes.rows.length === 0) {
+    let inc = incRes.rows[0] || null;
+
+    if (!inc) {
+      const gmisRes = await pool.query(
+        `SELECT * FROM gmis_gc_items 
+         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
+            OR UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+         LIMIT 1`,
+        [normalizedItemNo],
+      );
+      if (gmisRes.rows.length > 0) {
+        const gmisItem = gmisRes.rows[0];
+        const insertGcRes = await pool.query(
+          `INSERT INTO reclass_gc (
+            item_no, first_name, last_name, region, division,
+            school_id, school_name, current_position, reclass_position,
+            stage_of_reclassification, email, password, password_hash,
+            passcode, passcode_hash, mobile_number, is_test, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, false, NOW(), NOW())
+          RETURNING *`,
+          [
+            normalizedItemNo,
+            cleanFirstName || gmisItem.first_name || '',
+            cleanLastName || gmisItem.last_name || '',
+            gmisItem.region || null,
+            gmisItem.division || null,
+            gmisItem.school_id || null,
+            gmisItem.school_name || null,
+            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+            'N/A',
+            cleanEmail,
+            password,
+            await bcrypt.hash(password, 10),
+            passcode,
+            await bcrypt.hash(passcode, 10),
+            cleanMobile,
+          ],
+        );
+        inc = insertGcRes.rows[0];
+      }
+    }
+
+    if (!inc) {
       throw new Error('Plantilla Item Number not found in GMIS records.');
     }
-    const inc = incRes.rows[0];
 
-    // 2. Check uniqueness in applicants
+    const finalFirstName = cleanFirstName || inc.first_name || 'Applicant';
+    const finalLastName = cleanLastName || inc.last_name || 'Reclass';
+
+    // 2. Check existing applicant for this plantilla item number
     const existingItem = await pool.query(
-      `SELECT id FROM applicants 
+      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
        WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
        LIMIT 1`,
       [normalizedItemNo],
     );
+    
+    let existingApplicantId: number | null = null;
     if (existingItem.rows.length > 0) {
+      const appRow = existingItem.rows[0];
+      const hasRealEmail =
+        (appRow.email && appRow.email.trim()) ||
+        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+      const hasPassword =
+        appRow.password_hash ||
+        appRow.passcode_hash ||
+        (inc && (inc.password_hash || inc.passcode_hash));
+
+      if (hasRealEmail && hasPassword) {
+        const err: any = new Error(
+          'This Plantilla Item Number is already registered. Please sign in.',
+        );
+        err.statusCode = 409;
+        throw err;
+      }
+      existingApplicantId = appRow.id;
+    }
+
+    // Check uniqueness of email in reclass_gc for any other plantilla item number
+    const existingReclassEmail = await pool.query(
+      `SELECT item_no, email FROM reclass_gc 
+       WHERE LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+         AND UPPER(TRIM(COALESCE(item_no, ''))) <> UPPER(TRIM($2))
+       LIMIT 1`,
+      [cleanEmail, normalizedItemNo],
+    );
+    if (existingReclassEmail.rows.length > 0) {
       const err: any = new Error(
-        'This Plantilla Item Number is already registered.',
+        'This DepEd email is already registered in GMIS reclassification records.',
       );
       err.statusCode = 409;
       throw err;
     }
 
+    // Check uniqueness of email across other applicants
     const existingEmail = await pool.query(
       `SELECT id FROM applicants 
-       WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
-          OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+       WHERE (LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+          OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1)))
+         AND ($2::int IS NULL OR id <> $2)
        LIMIT 1`,
-      [cleanEmail],
+      [cleanEmail, existingApplicantId],
     );
     if (existingEmail.rows.length > 0) {
       const err: any = new Error(
-        'This email address is already registered.',
+        'This DepEd email address is already registered to another account.',
       );
       err.statusCode = 409;
       throw err;
@@ -2100,68 +2228,132 @@ class ApplicantsServiceClass {
     const password_hash = await bcrypt.hash(password, 10);
     const passcode_hash = await bcrypt.hash(passcode, 10);
 
-    // 4. Insert into database inside transaction
+    // 4. Save into database inside transaction
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
 
-      const lastApplicant = await client.query(
-        `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
-      );
-      let nextApplicantNum = 1;
-      if (
-        lastApplicant.rows.length > 0 &&
-        lastApplicant.rows[0].applicant_number
-      ) {
-        const match =
-          lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
-        if (match) {
-          nextApplicantNum = parseInt(match[1], 10) + 1;
-        }
-      }
-      const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
-
       const designation = inc.current_position || 'Guidance Counselor';
       const region = inc.region || null;
       const division = inc.division || null;
 
-      const insertRes = await client.query(
-        `INSERT INTO applicants (
-          applicant_number, surname, first_name, middle_name,
-          email_address, email, password_hash, passcode_hash, passcode,
-          mobile_no, mobile_number, registrant_type, plantilla_item_number,
-          current_designation, region, division, is_test, created_at, updated_at
-        ) VALUES (
-          $1, $2, $3, $4,
-          $5, $5, $6, $7, $8,
-          $9, $9, 'reclass', $10,
-          $11, $12, $13, false, NOW(), NOW()
-        ) RETURNING *`,
+      let applicant: any;
+
+      if (existingApplicantId) {
+        const updateRes = await client.query(
+          `UPDATE applicants SET
+            surname = $1,
+            first_name = $2,
+            middle_name = COALESCE($3, middle_name),
+            email_address = $4,
+            email = $4,
+            password_hash = $5,
+            passcode_hash = $6,
+            passcode = $7,
+            mobile_no = $8,
+            mobile_number = $8,
+            registrant_type = 'reclass',
+            plantilla_item_number = $9,
+            current_designation = COALESCE(current_designation, $10),
+            region = COALESCE(region, $11),
+            division = COALESCE(division, $12),
+            updated_at = NOW()
+          WHERE id = $13
+          RETURNING *`,
+          [
+            finalLastName,
+            finalFirstName,
+            cleanMiddleName,
+            cleanEmail,
+            password_hash,
+            passcode_hash,
+            passcode,
+            cleanMobile,
+            normalizedItemNo,
+            designation,
+            region,
+            division,
+            existingApplicantId,
+          ],
+        );
+        applicant = updateRes.rows[0];
+      } else {
+        const lastApplicant = await client.query(
+          `SELECT applicant_number FROM applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
+        );
+        let nextApplicantNum = 1;
+        if (
+          lastApplicant.rows.length > 0 &&
+          lastApplicant.rows[0].applicant_number
+        ) {
+          const match =
+            lastApplicant.rows[0].applicant_number.match(/AGAP-(\d+)/);
+          if (match) {
+            nextApplicantNum = parseInt(match[1], 10) + 1;
+          }
+        }
+        const newApplicantNumber = `AGAP-${String(nextApplicantNum).padStart(4, '0')}`;
+
+        const insertRes = await client.query(
+          `INSERT INTO applicants (
+            applicant_number, surname, first_name, middle_name,
+            email_address, email, password_hash, passcode_hash, passcode,
+            mobile_no, mobile_number, registrant_type, plantilla_item_number,
+            current_designation, region, division, is_test, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4,
+            $5, $5, $6, $7, $8,
+            $9, $9, 'reclass', $10,
+            $11, $12, $13, false, NOW(), NOW()
+          ) RETURNING *`,
+          [
+            newApplicantNumber,
+            finalLastName,
+            finalFirstName,
+            cleanMiddleName,
+            cleanEmail,
+            password_hash,
+            passcode_hash,
+            passcode,
+            cleanMobile,
+            normalizedItemNo,
+            designation,
+            region,
+            division,
+          ],
+        );
+        applicant = insertRes.rows[0];
+      }
+
+      // Update or insert credentials and contact info in reclass_gc via plantilla item number
+      await client.query(
+        `UPDATE reclass_gc SET 
+          email = $1, 
+          password = $2, 
+          password_hash = $3, 
+          passcode = $4, 
+          passcode_hash = $5, 
+          mobile_number = $6, 
+          first_name = COALESCE(NULLIF(first_name, ''), $7),
+          last_name = COALESCE(NULLIF(last_name, ''), $8),
+          updated_at = NOW() 
+        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($9)) 
+           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($9))
+           OR id = $10`,
         [
-          newApplicantNumber,
-          cleanLastName,
-          cleanFirstName,
-          cleanMiddleName,
           cleanEmail,
+          password,
           password_hash,
-          passcode_hash,
           passcode,
+          passcode_hash,
           cleanMobile,
+          finalFirstName,
+          finalLastName,
           normalizedItemNo,
-          designation,
-          region,
-          division,
+          inc.id,
         ],
       );
-      const applicant = insertRes.rows[0];
-
-      if (!inc.email) {
-        await client.query(
-          `UPDATE reclass_gc SET email = $1, updated_at = NOW() WHERE id = $2`,
-          [cleanEmail, inc.id],
-        );
-      }
 
       await client.query('COMMIT');
 
@@ -2220,28 +2412,100 @@ class ApplicantsServiceClass {
   }
 
   async authenticateReclassAccount(
-    email: string,
+    emailOrItemNumber: string,
     credential: string,
     method: 'password' | 'passcode',
   ) {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    if (!cleanEmail || !credential) {
+    const cleanIdentifier = (emailOrItemNumber || '').trim();
+    if (!cleanIdentifier || !credential) {
       return null;
     }
 
-    const appRes = await pool.query(
+    let appRes = await pool.query(
       `SELECT * FROM applicants 
        WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
           OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))
        LIMIT 1`,
-      [cleanEmail],
+      [cleanIdentifier],
     );
 
-    if (appRes.rows.length === 0) {
+    let applicant = appRes.rows[0] || null;
+
+    if (!applicant) {
+      // Fallback: check if record exists in reclass_gc directly
+      const gcRes = await pool.query(
+        `SELECT * FROM reclass_gc 
+         WHERE LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1)) 
+            OR UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+         LIMIT 1`,
+        [cleanIdentifier],
+      );
+      if (gcRes.rows.length > 0) {
+        const gc = gcRes.rows[0];
+        let isGcMatch = false;
+        if (method === 'passcode') {
+          if (gc.passcode_hash) {
+            isGcMatch = await bcrypt.compare(credential, gc.passcode_hash);
+          } else if (gc.passcode) {
+            isGcMatch = gc.passcode === credential;
+          }
+        } else {
+          if (gc.password_hash) {
+            isGcMatch = await bcrypt.compare(credential, gc.password_hash);
+          } else if (gc.password) {
+            isGcMatch = gc.password === credential;
+          }
+        }
+
+        if (isGcMatch) {
+          // Link / create applicant for this session
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            const newApplicantNumber = `AGAP-${Date.now().toString().slice(-4)}`;
+            const insertApp = await client.query(
+              `INSERT INTO applicants (
+                applicant_number, surname, first_name, email_address, email,
+                password_hash, passcode_hash, passcode, mobile_number,
+                registrant_type, plantilla_item_number, current_designation,
+                region, division, is_test, created_at, updated_at
+              ) VALUES (
+                $1, $2, $3, $4, $4,
+                $5, $6, $7, $8,
+                'reclass', $9, $10,
+                $11, $12, false, NOW(), NOW()
+              ) RETURNING *`,
+              [
+                newApplicantNumber,
+                gc.last_name || '',
+                gc.first_name || '',
+                gc.email || `${cleanIdentifier.toLowerCase()}@deped.gov.ph`,
+                gc.password_hash,
+                gc.passcode_hash,
+                gc.passcode,
+                gc.mobile_number,
+                gc.item_no,
+                gc.current_position || 'Guidance Counselor',
+                gc.region,
+                gc.division,
+              ],
+            );
+            applicant = insertApp.rows[0];
+            await client.query('COMMIT');
+          } catch {
+            await client.query('ROLLBACK');
+          } finally {
+            client.release();
+          }
+        }
+      }
+    }
+
+    if (!applicant) {
       return null;
     }
 
-    const applicant = appRes.rows[0];
     let isMatch = false;
 
     if (method === 'passcode') {
@@ -2257,6 +2521,8 @@ class ApplicantsServiceClass {
     } else {
       if (applicant.password_hash) {
         isMatch = await bcrypt.compare(credential, applicant.password_hash);
+      } else if (applicant.password) {
+        isMatch = applicant.password === credential;
       }
     }
 

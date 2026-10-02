@@ -56,8 +56,8 @@ export const RECLASS_REQUIREMENTS: ReclassDocumentRequirement[] = [
   {
     key: 'training_certs',
     title: 'Certificate/s of Relevant Training',
-    description: 'Certificates of relevant specialized training and professional development.',
-    required: true,
+    description: 'Certificates of relevant specialized training and professional development (Optional).',
+    required: false,
   },
   {
     key: 'omnibus_sworn_statement',
@@ -136,10 +136,12 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     uploadedMap[doc.category_key] = doc;
   });
 
-  const totalRequired = RECLASS_REQUIREMENTS.length;
-  const uploadedCount = RECLASS_REQUIREMENTS.filter((req) => !!uploadedMap[req.key]).length;
+  const mandatoryRequirements = RECLASS_REQUIREMENTS.filter((req) => req.required);
+  const totalMandatory = mandatoryRequirements.length;
+  const uploadedMandatoryCount = mandatoryRequirements.filter((req) => !!uploadedMap[req.key]).length;
+  const totalUploadedCount = RECLASS_REQUIREMENTS.filter((req) => !!uploadedMap[req.key]).length;
   const stagedCount = Object.keys(stagedFiles).length;
-  const progressPercent = Math.round((uploadedCount / totalRequired) * 100);
+  const progressPercent = Math.min(100, Math.round((uploadedMandatoryCount / totalMandatory) * 100));
 
   const handleFileSelect = (req: ReclassDocumentRequirement, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -306,8 +308,8 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Submission Progress</span>
-              <span className="text-xs font-bold text-[#022851] bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-                {uploadedCount} of {totalRequired} Uploaded
+              <span className="text-xs font-bold text-[#022851] bg-white border border-gray-200 px-2.5 py-0.5 rounded-full">
+                {totalUploadedCount} of {RECLASS_REQUIREMENTS.length} Uploaded ({uploadedMandatoryCount}/{totalMandatory} Mandatory)
               </span>
               {stagedCount > 0 && (
                 <span className="text-xs font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
@@ -330,7 +332,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           <div className="text-xs text-gray-600 bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <span>
-              Select your PDF documents below (PDF only, max 15MB). All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>.
+              Select your PDF documents below (PDF only, max 15MB). All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>. Note: Training certificates are optional.
             </span>
           </div>
 
@@ -378,6 +380,11 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-bold text-[#022851] tracking-tight">{req.title}</h3>
+                            {!req.required && (
+                              <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+                                Optional
+                              </span>
+                            )}
                             {stagedFile ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
                                 <FileCheck className="w-3 h-3 text-sky-600" /> Selected (Pending Upload)
@@ -386,9 +393,13 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                 <CheckCircle2 className="w-3 h-3" /> Uploaded
                               </span>
-                            ) : (
+                            ) : req.required ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                 <Clock className="w-3 h-3" /> Pending Selection
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                <Clock className="w-3 h-3 text-slate-400" /> Optional
                               </span>
                             )}
                           </div>
@@ -507,9 +518,9 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           <span className="text-xs text-gray-500 font-medium">
             {stagedCount > 0
               ? `📄 ${stagedCount} file(s) selected and ready to upload.`
-              : uploadedCount === totalRequired
-              ? '🎉 All 7 required reclassification documents are uploaded.'
-              : `${totalRequired - uploadedCount} document(s) pending.`}
+              : uploadedMandatoryCount === totalMandatory
+              ? '🎉 All 7 mandatory reclassification documents are uploaded.'
+              : `${totalMandatory - uploadedMandatoryCount} mandatory document(s) pending.`}
           </span>
           <button
             type="button"

@@ -172,8 +172,6 @@ router.post('/reclass-register', async (req, res) => {
 
     if (
       !item_number ||
-      !first_name ||
-      !last_name ||
       !mobile_number ||
       !email ||
       !password ||
@@ -193,10 +191,14 @@ router.post('/reclass-register', async (req, res) => {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      return res
-        .status(400)
-        .json({ message: 'Invalid email address format.' });
+    if (
+      !cleanEmail.endsWith('@deped.gov.ph') ||
+      !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)
+    ) {
+      return res.status(400).json({
+        message:
+          'Only official @deped.gov.ph email addresses are allowed for Reclassification.',
+      });
     }
 
     if (!password || !String(password).trim()) {

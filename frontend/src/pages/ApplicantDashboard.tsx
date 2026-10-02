@@ -748,18 +748,27 @@ export default function ApplicantDashboard() {
                 ''
               ).trim().toLowerCase();
 
-              const initialAssessment =
+              const rawInitial =
                 reclassData.initial_assessment_position ||
                 reclassData.reclass_position ||
-                'SCHOOL COUNSELOR II';
+                '';
+              const initialAssessment =
+                rawInitial && rawInitial.toUpperCase() !== 'N/A' && rawInitial.trim() !== ''
+                  ? rawInitial.trim()
+                  : 'N/A';
+
               const initialSalaryGrade =
-                reclassData.initial_assessment_salary_grade
-                  ? `SG-${reclassData.initial_assessment_salary_grade}`
-                  : getPositionSalaryGrade(initialAssessment);
+                initialAssessment !== 'N/A'
+                  ? (reclassData.initial_assessment_salary_grade && reclassData.initial_assessment_salary_grade !== 'N/A'
+                      ? (reclassData.initial_assessment_salary_grade.startsWith('SG-')
+                          ? reclassData.initial_assessment_salary_grade
+                          : `SG-${reclassData.initial_assessment_salary_grade}`)
+                      : getPositionSalaryGrade(initialAssessment))
+                  : 'N/A';
 
               const uploadedDocsCount = reclassDocs.length;
-              const TOTAL_REQUIRED_DOCS = 8;
-              const hasSubmittedAllDocs = uploadedDocsCount >= TOTAL_REQUIRED_DOCS;
+              const TOTAL_MANDATORY_DOCS = 7;
+              const hasSubmittedAllDocs = uploadedDocsCount >= TOTAL_MANDATORY_DOCS;
               const submissionDeadline = reclassData.submission_deadline || 'October 31, 2026';
 
               const isReclassProper =
@@ -793,10 +802,10 @@ export default function ApplicantDashboard() {
 
               if (isReclassProper) {
                 currentStep = 4;
-                currentLabel = 'Reclassification Proper';
-                stepBadge = 'Step 4 of 4: Reclassification Proper';
+                currentLabel = 'Appointment';
+                stepBadge = 'Step 4 of 4: Appointment';
                 defaultRemarks =
-                  'Your plantilla position has been officially reclassified with NOSCA allocation and salary adjustment.';
+                  'Your plantilla position has been officially reclassified and appointed with NOSCA allocation and salary adjustment.';
               } else if (isEndorsedToDbm) {
                 currentStep = 3;
                 currentLabel = 'Endorsed TO DBM RO';
@@ -814,7 +823,7 @@ export default function ApplicantDashboard() {
                 currentLabel = 'For Review';
                 stepBadge = 'Step 2 of 4: SDO Initial Review';
                 defaultRemarks =
-                  'All 8 required documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
+                  'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
               } else {
                 currentStep = 1;
                 currentLabel = 'Updating of Documents';
@@ -822,7 +831,7 @@ export default function ApplicantDashboard() {
                 defaultRemarks =
                   uploadedDocsCount === 0
                     ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your Initial Assessment.'
-                    : `${uploadedDocsCount} of 8 requirements uploaded. Your reclassification will proceed under your Initial Assessment if no additional documents are submitted.`;
+                    : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your Initial Assessment if no additional documents are submitted.`;
               }
 
               return (
@@ -1023,7 +1032,12 @@ export default function ApplicantDashboard() {
                     <div className="bg-amber-50/90 border border-amber-300/80 rounded-xl px-4 py-3 text-amber-950 shadow-xs flex items-center gap-2.5">
                       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                       <p className="text-xs text-amber-900 font-medium leading-relaxed">
-                        <strong>Important Notice:</strong> Non-submission of updated documents means <strong>no re-assessment will be initiated</strong>. Your reclassification will remain based on your <strong>Initial Assessment: {initialAssessment} ({initialSalaryGrade})</strong>.
+                        <strong>Important Notice:</strong> Non-submission of updated documents means <strong>no re-assessment will be initiated</strong>.
+                        {initialAssessment !== 'N/A' ? (
+                          <> Your reclassification will remain based on your <strong>Initial Assessment: {initialAssessment} ({initialSalaryGrade})</strong>.</>
+                        ) : (
+                          <> Your reclassification will proceed under your current plantilla record.</>
+                        )}
                       </p>
                     </div>
 
@@ -1086,11 +1100,11 @@ export default function ApplicantDashboard() {
                                 Tentative Assessment
                               </span>
                               <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">
-                                Previous Evaluation
+                                {initialAssessment !== 'N/A' ? 'Previous Evaluation' : 'PAL Status'}
                               </span>
                             </div>
                             <p className="text-xs font-black text-[#022851] mt-0.5">
-                              Initial Assessment: {initialAssessment} ({initialSalaryGrade})
+                              Initial Assessment: {initialAssessment} {initialSalaryGrade !== 'N/A' ? `(${initialSalaryGrade})` : ''}
                             </p>
                           </div>
 
@@ -1099,7 +1113,7 @@ export default function ApplicantDashboard() {
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="font-bold text-gray-500">Submission Progress</span>
                               <span className={`font-extrabold ${hasSubmittedAllDocs ? 'text-emerald-700' : 'text-[#022851]'}`}>
-                                {uploadedDocsCount} of 8 Uploaded
+                                {uploadedDocsCount} of 8 ({Math.min(uploadedDocsCount, 7)}/7 Mandatory)
                               </span>
                             </div>
                             <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
@@ -1108,7 +1122,7 @@ export default function ApplicantDashboard() {
                                   hasSubmittedAllDocs ? 'bg-emerald-500' : 'bg-[#0284c7]'
                                 }`}
                                 style={{
-                                  width: `${Math.min(100, Math.round((uploadedDocsCount / 8) * 100))}%`,
+                                  width: `${Math.min(100, Math.round((Math.min(uploadedDocsCount, 7) / 7) * 100))}%`,
                                 }}
                               />
                             </div>
@@ -1244,7 +1258,7 @@ export default function ApplicantDashboard() {
                         </div>
                       </div>
 
-                      {/* Step 4: Reclassification Proper */}
+                      {/* Step 4: Appointment */}
                       <div
                         className={`relative rounded-xl p-5 transition-all border flex flex-col justify-between ${
                           isReclassProper
@@ -1274,20 +1288,20 @@ export default function ApplicantDashboard() {
                                   : 'bg-slate-100 text-slate-400'
                               }`}
                             >
-                              {isReclassProper ? 'Official Placement' : 'Upcoming'}
+                              {isReclassProper ? 'Official Appointment' : 'Upcoming'}
                             </span>
                           </div>
 
                           <p className={`text-xs font-bold uppercase tracking-wider ${isReclassProper ? 'text-emerald-700' : 'text-slate-400'}`}>
-                            Step 4 • Final Placement
+                            Step 4 • Appointment
                           </p>
                           <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${isReclassProper ? 'text-[#022851]' : 'text-gray-500'}`}>
-                            Reclassification Proper
+                            Appointment / Reclassification Proper
                           </h4>
                           <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
                             {isReclassProper
-                              ? 'Official reclassification into approved plantilla position & salary grade.'
-                              : 'Official reclassification and appointment to the position upon NOSCA issuance.'}
+                              ? 'Official appointment and reclassification into approved plantilla position & salary grade.'
+                              : 'Official appointment and placement to the position upon DBM NOSCA issuance.'}
                           </p>
 
                           {/* Reclassified Position & Salary Grade Display Box */}
@@ -1321,7 +1335,7 @@ export default function ApplicantDashboard() {
                                 isReclassProper ? 'text-[#022851] font-black' : 'text-slate-600'
                               }`}
                             >
-                              {reclassData.reclass_position || reclassData.indicative_position || reclassData.target_position || initialAssessment}
+                              {reclassData.reclass_position || reclassData.indicative_position || reclassData.target_position || (initialAssessment !== 'N/A' ? initialAssessment : '—')}
                             </p>
                             <div
                               className={`flex items-center gap-1.5 mt-1.5 pt-1.5 border-t ${
