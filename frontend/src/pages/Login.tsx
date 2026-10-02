@@ -12,7 +12,7 @@ const RECLASS_LOGIN_TOUR_STEPS = [
     sel: '#tour-login-identifier',
     label: 'Step 1 of 4: Account Identifier',
     title: 'Plantilla Item No. or DepEd Email',
-    body: 'Enter your 28-character Plantilla Item Number (e.g. OSEC-DECSB-GCOOR3-TEST01-2026) or your official DepEd email address to identify your account.',
+    body: 'Enter your 28-character Plantilla Item Number or your official DepEd email address to identify your account.',
   },
   {
     sel: '#tour-login-credentials',
@@ -39,7 +39,7 @@ const RECLASS_REG_TOUR_STEPS = [
     sel: '#tour-reg-plantilla',
     label: 'Step 1 of 5: Plantilla Verification',
     title: 'DepEd Plantilla Item Number',
-    body: 'Enter your 28-character GMIS Plantilla Item Number (e.g. OSEC-DECSB-GCOOR3-TEST01-2026) and click "Verify" to validate against official DepEd central records.',
+    body: 'Enter your 28-character GMIS Plantilla Item Number and click "Verify" to validate against official DepEd central records.',
   },
   {
     sel: '#tour-reg-name',
@@ -1204,7 +1204,7 @@ export default function Login() {
                           setReclassLoginError(null);
                         }}
                         className="block w-full pl-10 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors"
-                        placeholder="e.g. OSEC-DECSB-... or name@deped.gov.ph"
+                        placeholder="Plantilla Item No. or name@deped.gov.ph"
                       />
                     </div>
                   </div>
