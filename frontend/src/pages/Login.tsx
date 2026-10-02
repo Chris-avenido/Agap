@@ -1490,7 +1490,7 @@ export default function Login() {
         {showWelcomeModal && (
           <div className="welcome-box">
             <div className="welcome-badge">
-              {reclassView === 'register' ? 'New Registration' : 'Welcome'}
+              {reclassView === 'register' ? 'New Registration' : 'AGAP Portal'}
             </div>
             <h2>
               {reclassView === 'register'
@@ -1500,7 +1500,7 @@ export default function Login() {
             <p>
               {reclassView === 'register'
                 ? 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.'
-                : 'Monitor openings, screen applicants against qualification standards, and track hiring from application through to appointment — all in one place.'}
+                : 'Seamlessly access your portal, submit documentary requirements, and track your evaluation progress from verification through to appointment.'}
             </p>
             <div className="welcome-highlights">
               {reclassView === 'register' ? (
@@ -1521,16 +1521,16 @@ export default function Login() {
               ) : (
                 <>
                   <div className="welcome-hi">
-                    <b>Screen</b>
-                    <span>Review applicants vs. QS and mark whether requirements are met.</span>
+                    <b>Authenticate</b>
+                    <span>Sign in with your Plantilla Item Number, DepEd email, or 6-digit PIN.</span>
                   </div>
                   <div className="welcome-hi">
-                    <b>Analyze</b>
-                    <span>KPIs, charts, and filters across every module.</span>
+                    <b>Submit Documents</b>
+                    <span>Upload documentary requirements, CSC forms, and update profile.</span>
                   </div>
                   <div className="welcome-hi">
-                    <b>Decide</b>
-                    <span>Advance the pipeline through to appointment.</span>
+                    <b>Track Status</b>
+                    <span>Real-time progress from SDO HRMO evaluation to DBM endorsement.</span>
                   </div>
                 </>
               )}
@@ -1549,12 +1549,6 @@ export default function Login() {
                 onClick={() => startTour(reclassView)}
               >
                 {reclassView === 'register' ? 'Show Register Tutorial' : 'Show Login Tutorial'}
-              </button>
-              <button
-                type="button"
-                onClick={() => window.open('https://sebtcheng.github.io/prototypes/agap_guides/agap-hrmo.html', '_blank')}
-              >
-                View Guide
               </button>
             </div>
           </div>
