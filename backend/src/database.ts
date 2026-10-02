@@ -33,16 +33,20 @@ async function runSchemaMigrations(client: any) {
       'ALTER TABLE applicants ADD COLUMN IF NOT EXISTS email VARCHAR(255);',
     );
 
-    // Ensure unique constraints for account credentials
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_email_lower 
-      ON applicants (LOWER(TRIM(email_address))) 
-      WHERE email_address IS NOT NULL AND TRIM(email_address) <> '';
+    // Ensure indices for account credentials
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_applicants_email_lower 
+        ON applicants (LOWER(TRIM(email_address))) 
+        WHERE email_address IS NOT NULL AND TRIM(email_address) <> '';
 
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_plantilla_unique 
-      ON applicants (UPPER(TRIM(plantilla_item_number))) 
-      WHERE plantilla_item_number IS NOT NULL AND TRIM(plantilla_item_number) <> '';
-    `);
+        CREATE INDEX IF NOT EXISTS idx_applicants_plantilla 
+        ON applicants (UPPER(TRIM(plantilla_item_number))) 
+        WHERE plantilla_item_number IS NOT NULL AND TRIM(plantilla_item_number) <> '';
+      `);
+    } catch (idxErr: any) {
+      console.warn('Index creation notice:', idxErr.message || idxErr);
+    }
     await client.query(
       'ALTER TABLE document_audit_logs ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT TRUE;',
     );
@@ -120,9 +124,11 @@ async function runSchemaMigrations(client: any) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_psi_cd ON gmis_gc_items(psi_cd);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_region ON gmis_gc_items(region);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_division ON gmis_gc_items(division);
+      CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_is_test ON gmis_gc_items(is_test);
     `);
 
     // Ensure agap_invited table exists

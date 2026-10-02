@@ -2002,7 +2002,6 @@ class ApplicantsServiceClass {
       const gmisRes = await pool.query(
         `SELECT * FROM gmis_gc_items 
          WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
-            OR UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
          LIMIT 1`,
         [normalized],
       );
@@ -2013,7 +2012,7 @@ class ApplicantsServiceClass {
             item_no, first_name, last_name, region, division,
             school_id, school_name, current_position, reclass_position,
             stage_of_reclassification, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, NOW(), NOW())
           RETURNING *`,
           [
             normalized,
@@ -2025,6 +2024,7 @@ class ApplicantsServiceClass {
             gmisItem.school_name || null,
             gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
             'N/A',
+            Boolean(gmisItem.is_test),
           ],
         );
         inc = insertGcRes.rows[0];
@@ -2124,7 +2124,6 @@ class ApplicantsServiceClass {
       const gmisRes = await pool.query(
         `SELECT * FROM gmis_gc_items 
          WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
-            OR UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
          LIMIT 1`,
         [normalizedItemNo],
       );
@@ -2136,7 +2135,7 @@ class ApplicantsServiceClass {
             school_id, school_name, current_position, reclass_position,
             stage_of_reclassification, email, password, password_hash,
             passcode, passcode_hash, mobile_number, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, false, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
           RETURNING *`,
           [
             normalizedItemNo,
@@ -2154,6 +2153,7 @@ class ApplicantsServiceClass {
             passcode,
             await bcrypt.hash(passcode, 10),
             cleanMobile,
+            Boolean(gmisItem.is_test),
           ],
         );
         inc = insertGcRes.rows[0];
