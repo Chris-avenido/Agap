@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, Calendar, FileText, Info } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, Calendar, FileText, Info, Send, Landmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
@@ -793,41 +793,41 @@ export default function ApplicantDashboard() {
 
               const isEndorsedToRegional = isEndorsedToRo || isEndorsedToDbm || isReclassProper;
 
-              // Step Calculation (4 Steps)
+              // Step Calculation (5 Explicit Stages: Updating of Documents -> SDO HRMO Review -> Endorsed to RO -> Endorsed to DBM -> Appointment)
               let currentStep = 1;
               let currentLabel = 'Updating of Documents';
-              let stepBadge = 'Step 1 of 4: Updating of Documents';
+              let stepBadge = 'Step 1 of 5: Updating of Documents';
               let defaultRemarks =
                 'Submit updated qualification documents if seeking re-assessment. Non-submission means your reclassification proceeds under your Initial Assessment.';
 
               if (isReclassProper) {
-                currentStep = 4;
+                currentStep = 5;
                 currentLabel = 'Appointment';
-                stepBadge = 'Step 4 of 4: Appointment';
+                stepBadge = 'Step 5 of 5: Appointment';
                 defaultRemarks =
                   'Your plantilla position has been officially reclassified and appointed with NOSCA allocation and salary adjustment.';
               } else if (isEndorsedToDbm) {
-                currentStep = 3;
-                currentLabel = 'Endorsed TO DBM RO';
-                stepBadge = 'Step 3 of 4: DBM RO Endorsement';
+                currentStep = 4;
+                currentLabel = 'Endorsed to DBM RO';
+                stepBadge = 'Step 4 of 5: DBM RO Endorsement';
                 defaultRemarks =
                   'Your reclassification application has been endorsed to the Department of Budget and Management (DBM) Regional Office for NOSCA issuance.';
               } else if (isEndorsedToRo) {
-                currentStep = 2;
-                currentLabel = 'Endorsed To RO';
-                stepBadge = 'Step 2 of 4: Endorsed to RO';
+                currentStep = 3;
+                currentLabel = 'Endorsed to RO';
+                stepBadge = 'Step 3 of 5: DepEd Regional Office Final Evaluation';
                 defaultRemarks =
-                  'Your documents have been verified and endorsed to the DepEd Regional Office for evaluation and transmittal.';
+                  'Your documents have been verified and endorsed to the DepEd Regional Office for final evaluation and transmittal to DBM.';
               } else if (hasSubmittedAllDocs) {
                 currentStep = 2;
-                currentLabel = 'For Review';
-                stepBadge = 'Step 2 of 4: SDO Initial Review';
+                currentLabel = 'SDO HRMO Review';
+                stepBadge = 'Step 2 of 5: SDO HRMO Review';
                 defaultRemarks =
                   'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
               } else {
                 currentStep = 1;
                 currentLabel = 'Updating of Documents';
-                stepBadge = 'Step 1 of 4: Updating of Documents';
+                stepBadge = 'Step 1 of 5: Updating of Documents';
                 defaultRemarks =
                   uploadedDocsCount === 0
                     ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your Initial Assessment.'
@@ -1041,20 +1041,20 @@ export default function ApplicantDashboard() {
                       </p>
                     </div>
 
-                    {/* Process Steps Stepper (4 Steps) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5 xl:gap-5 relative">
+                    {/* Process Steps Stepper (5 Steps: Updating of Docs -> SDO HRMO Review -> DepEd RO Final Eval -> DBM RO Endorsement -> Appointment) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 relative">
                       {/* Step 1: Updating of Documents */}
                       <div
-                        className={`relative rounded-xl p-5 transition-all border flex flex-col justify-between ${
+                        className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
                           currentStep === 1
                             ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
                             : 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
                         }`}
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center font-bold text-xs ${
                                 hasSubmittedAllDocs
                                   ? 'bg-emerald-600 text-white shadow-sm'
                                   : 'bg-[#022851] text-[#facc15] shadow-sm'
@@ -1067,7 +1067,7 @@ export default function ApplicantDashboard() {
                               )}
                             </div>
                             <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
                                 hasSubmittedAllDocs
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : 'bg-sky-100 text-[#0284c7] animate-pulse'
@@ -1077,46 +1077,46 @@ export default function ApplicantDashboard() {
                             </span>
                           </div>
 
-                          <p className={`text-xs font-bold uppercase tracking-wider ${currentStep === 1 ? 'text-[#0284c7]' : hasSubmittedAllDocs ? 'text-emerald-800' : 'text-gray-400'}`}>
-                            Step 1 • Applicant Submission
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 1 ? 'text-[#0284c7]' : hasSubmittedAllDocs ? 'text-emerald-800' : 'text-gray-400'}`}>
+                            Step 1 • Applicant
                           </p>
-                          <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${currentStep === 1 ? 'text-[#022851]' : 'text-gray-800'}`}>
+                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 1 ? 'text-[#022851]' : 'text-gray-800'}`}>
                             Updating of Documents
                           </h4>
 
                           {/* Submission Deadline */}
-                          <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50/90 border border-amber-300/80 text-amber-950 text-[11px] mt-2 mb-1 w-full shadow-2xs">
-                            <span className="flex items-center gap-1.5 font-bold text-amber-900">
-                              <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <div className="flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg bg-amber-50/90 border border-amber-300/80 text-amber-950 text-[10px] mt-2 mb-1 w-full shadow-2xs">
+                            <span className="flex items-center gap-1 font-bold text-amber-900">
+                              <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
                               Deadline:
                             </span>
-                            <span className="font-extrabold text-amber-900 font-mono">{submissionDeadline}</span>
+                            <span className="font-extrabold text-amber-900 font-mono text-[10px]">{submissionDeadline}</span>
                           </div>
 
                           {/* Tentative Initial Assessment highlight box */}
-                          <div className="my-2.5 p-2.5 rounded-lg bg-sky-50/80 border border-sky-200/90 text-left">
+                          <div className="my-2 p-2 rounded-lg bg-sky-50/80 border border-sky-200/90 text-left">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-[10px] font-extrabold uppercase text-[#0369a1] tracking-wider">
-                                Tentative Assessment
+                              <span className="text-[9px] font-extrabold uppercase text-[#0369a1] tracking-wider">
+                                Initial Assessment
                               </span>
-                              <span className="text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">
-                                {initialAssessment !== 'N/A' ? 'Previous Evaluation' : 'PAL Status'}
+                              <span className="text-[8px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded">
+                                {initialAssessment !== 'N/A' ? 'Previous Eval' : 'PAL Status'}
                               </span>
                             </div>
-                            <p className="text-xs font-black text-[#022851] mt-0.5">
-                              Initial Assessment: {initialAssessment} {initialSalaryGrade !== 'N/A' ? `(${initialSalaryGrade})` : ''}
+                            <p className="text-[11px] font-black text-[#022851] mt-0.5 truncate" title={initialAssessment}>
+                              {initialAssessment} {initialSalaryGrade !== 'N/A' ? `(${initialSalaryGrade})` : ''}
                             </p>
                           </div>
 
                           {/* Submission Progress Bar */}
-                          <div className="space-y-1.5 my-2">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-bold text-gray-500">Submission Progress</span>
+                          <div className="space-y-1 my-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="font-bold text-gray-500">Progress</span>
                               <span className={`font-extrabold ${hasSubmittedAllDocs ? 'text-emerald-700' : 'text-[#022851]'}`}>
-                                {uploadedDocsCount} of 8 ({Math.min(uploadedDocsCount, 7)}/7 Mandatory)
+                                {uploadedDocsCount}/8 ({Math.min(uploadedDocsCount, 7)}/7 Req)
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                            <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all duration-500 ${
                                   hasSubmittedAllDocs ? 'bg-emerald-500' : 'bg-[#0284c7]'
@@ -1132,35 +1132,35 @@ export default function ApplicantDashboard() {
                         <button
                           type="button"
                           onClick={() => setIsReclassUploadModalOpen(true)}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#022851] hover:bg-[#033b77] shadow-xs transition-all cursor-pointer"
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-[#022851] hover:bg-[#033b77] shadow-xs transition-all cursor-pointer"
                         >
-                          <Upload className="w-3.5 h-3.5" />
-                          <span>{hasSubmittedAllDocs ? 'Manage Requirements' : `Upload Requirements (${uploadedDocsCount}/8)`}</span>
+                          <Upload className="w-3 h-3" />
+                          <span>{hasSubmittedAllDocs ? 'Manage Docs' : `Upload Docs (${uploadedDocsCount}/8)`}</span>
                         </button>
                       </div>
 
                       {/* Step 2: SDO Division HRMO */}
                       <div
-                        className={`relative rounded-xl p-5 transition-all border flex flex-col justify-between ${
+                        className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
                           currentStep === 2
                             ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
-                            : isEndorsedToRo || isEndorsedToDbm || isReclassProper
+                            : currentStep > 2
                             ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
                             : 'bg-slate-50/70 border-slate-200 text-slate-400'
                         }`}
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                                isEndorsedToRo || isEndorsedToDbm || isReclassProper
+                              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                currentStep > 2
                                   ? 'bg-emerald-600 text-white shadow-sm'
                                   : currentStep === 2
                                   ? 'bg-[#022851] text-[#facc15] shadow-sm'
                                   : 'bg-slate-100 text-slate-400 border border-slate-200'
                               }`}
                             >
-                              {isEndorsedToRo || isEndorsedToDbm || isReclassProper ? (
+                              {currentStep > 2 ? (
                                 <CheckCircle2 className="w-5 h-5" />
                               ) : currentStep === 2 ? (
                                 <Building2 className="w-4 h-4" />
@@ -1169,15 +1169,15 @@ export default function ApplicantDashboard() {
                               )}
                             </div>
                             <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                isEndorsedToRo || isEndorsedToDbm || isReclassProper
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                currentStep > 2
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : currentStep === 2
                                   ? 'bg-sky-100 text-[#0284c7] animate-pulse'
                                   : 'bg-slate-100 text-slate-400'
                               }`}
                             >
-                              {isEndorsedToRo || isEndorsedToDbm || isReclassProper
+                              {currentStep > 2
                                 ? 'Completed'
                                 : currentStep === 2
                                 ? 'Active Stage'
@@ -1185,11 +1185,11 @@ export default function ApplicantDashboard() {
                             </span>
                           </div>
 
-                          <p className={`text-xs font-bold uppercase tracking-wider ${currentStep === 2 ? 'text-[#0284c7]' : isEndorsedToRo || isEndorsedToDbm || isReclassProper ? 'text-emerald-800' : 'text-gray-400'}`}>
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 2 ? 'text-[#0284c7]' : currentStep > 2 ? 'text-emerald-800' : 'text-gray-400'}`}>
                             Step 2 • SDO Division HRMO
                           </p>
-                          <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${currentStep === 2 ? 'text-[#0284c7]' : isEndorsedToRo || isEndorsedToDbm || isReclassProper ? 'text-gray-800' : 'text-gray-500'}`}>
-                            For Review / SDO Re-assessment
+                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 2 ? 'text-[#022851]' : currentStep > 2 ? 'text-gray-800' : 'text-gray-500'}`}>
+                            HRMO Review & Evaluation
                           </h4>
                           <p className="text-[11px] text-gray-500 mt-1 leading-snug">
                             {hasSubmittedAllDocs
@@ -1199,77 +1199,153 @@ export default function ApplicantDashboard() {
                         </div>
 
                         {!hasSubmittedAllDocs && (
-                          <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-400 bg-slate-100/80 px-2.5 py-1.5 rounded-lg border border-slate-200">
-                            <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-slate-400 bg-slate-100/80 px-2 py-1.5 rounded-lg border border-slate-200">
+                            <Clock className="w-3 h-3 shrink-0 text-slate-400" />
                             <span>Awaiting submission of requirements</span>
+                          </div>
+                        )}
+                        {currentStep === 2 && hasSubmittedAllDocs && (
+                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-[#0369a1] bg-sky-50 px-2 py-1.5 rounded-lg border border-sky-200">
+                            <Clock className="w-3 h-3 shrink-0 text-[#0284c7]" />
+                            <span>In-review by Division HRMO</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Step 3: DBM Regional Office */}
+                      {/* Step 3: DepEd Regional Office (RO) */}
                       <div
-                        className={`relative rounded-xl p-5 transition-all border flex flex-col justify-between ${
+                        className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
                           currentStep === 3
                             ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
-                            : isReclassProper
+                            : currentStep > 3
                             ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
-                            : 'bg-white/60 border-slate-200 text-gray-400'
+                            : 'bg-slate-50/70 border-slate-200 text-slate-400'
                         }`}
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                                isReclassProper
+                              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                currentStep > 3
                                   ? 'bg-emerald-600 text-white shadow-sm'
                                   : currentStep === 3
                                   ? 'bg-[#022851] text-[#facc15] shadow-sm'
                                   : 'bg-slate-100 text-slate-400 border border-slate-200'
                               }`}
                             >
-                              {isReclassProper ? (
+                              {currentStep > 3 ? (
                                 <CheckCircle2 className="w-5 h-5" />
+                              ) : currentStep === 3 ? (
+                                <Send className="w-4 h-4 text-[#facc15]" />
                               ) : (
-                                <Award className="w-4 h-4" />
+                                <Lock className="w-4 h-4 text-slate-400" />
                               )}
                             </div>
                             <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                isReclassProper
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                currentStep > 3
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : currentStep === 3
                                   ? 'bg-sky-100 text-[#0284c7] animate-pulse'
                                   : 'bg-slate-100 text-slate-400'
                               }`}
                             >
-                              {isReclassProper ? 'Completed' : currentStep === 3 ? 'Active Stage' : 'Upcoming'}
+                              {currentStep > 3 ? 'Completed' : currentStep === 3 ? 'Active Stage' : 'Upcoming'}
                             </span>
                           </div>
 
-                          <p className={`text-xs font-bold uppercase tracking-wider ${currentStep === 3 ? 'text-[#0284c7]' : isReclassProper ? 'text-emerald-800' : 'text-gray-400'}`}>
-                            Step 3 • DBM Regional Office
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 3 ? 'text-[#0284c7]' : currentStep > 3 ? 'text-emerald-800' : 'text-gray-400'}`}>
+                            Step 3 • DepEd Regional Office
                           </p>
-                          <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${currentStep === 3 ? 'text-[#022851]' : isReclassProper ? 'text-gray-800' : 'text-gray-500'}`}>
-                            Endorsed TO DBM RO
+                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 3 ? 'text-[#022851]' : currentStep > 3 ? 'text-gray-800' : 'text-gray-500'}`}>
+                            Endorsed to RO (Final Eval)
+                          </h4>
+                          <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                            Endorsement to DepEd Regional Office for final evaluation, regional consolidation, and endorsement to DBM.
+                          </p>
+                        </div>
+
+                        {currentStep === 3 && (
+                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-[#0369a1] bg-sky-50 px-2 py-1.5 rounded-lg border border-sky-200">
+                            <Send className="w-3 h-3 shrink-0 text-[#0284c7]" />
+                            <span>Under Regional Office Evaluation</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Step 4: DBM Regional Office */}
+                      <div
+                        className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
+                          currentStep === 4
+                            ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
+                            : currentStep > 4
+                            ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                            : 'bg-slate-50/70 border-slate-200 text-slate-400'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
+                            <div
+                              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                currentStep > 4
+                                  ? 'bg-emerald-600 text-white shadow-sm'
+                                  : currentStep === 4
+                                  ? 'bg-[#022851] text-[#facc15] shadow-sm'
+                                  : 'bg-slate-100 text-slate-400 border border-slate-200'
+                              }`}
+                            >
+                              {currentStep > 4 ? (
+                                <CheckCircle2 className="w-5 h-5" />
+                              ) : currentStep === 4 ? (
+                                <Landmark className="w-4 h-4 text-[#facc15]" />
+                              ) : (
+                                <Lock className="w-4 h-4 text-slate-400" />
+                              )}
+                            </div>
+                            <span
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                currentStep > 4
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : currentStep === 4
+                                  ? 'bg-sky-100 text-[#0284c7] animate-pulse'
+                                  : 'bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              {currentStep > 4 ? 'Completed' : currentStep === 4 ? 'Active Stage' : 'Upcoming'}
+                            </span>
+                          </div>
+
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 4 ? 'text-[#0284c7]' : currentStep > 4 ? 'text-emerald-800' : 'text-gray-400'}`}>
+                            Step 4 • DBM Regional Office
+                          </p>
+                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 4 ? 'text-[#022851]' : currentStep > 4 ? 'text-gray-800' : 'text-gray-500'}`}>
+                            Endorsed to DBM RO
                           </h4>
                           <p className="text-[11px] text-gray-500 mt-1 leading-snug">
                             Budget allocation & Notice of Organization, Staffing and Compensation Action (NOSCA) issuance.
                           </p>
                         </div>
+
+                        {currentStep === 4 && (
+                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-[#0369a1] bg-sky-50 px-2 py-1.5 rounded-lg border border-sky-200">
+                            <Landmark className="w-3 h-3 shrink-0 text-[#0284c7]" />
+                            <span>Awaiting NOSCA Issuance from DBM</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Step 4: Appointment */}
+                      {/* Step 5: Appointment */}
                       <div
-                        className={`relative rounded-xl p-5 transition-all border flex flex-col justify-between ${
+                        className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
                           isReclassProper
                             ? 'bg-gradient-to-br from-emerald-50/90 to-teal-50/70 border-emerald-500 shadow-md ring-2 ring-emerald-500/20'
                             : 'bg-slate-50/70 border-slate-200 text-slate-400'
                         }`}
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center justify-between gap-2 mb-2.5">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center font-bold text-xs ${
                                 isReclassProper
                                   ? 'bg-emerald-600 text-white shadow-sm'
                                   : 'bg-slate-100 text-slate-400 border border-slate-200'
@@ -1282,7 +1358,7 @@ export default function ApplicantDashboard() {
                               )}
                             </div>
                             <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
                                 isReclassProper
                                   ? 'bg-emerald-100 text-emerald-800 font-black'
                                   : 'bg-slate-100 text-slate-400'
@@ -1292,11 +1368,11 @@ export default function ApplicantDashboard() {
                             </span>
                           </div>
 
-                          <p className={`text-xs font-bold uppercase tracking-wider ${isReclassProper ? 'text-emerald-700' : 'text-slate-400'}`}>
-                            Step 4 • Appointment
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${isReclassProper ? 'text-emerald-700' : 'text-slate-400'}`}>
+                            Step 5 • Official Appointment
                           </p>
-                          <h4 className={`text-[15px] font-extrabold tracking-tight mt-0.5 ${isReclassProper ? 'text-[#022851]' : 'text-gray-500'}`}>
-                            Appointment / Reclassification Proper
+                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${isReclassProper ? 'text-[#022851]' : 'text-gray-500'}`}>
+                            Appointment / Reclass Proper
                           </h4>
                           <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
                             {isReclassProper
@@ -1306,56 +1382,56 @@ export default function ApplicantDashboard() {
 
                           {/* Reclassified Position & Salary Grade Display Box */}
                           <div
-                            className={`mt-3 p-3 rounded-xl border text-left transition-all ${
+                            className={`mt-2.5 p-2.5 rounded-xl border text-left transition-all ${
                               isReclassProper
                                 ? 'bg-gradient-to-br from-emerald-50/90 to-sky-50/70 border-emerald-200/90 shadow-xs'
                                 : 'bg-slate-100/80 border-slate-200'
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
                               <span
-                                className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                                className={`text-[9px] font-extrabold uppercase tracking-wider ${
                                   isReclassProper ? 'text-emerald-800' : 'text-slate-400'
                                 }`}
                               >
                                 Reclassified Position
                               </span>
                               <span
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                className={`text-[8px] font-bold px-1 py-0.2 rounded font-mono ${
                                   isReclassProper
                                     ? 'bg-emerald-600 text-white'
                                     : 'bg-slate-200 text-slate-500'
                                 }`}
                               >
-                                {isReclassProper ? 'Official' : 'Pending Appointment'}
+                                {isReclassProper ? 'Official' : 'Pending'}
                               </span>
                             </div>
                             <p
-                              className={`text-[13px] font-bold tracking-tight break-words ${
+                              className={`text-[12px] font-bold tracking-tight break-words ${
                                 isReclassProper ? 'text-[#022851] font-black' : 'text-slate-600'
                               }`}
                             >
                               {reclassData.reclass_position || reclassData.indicative_position || reclassData.target_position || (initialAssessment !== 'N/A' ? initialAssessment : '—')}
                             </p>
                             <div
-                              className={`flex items-center gap-1.5 mt-1.5 pt-1.5 border-t ${
+                              className={`flex items-center gap-1.5 mt-1 pt-1 border-t ${
                                 isReclassProper ? 'border-emerald-200/60' : 'border-slate-200'
                               }`}
                             >
                               <span
-                                className={`text-xs font-bold ${
+                                className={`text-[11px] font-bold ${
                                   isReclassProper ? 'text-emerald-700 font-black' : 'text-slate-500'
                                 }`}
                               >
                                 {getPositionSalaryGrade(reclassData.reclass_position || reclassData.indicative_position || reclassData.target_position || initialAssessment)}
                               </span>
-                              <span className="text-[10px] text-slate-400">• {isReclassProper ? 'Approved Grade' : 'Projected Grade'}</span>
+                              <span className="text-[9px] text-slate-400">• {isReclassProper ? 'Approved' : 'Projected'}</span>
                             </div>
                           </div>
 
                           {/* Plantilla Item / NOSCA serial details if present */}
                           {(reclassData.new_item_no || reclassData.nosca_serial_no) ? (
-                            <div className="mt-2 text-[10px] font-semibold text-gray-600 flex items-center justify-between">
+                            <div className="mt-2 text-[9px] font-semibold text-gray-600 flex items-center justify-between">
                               {reclassData.new_item_no && (
                                 <span>Item: <strong className="font-mono text-[#022851]">{reclassData.new_item_no}</strong></span>
                               )}
@@ -1364,8 +1440,8 @@ export default function ApplicantDashboard() {
                               )}
                             </div>
                           ) : (
-                            <div className="mt-2.5 text-[10px] text-slate-400 flex items-center gap-1.5">
-                              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <div className="mt-2 text-[9px] text-slate-400 flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-slate-400 shrink-0" />
                               <span>Locked until official appointment</span>
                             </div>
                           )}
