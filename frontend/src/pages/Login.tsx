@@ -1,11 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
+const RECLASS_LOGIN_TOUR_STEPS = [
+  {
+    sel: '#tour-login-identifier',
+    label: 'Step 1 of 4: Account Identifier',
+    title: 'Plantilla Item No. or DepEd Email',
+    body: 'Enter your 28-character Plantilla Item Number (e.g. OSEC-DECSB-GCOOR3-TEST01-2026) or your official DepEd email address to identify your account.',
+  },
+  {
+    sel: '#tour-login-credentials',
+    label: 'Step 2 of 4: Authentication Mode',
+    title: 'Password or 6-Digit Passcode',
+    body: 'Choose between standard Password sign-in or use your 6-digit numeric PIN passcode for quick, secure authentication.',
+  },
+  {
+    sel: '#tour-login-submit',
+    label: 'Step 3 of 4: Access Account',
+    title: 'Sign In to Dashboard',
+    body: 'Click "Sign in" to access your applicant dashboard, upload requirements, and monitor real-time evaluation status.',
+  },
+  {
+    sel: '#tour-login-register',
+    label: 'Step 4 of 4: First-Time User',
+    title: 'Register New Account',
+    body: 'First time applicant? Click "Register" to verify your Plantilla Item Number in GMIS and create your profile.',
+  },
+];
+
+const RECLASS_REG_TOUR_STEPS = [
+  {
+    sel: '#tour-reg-plantilla',
+    label: 'Step 1 of 5: Plantilla Verification',
+    title: 'DepEd Plantilla Item Number',
+    body: 'Enter your 28-character GMIS Plantilla Item Number (e.g. OSEC-DECSB-GCOOR3-TEST01-2026) and click "Verify" to validate against official DepEd central records.',
+  },
+  {
+    sel: '#tour-reg-name',
+    label: 'Step 2 of 5: Personal Details',
+    title: 'Incumbent Full Name',
+    body: 'Enter your legal First Name and Last Name as registered in official DepEd personnel records.',
+  },
+  {
+    sel: '#tour-reg-contact',
+    label: 'Step 3 of 5: DepEd Contact Info',
+    title: 'Official DepEd Email & Mobile',
+    body: 'Provide your official DepEd email (deped.gov.ph) for status updates and an 11-digit mobile number for SMS notifications.',
+  },
+  {
+    sel: '#tour-reg-security',
+    label: 'Step 4 of 5: Security Credentials',
+    title: 'Password & 6-Digit Passcode',
+    body: 'Create a secure password and a 6-digit numeric passcode for rapid and convenient sign-in.',
+  },
+  {
+    sel: '#tour-reg-submit',
+    label: 'Step 5 of 5: Account Submission',
+    title: 'Submit Reclassification Account',
+    body: 'Click "Register Account" to complete your registration and proceed directly to uploading your reclassification documents.',
+  },
+];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,6 +75,18 @@ export default function Login() {
     typeParam === 'reclass' ? 'reclass' : 'jobseeker'
   );
   const [loading, setLoading] = useState(false);
+
+  // Welcome Guide and Guided Tour state
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
+  const [tourMode, setTourMode] = useState<'login' | 'register'>('login');
+  const [tourIndex, setTourIndex] = useState(0);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  const getActiveTourSteps = () => {
+    return tourMode === 'register' ? RECLASS_REG_TOUR_STEPS : RECLASS_LOGIN_TOUR_STEPS;
+  };
 
   // Jobseeker Login state
   const [email, setEmail] = useState('');
@@ -73,11 +145,140 @@ export default function Login() {
   const [stepBError, setStepBError] = useState<string | null>(null);
   const [stepBRegistering, setStepBRegistering] = useState(false);
 
-  useEffect(() => {
-    if (typeParam === 'reclass' || typeParam === 'jobseeker') {
-      setPortalType(typeParam);
+  // Tour positioning logic
+  const placeTour = (index: number, retries = 4) => {
+    const steps = getActiveTourSteps();
+    const step = steps[index];
+    if (!step) {
+      endTour();
+      return;
     }
-  }, [typeParam]);
+
+    const hl = highlightRef.current;
+    const tip = tooltipRef.current;
+    if (!hl || !tip) return;
+
+    const el = document.querySelector(step.sel) as HTMLElement;
+
+    if (!el) {
+      if (retries > 0) {
+        setTimeout(() => placeTour(index, retries - 1), 70);
+        return;
+      }
+      hl.classList.remove('active');
+      tip.classList.add('active');
+      tip.style.visibility = 'hidden';
+      const tw = tip.offsetWidth || 390;
+      const th = tip.offsetHeight || 180;
+      const gap = 20;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      tip.style.top = Math.max(gap, (vh - th) / 2) + 'px';
+      tip.style.left = Math.min(Math.max(gap, (vw - tw) / 2), vw - tw - gap) + 'px';
+      tip.style.visibility = 'visible';
+      return;
+    }
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+
+    setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      const pad = 8;
+      hl.style.top = Math.max(4, rect.top - pad) + 'px';
+      hl.style.left = Math.max(4, rect.left - pad) + 'px';
+      hl.style.width = Math.min(window.innerWidth - 8, rect.width + pad * 2) + 'px';
+      hl.style.height = (rect.height + pad * 2) + 'px';
+      hl.classList.add('active');
+
+      tip.classList.add('active');
+      tip.style.visibility = 'hidden';
+
+      const tw = tip.offsetWidth || 390;
+      const th = tip.offsetHeight || 180;
+      const gap = 16;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let top: number;
+      if (rect.bottom + gap + th <= vh) {
+        top = rect.bottom + gap;
+      } else if (rect.top - gap - th >= 0) {
+        top = rect.top - gap - th;
+      } else {
+        top = Math.max(gap, (vh - th) / 2);
+      }
+
+      let left = rect.left + rect.width / 2 - tw / 2;
+      left = Math.min(Math.max(gap, left), vw - tw - gap);
+
+      tip.style.top = top + 'px';
+      tip.style.left = left + 'px';
+      tip.style.visibility = 'visible';
+    }, 60);
+  };
+
+  const startTour = (mode?: 'login' | 'register') => {
+    setShowWelcomeModal(false);
+    setPortalType('reclass');
+    const targetMode = mode || (reclassView === 'register' ? 'register' : 'login');
+    setTourMode(targetMode);
+    if (targetMode === 'register') {
+      setReclassView('register');
+    } else {
+      setReclassView('login');
+    }
+    setTourIndex(0);
+    setTourActive(true);
+  };
+
+  const endTour = () => {
+    setTourActive(false);
+    if (highlightRef.current) highlightRef.current.classList.remove('active');
+    if (tooltipRef.current) tooltipRef.current.classList.remove('active');
+  };
+
+  const tourNext = () => {
+    const steps = getActiveTourSteps();
+    if (tourIndex >= steps.length - 1) {
+      endTour();
+      return;
+    }
+    setTourIndex(prev => prev + 1);
+  };
+
+  const tourPrev = () => {
+    if (tourIndex <= 0) return;
+    setTourIndex(prev => prev - 1);
+  };
+
+  useEffect(() => {
+    if (tourActive) {
+      placeTour(tourIndex);
+
+      const handleResize = () => placeTour(tourIndex);
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('scroll', handleResize, true);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('scroll', handleResize, true);
+      };
+    }
+  }, [tourActive, tourIndex, tourMode, reclassView]);
+
+  useEffect(() => {
+    if (typeParam === 'reclass') {
+      setPortalType('reclass');
+      if (searchParams.get('view') === 'register') {
+        setReclassView('register');
+      }
+      setShowWelcomeModal(true);
+    } else if (typeParam === 'jobseeker') {
+      setPortalType('jobseeker');
+    }
+    if (searchParams.get('guide') === 'true') {
+      setShowWelcomeModal(true);
+    }
+  }, [typeParam, searchParams]);
 
   useEffect(() => {
     const sessionStr = localStorage.getItem('session_data');
@@ -498,28 +699,76 @@ export default function Login() {
           </p>
 
           <div className="mt-8">
-            {/* Gateway Header Badge */}
+            {/* Gateway Header & Switcher */}
             {!isRegistering && (
-              <>
+              <div className="mb-5" id="tour-reclass-portal">
+                {/* Gateway Switcher Tabs */}
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPortalType('jobseeker');
+                      setIsRegistering(false);
+                      setReclassView('login');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      portalType === 'jobseeker'
+                        ? 'bg-white text-[#022851] shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Jobseeker</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPortalType('reclass');
+                      setIsRegistering(false);
+                      setShowWelcomeModal(true);
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      portalType === 'reclass'
+                        ? 'bg-[#0369a1] text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Reclassification</span>
+                  </button>
+                </div>
+
                 {portalType === 'reclass' ? (
-                  <div className="mb-5 bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center shadow-sm">
+                  <div className="bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-[#0369a1] text-white flex items-center justify-center shadow-sm">
                         <Award className="w-4 h-4" />
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider">Reclassification Portal</h3>
-                        <p className="text-[11px] text-gray-500 font-medium">Guidance Counselor Gateway</p>
+                        <p className="text-[11px] text-gray-500 font-medium">
+                          {reclassView === 'register' ? 'Incumbent Registration' : 'Guidance Counselor Gateway'}
+                        </p>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => startTour(reclassView)}
+                      className="text-xs font-bold text-[#0369a1] hover:text-[#02527e] flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-sky-200 shadow-2xs hover:bg-sky-50 transition-colors"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span>{reclassView === 'register' ? 'Register Tutorial' : 'Login Tutorial'}</span>
+                    </button>
                   </div>
                 ) : (
-                  <div className="mb-4 bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 shrink-0 text-[#022851]" />
-                    <span>Logging in to the <strong>General Jobseeker &amp; Vacancies</strong> gateway.</span>
+                  <div className="bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 shrink-0 text-[#022851]" />
+                      <span>Logging in to <strong>General Jobseeker &amp; Vacancies</strong></span>
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* FORM 1: Jobseeker Registration Form */}
@@ -677,7 +926,7 @@ export default function Login() {
                   )}
 
                   {/* Plantilla Item Number */}
-                  <div>
+                  <div id="tour-reg-plantilla">
                     <label className="block text-xs font-bold text-gray-700 mb-1">
                       Plantilla Item Number <span className="text-red-500">*</span>
                     </label>
@@ -729,7 +978,7 @@ export default function Login() {
                   </div>
 
                   {/* Incumbent First Name & Last Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div id="tour-reg-name" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
                         First Name <span className="text-red-500">*</span>
@@ -776,7 +1025,7 @@ export default function Login() {
                   </div>
 
                   {/* DepEd Email & Mobile Number */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div id="tour-reg-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
                         DepEd Email Address <span className="text-red-500">*</span>
@@ -820,88 +1069,90 @@ export default function Login() {
                     </div>
                   </div>
 
-                  {/* Password & Confirm Password */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Password, Confirm Password & 6-Digit Passcode */}
+                  <div id="tour-reg-security" className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative rounded-lg shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Lock className="h-3.5 w-3.5 text-gray-400" />
+                          </div>
+                          <input
+                            type={showStepBPassword ? 'text' : 'password'}
+                            required
+                            value={stepBPassword}
+                            onChange={e => setStepBPassword(e.target.value)}
+                            className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowStepBPassword(!showStepBPassword)}
+                            className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                          >
+                            {showStepBPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Confirm Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative rounded-lg shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Lock className="h-3.5 w-3.5 text-gray-400" />
+                          </div>
+                          <input
+                            type={showStepBConfirmPassword ? 'text' : 'password'}
+                            required
+                            value={stepBConfirmPassword}
+                            onChange={e => setStepBConfirmPassword(e.target.value)}
+                            className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowStepBConfirmPassword(!showStepBConfirmPassword)}
+                            className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                          >
+                            {showStepBConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 6-Digit Passcode */}
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Password <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-gray-700">
+                          6-Digit Passcode <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[10px] text-gray-400">Used for quick passcode login</span>
+                      </div>
                       <div className="relative rounded-lg shadow-sm">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <Lock className="h-3.5 w-3.5 text-gray-400" />
                         </div>
                         <input
-                          type={showStepBPassword ? 'text' : 'password'}
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={6}
                           required
-                          value={stepBPassword}
-                          onChange={e => setStepBPassword(e.target.value)}
-                          className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
-                          placeholder="••••••••"
+                          value={stepBPasscode}
+                          onChange={e => setStepBPasscode(e.target.value.replace(/\D/g, ''))}
+                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none tracking-widest font-mono text-center font-bold"
+                          placeholder="••••••"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowStepBPassword(!showStepBPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                        >
-                          {showStepBPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Confirm Password <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type={showStepBConfirmPassword ? 'text' : 'password'}
-                          required
-                          value={stepBConfirmPassword}
-                          onChange={e => setStepBConfirmPassword(e.target.value)}
-                          className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
-                          placeholder="••••••••"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowStepBConfirmPassword(!showStepBConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                        >
-                          {showStepBConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 6-Digit Passcode */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-gray-700">
-                        6-Digit Passcode <span className="text-red-500">*</span>
-                      </label>
-                      <span className="text-[10px] text-gray-400">Used for quick passcode login</span>
-                    </div>
-                    <div className="relative rounded-lg shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-3.5 w-3.5 text-gray-400" />
-                      </div>
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={6}
-                        required
-                        value={stepBPasscode}
-                        onChange={e => setStepBPasscode(e.target.value.replace(/\D/g, ''))}
-                        className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none tracking-widest font-mono text-center font-bold"
-                        placeholder="••••••"
-                      />
                     </div>
                   </div>
 
                   {/* Submit Button */}
-                  <div className="pt-2">
+                  <div id="tour-reg-submit" className="pt-2">
                     <button
                       type="submit"
                       disabled={stepBRegistering}
@@ -938,7 +1189,7 @@ export default function Login() {
                     </div>
                   )}
 
-                  <div>
+                  <div id="tour-login-identifier">
                     <label className="block text-sm font-medium text-[var(--ink)]">Plantilla Item No. or DepEd Email</label>
                     <div className="mt-1 relative rounded-lg shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -958,7 +1209,7 @@ export default function Login() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div id="tour-login-credentials" className="space-y-4">
                     {/* Tabs for Password vs 6-Digit Passcode */}
                     <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
                       <button
@@ -1038,7 +1289,7 @@ export default function Login() {
                     </div>
                   </div>
 
-                  <div className="pt-2">
+                  <div id="tour-login-submit" className="pt-2">
                     <button
                       type="submit"
                       disabled={loading}
@@ -1049,7 +1300,7 @@ export default function Login() {
                     </button>
                   </div>
 
-                  <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                  <div id="tour-login-register" className="mt-4 text-center text-sm text-[var(--muted)]">
                     Don't have an account?{' '}
                     <button
                       type="button"
@@ -1059,6 +1310,7 @@ export default function Login() {
                         setStepAError(null);
                         setStepBError(null);
                         setStepAIsAlreadyRegistered(false);
+                        setShowWelcomeModal(true);
                       }}
                       className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
                     >
@@ -1233,7 +1485,129 @@ export default function Login() {
         </div>
       </div>
 
+      {/* Welcome Onboarding Modal */}
+      <div className={`welcome-overlay ${showWelcomeModal ? 'open' : ''}`}>
+        {showWelcomeModal && (
+          <div className="welcome-box">
+            <div className="welcome-badge">
+              {reclassView === 'register' ? 'New Registration' : 'Welcome'}
+            </div>
+            <h2>
+              {reclassView === 'register'
+                ? 'Guidance Counselor Registration'
+                : 'Welcome to the AGAP Portal'}
+            </h2>
+            <p>
+              {reclassView === 'register'
+                ? 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.'
+                : 'Monitor openings, screen applicants against qualification standards, and track hiring from application through to appointment — all in one place.'}
+            </p>
+            <div className="welcome-highlights">
+              {reclassView === 'register' ? (
+                <>
+                  <div className="welcome-hi">
+                    <b>Verify Plantilla</b>
+                    <span>Connect to GMIS central records to auto-verify position.</span>
+                  </div>
+                  <div className="welcome-hi">
+                    <b>Contact Info</b>
+                    <span>Official DepEd email &amp; mobile for status alerts.</span>
+                  </div>
+                  <div className="welcome-hi">
+                    <b>Credentials</b>
+                    <span>Secure password &amp; 6-digit quick PIN passcode.</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="welcome-hi">
+                    <b>Screen</b>
+                    <span>Review applicants vs. QS and mark whether requirements are met.</span>
+                  </div>
+                  <div className="welcome-hi">
+                    <b>Analyze</b>
+                    <span>KPIs, charts, and filters across every module.</span>
+                  </div>
+                  <div className="welcome-hi">
+                    <b>Decide</b>
+                    <span>Advance the pipeline through to appointment.</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="welcome-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowWelcomeModal(false)}
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                className="gold"
+                onClick={() => startTour(reclassView)}
+              >
+                {reclassView === 'register' ? 'Show Register Tutorial' : 'Show Login Tutorial'}
+              </button>
+              <button
+                type="button"
+                onClick={() => window.open('https://sebtcheng.github.io/prototypes/agap_guides/agap-hrmo.html', '_blank')}
+              >
+                View Guide
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* Tour Spotlight & Tooltip */}
+      <div
+        ref={highlightRef}
+        className={`tour-highlight ${tourActive ? 'active' : ''}`}
+      />
+      {tourActive && (
+        <div
+          ref={tooltipRef}
+          className="tour-tooltip active"
+        >
+          <button
+            type="button"
+            className="tour-skip"
+            onClick={endTour}
+            title="Close tutorial"
+          >
+            ✕
+          </button>
+          <div className="tour-step-label">
+            {getActiveTourSteps()[tourIndex]?.label}
+          </div>
+          <h4>{getActiveTourSteps()[tourIndex]?.title}</h4>
+          <p>{getActiveTourSteps()[tourIndex]?.body}</p>
+          <div className="tour-footer">
+            <div className="tour-progress">
+              Step {tourIndex + 1} of {getActiveTourSteps().length}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="tour-btn secondary"
+                onClick={tourPrev}
+                disabled={tourIndex === 0}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="tour-btn"
+                onClick={tourNext}
+              >
+                {tourIndex === getActiveTourSteps().length - 1 ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

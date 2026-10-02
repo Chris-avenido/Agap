@@ -799,3 +799,367 @@ a {
     transform: none;
   }
 }
+
+/* ==========================================================================
+   WELCOME ONBOARDING MODAL & USER GUIDE TOUR
+   ========================================================================== */
+.welcome-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px;
+  background: rgba(6, 35, 63, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease-out;
+  box-sizing: border-box;
+}
+
+.welcome-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.welcome-box {
+  position: relative;
+  width: min(580px, 96vw);
+  background: linear-gradient(135deg, #FFFFFF, #F8FCFF);
+  border: 2px solid var(--blue, #0A6FA6);
+  border-radius: 26px;
+  padding: 36px 30px 28px;
+  box-shadow: 0 30px 60px rgba(6, 52, 95, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  text-align: center;
+  overflow: hidden;
+  transform: scale(0.92);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 10;
+}
+
+.welcome-overlay.open .welcome-box {
+  transform: scale(1);
+}
+
+.welcome-box:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(90deg, var(--navy, #06345F), var(--blue, #0A6FA6), var(--gold, #FDBA22));
+}
+
+.welcome-badge {
+  display: inline-block;
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--blue, #0A6FA6);
+  background: #E0F2FE;
+  border: 1.5px solid #BAE6FD;
+  border-radius: 999px;
+  padding: 6px 16px;
+  margin-bottom: 14px;
+}
+
+.welcome-box h2 {
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--navy, #06345F);
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+.welcome-box > p {
+  color: var(--muted, #667A91);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 auto 20px;
+  max-width: 460px;
+}
+
+.welcome-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 24px;
+  text-align: left;
+}
+
+@media (max-width: 540px) {
+  .welcome-highlights {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.welcome-hi {
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
+  background: #F8FCFF;
+  padding: 14px 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.welcome-hi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(10, 111, 166, 0.08);
+}
+
+.welcome-hi b {
+  display: block;
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy, #06345F);
+  margin-bottom: 4px;
+}
+
+.welcome-hi span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted, #667A91);
+  line-height: 1.35;
+  display: block;
+}
+
+.welcome-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.welcome-actions button {
+  min-width: 140px;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  background: var(--navy, #06345F);
+  color: #FFFFFF;
+}
+
+.welcome-actions button:hover {
+  background: var(--blue-deep, #04557F);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(6, 52, 95, 0.25);
+}
+
+.welcome-actions button.secondary {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1.5px solid #CBD5E1;
+}
+
+.welcome-actions button.secondary:hover {
+  background: #E2E8F0;
+  color: #1E293B;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.welcome-actions button.gold {
+  background: linear-gradient(135deg, #FDBA22, #F59E0B);
+  color: #78350F;
+  font-weight: 800;
+  border: 1.5px solid #FCD34D;
+}
+
+.welcome-actions button.gold:hover {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+}
+
+/* Tutorial Interactive Walkthrough Modal */
+.tutorial-box {
+  position: relative;
+  width: min(600px, 96vw);
+  background: #FFFFFF;
+  border: 2px solid #E2E8F0;
+  border-radius: 26px;
+  padding: 30px 28px 24px;
+  box-shadow: 0 30px 70px rgba(6, 52, 95, 0.35);
+  text-align: left;
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.welcome-overlay.open .tutorial-box {
+  transform: scale(1);
+}
+
+/* ==========================================================================
+   INTERACTIVE DOM TOUR HIGHLIGHT & TOOLTIP (MATCHING ATTACHED SCREENSHOT)
+   ========================================================================== */
+.tour-highlight {
+  position: fixed;
+  z-index: 9999998 !important;
+  border-radius: 16px;
+  border: 3.5px solid var(--gold, #FDBA22);
+  box-shadow: 0 0 0 9999px rgba(6, 35, 63, 0.65), 0 0 0 6px rgba(253, 186, 34, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0.35s ease,
+              top 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+              left 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+              width 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+              height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.tour-highlight.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tour-tooltip {
+  position: fixed;
+  z-index: 9999999 !important;
+  opacity: 0;
+  visibility: hidden;
+  width: min(420px, 94vw);
+  background: #FFFFFF;
+  border: 2.5px solid var(--blue, #0A6FA6);
+  border-radius: 22px;
+  padding: 24px 22px 18px;
+  box-shadow: 0 24px 50px rgba(6, 52, 95, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  transition: opacity 0.35s ease, visibility 0.35s ease,
+              top 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+              left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  text-align: left;
+}
+
+.tour-tooltip.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tour-highlight.no-transition,
+.tour-tooltip.no-transition {
+  transition: none !important;
+}
+
+.tour-tooltip .tour-step-label {
+  display: inline-block;
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #B45309;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 10px;
+}
+
+.tour-tooltip h4 {
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy, #06345F);
+  margin: 0 0 8px;
+  line-height: 1.25;
+}
+
+.tour-tooltip p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.55;
+  margin: 0 0 18px;
+}
+
+.tour-footer, .tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.tour-progress {
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted, #667A91);
+}
+
+.tour-skip {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tour-skip:hover {
+  color: var(--navy, #06345F);
+  background: #F1F5F9;
+}
+
+.tour-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+  background: #0284C7;
+  color: #FFFFFF;
+}
+
+.tour-btn:hover {
+  background: #0369A1;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.tour-btn.secondary {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.tour-btn.secondary:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.tour-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+

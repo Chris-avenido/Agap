@@ -658,7 +658,7 @@ export default function PublicCareers() {
                   type="button"
                   onClick={() => {
                     setShowLoginModal(false);
-                    navigate('/login?type=reclass');
+                    navigate('/login?type=reclass&guide=true');
                   }}
                   className="mt-6 w-full py-3 px-4 rounded-xl bg-[#0369a1] hover:bg-[#02527e] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
                 >
