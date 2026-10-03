@@ -1,5 +1,26 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-03] Reclassification Salary Grade Mapping Updates (Hardcoded)
+
+### 1. Position to Salary Grade Mapping
+Updated the salary grade mappings across the reclassification module in frontend ([`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)) and backend ([`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts)):
+- **Schools Division Counselor**: Salary Grade 24 (`SG-24`)
+- **School Counselor IV**: Salary Grade 22 (`SG-22`)
+- **School Counselor III**: Salary Grade 20 (`SG-20`)
+- **School Counselor II**: Salary Grade 18 (`SG-18`)
+- **School Counselor I**: Salary Grade 16 (`SG-16`)
+- **School Counselor Associate V**: Salary Grade 15 (`SG-15`)
+- **School Counselor Associate IV**: Salary Grade 14 (`SG-14`)
+- **School Counselor Associate III**: Salary Grade 13 (`SG-13`)
+- **School Counselor Associate II**: Salary Grade 12 (`SG-12`)
+- **School Counselor Associate I**: Salary Grade 11 (`SG-11`)
+
+### 2. Real-Time Dynamic Target Reclass & Salary Grade Synchronization
+- **Live Preview & Persistence**: In [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx), the **Salary Grade** card automatically computes and updates in real-time based on the selected **Target Reclass** position (both while selecting in the dropdown and when saved).
+- **Backend Response Synchronization**: `ApplicantsService.getReclassDetails` and `ApplicantsService.updateTargetPosition` in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) immediately resolve and return the accurate salary grade matching the updated target position.
+
+---
+
 ## [2026-09-29] Guidance Counselor (GC) Reclassification Module Implementation
 
 ### 1. Overview & Business Model

@@ -1849,28 +1849,54 @@ class ApplicantsServiceClass {
       if (!posName) return null;
       const upper = posName.toUpperCase().trim();
 
+      // Schools Division Counselor track
+      if (
+        upper.includes('SCHOOLS DIVISION COUNSELOR') ||
+        upper.includes('SCHOOL DIVISION COUNSELOR') ||
+        upper.includes('DIVISION COUNSELOR')
+      )
+        return '24';
+
       // School Counselor Associate track
       if (upper.includes('SCHOOL COUNSELOR ASSOCIATE V')) return '15';
       if (upper.includes('SCHOOL COUNSELOR ASSOCIATE IV')) return '14';
       if (upper.includes('SCHOOL COUNSELOR ASSOCIATE III')) return '13';
       if (upper.includes('SCHOOL COUNSELOR ASSOCIATE II')) return '12';
-      if (upper.includes('SCHOOL COUNSELOR ASSOCIATE I')) return '11';
+      if (
+        upper.includes('SCHOOL COUNSELOR ASSOCIATE I') ||
+        upper === 'SCHOOL COUNSELOR ASSOCIATE'
+      )
+        return '11';
 
       // School Counselor track
-      if (upper.includes('SCHOOL COUNSELOR IV')) return '19';
-      if (upper.includes('SCHOOL COUNSELOR III')) return '16';
-      if (upper.includes('SCHOOL COUNSELOR II')) return '13';
-      if (upper.includes('SCHOOL COUNSELOR I')) return '11';
+      if (upper.includes('SCHOOL COUNSELOR IV')) return '22';
+      if (upper.includes('SCHOOL COUNSELOR III')) return '20';
+      if (upper.includes('SCHOOL COUNSELOR II')) return '18';
+      if (upper.includes('SCHOOL COUNSELOR I') || upper === 'SCHOOL COUNSELOR')
+        return '16';
 
       // Incumbent Guidance track
       if (upper.includes('GUIDANCE SERVICES SPECIALIST II')) return '18';
-      if (upper.includes('GUIDANCE SERVICES SPECIALIST I')) return '16';
+      if (
+        upper.includes('GUIDANCE SERVICES SPECIALIST I') ||
+        upper.includes('GUIDANCE SERVICES SPECIALIST')
+      )
+        return '16';
       if (upper.includes('GUIDANCE COORDINATOR III')) return '16';
       if (upper.includes('GUIDANCE COORDINATOR II')) return '15';
-      if (upper.includes('GUIDANCE COORDINATOR I')) return '14';
+      if (
+        upper.includes('GUIDANCE COORDINATOR I') ||
+        upper.includes('GUIDANCE COORDINATOR')
+      )
+        return '14';
       if (upper.includes('GUIDANCE COUNSELOR III')) return '13';
       if (upper.includes('GUIDANCE COUNSELOR II')) return '12';
-      if (upper.includes('GUIDANCE COUNSELOR I') || upper === 'GUIDANCE COUNSELOR') return '11';
+      if (
+        upper.includes('GUIDANCE COUNSELOR I') ||
+        upper === 'GUIDANCE COUNSELOR' ||
+        upper.includes('GUIDANCE COUNSELOR')
+      )
+        return '11';
       return null;
     };
 
@@ -1919,6 +1945,10 @@ class ApplicantsServiceClass {
       }
     }
 
+    const targetSalaryGrade = getSalaryGradeForPosition(targetPosition);
+    const indicativeSalaryGrade = getSalaryGradeForPosition(indicativePosition);
+    const currentSalaryGrade = getSalaryGradeForPosition(currentPosition);
+
     return {
       ...(incumbent || {}),
       full_name: fullName,
@@ -1926,9 +1956,11 @@ class ApplicantsServiceClass {
       target_position: targetPosition,
       current_position: currentPosition,
       salary_grade:
+        targetSalaryGrade ||
+        indicativeSalaryGrade ||
         incumbent?.salary_grade ||
         reclassApp?.salary_grade ||
-        getSalaryGradeForPosition(currentPosition) ||
+        currentSalaryGrade ||
         null,
       application_number:
         reclassApp?.school_name || incumbent?.school_name || null,
@@ -1944,9 +1976,10 @@ class ApplicantsServiceClass {
       submission_deadline: 'October 31, 2026',
       indicative_position: indicativePosition,
       indicative_salary_grade:
+        indicativeSalaryGrade ||
+        targetSalaryGrade ||
         incumbent?.indicative_salary_grade ||
         reclassApp?.indicative_salary_grade ||
-        getSalaryGradeForPosition(indicativePosition) ||
         null,
       reclass_application: reclassApp || null,
     };

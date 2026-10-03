@@ -9,42 +9,47 @@ import PlantillaGateModal from '../components/PlantillaGateModal';
 import ReclassUploadModal from '../components/ReclassUploadModal';
 
 const RECLASS_TARGET_OPTIONS = [
-  { value: 'SCHOOL COUNSELOR I', label: 'School Counselor I (SG 11)' },
-  { value: 'SCHOOL COUNSELOR II', label: 'School Counselor II (SG 13)' },
-  { value: 'SCHOOL COUNSELOR III', label: 'School Counselor III (SG 16)' },
-  { value: 'SCHOOL COUNSELOR IV', label: 'School Counselor IV (SG 19)' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE II', label: 'School Counselor Associate II (SG 12)' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE III', label: 'School Counselor Associate III (SG 13)' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE IV', label: 'School Counselor Associate IV (SG 14)' },
+  { value: 'SCHOOLS DIVISION COUNSELOR', label: 'Schools Division Counselor (SG 24)' },
+  { value: 'SCHOOL COUNSELOR IV', label: 'School Counselor IV (SG 22)' },
+  { value: 'SCHOOL COUNSELOR III', label: 'School Counselor III (SG 20)' },
+  { value: 'SCHOOL COUNSELOR II', label: 'School Counselor II (SG 18)' },
+  { value: 'SCHOOL COUNSELOR I', label: 'School Counselor I (SG 16)' },
   { value: 'SCHOOL COUNSELOR ASSOCIATE V', label: 'School Counselor Associate V (SG 15)' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE IV', label: 'School Counselor Associate IV (SG 14)' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE III', label: 'School Counselor Associate III (SG 13)' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE II', label: 'School Counselor Associate II (SG 12)' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE I', label: 'School Counselor Associate I (SG 11)' },
 ];
 
 function getPositionSalaryGrade(posName?: string | null): string {
   if (!posName) return '—';
   const clean = posName.toUpperCase().trim();
 
+  // Schools Division Counselor track
+  if (clean.includes('SCHOOLS DIVISION COUNSELOR') || clean.includes('SCHOOL DIVISION COUNSELOR') || clean.includes('DIVISION COUNSELOR')) return 'SG-24';
+
   // School Counselor Associate track
   if (clean.includes('SCHOOL COUNSELOR ASSOCIATE V')) return 'SG-15';
   if (clean.includes('SCHOOL COUNSELOR ASSOCIATE IV')) return 'SG-14';
   if (clean.includes('SCHOOL COUNSELOR ASSOCIATE III')) return 'SG-13';
   if (clean.includes('SCHOOL COUNSELOR ASSOCIATE II')) return 'SG-12';
-  if (clean.includes('SCHOOL COUNSELOR ASSOCIATE I')) return 'SG-11';
+  if (clean.includes('SCHOOL COUNSELOR ASSOCIATE I') || clean === 'SCHOOL COUNSELOR ASSOCIATE') return 'SG-11';
 
   // School Counselor track
-  if (clean.includes('SCHOOL COUNSELOR IV')) return 'SG-19';
-  if (clean.includes('SCHOOL COUNSELOR III')) return 'SG-16';
-  if (clean.includes('SCHOOL COUNSELOR II')) return 'SG-13';
-  if (clean.includes('SCHOOL COUNSELOR I')) return 'SG-11';
+  if (clean.includes('SCHOOL COUNSELOR IV')) return 'SG-22';
+  if (clean.includes('SCHOOL COUNSELOR III')) return 'SG-20';
+  if (clean.includes('SCHOOL COUNSELOR II')) return 'SG-18';
+  if (clean.includes('SCHOOL COUNSELOR I') || clean === 'SCHOOL COUNSELOR') return 'SG-16';
 
   // Incumbent Guidance track (for current position)
   if (clean.includes('GUIDANCE SERVICES SPECIALIST II')) return 'SG-18';
-  if (clean.includes('GUIDANCE SERVICES SPECIALIST I')) return 'SG-16';
+  if (clean.includes('GUIDANCE SERVICES SPECIALIST I') || clean.includes('GUIDANCE SERVICES SPECIALIST')) return 'SG-16';
   if (clean.includes('GUIDANCE COORDINATOR III')) return 'SG-16';
   if (clean.includes('GUIDANCE COORDINATOR II')) return 'SG-15';
-  if (clean.includes('GUIDANCE COORDINATOR I')) return 'SG-14';
+  if (clean.includes('GUIDANCE COORDINATOR I') || clean.includes('GUIDANCE COORDINATOR')) return 'SG-14';
   if (clean.includes('GUIDANCE COUNSELOR III')) return 'SG-13';
   if (clean.includes('GUIDANCE COUNSELOR II')) return 'SG-12';
-  if (clean.includes('GUIDANCE COUNSELOR I') || clean === 'GUIDANCE COUNSELOR') return 'SG-11';
+  if (clean.includes('GUIDANCE COUNSELOR I') || clean === 'GUIDANCE COUNSELOR' || clean.includes('GUIDANCE COUNSELOR')) return 'SG-11';
 
   return '—';
 }
@@ -107,18 +112,20 @@ export default function ApplicantDashboard() {
       );
       const data = await response.json();
       if (response.ok && data.success) {
+        const newSG = getPositionSalaryGrade(editTargetPositionValue).replace('SG-', '');
         setReclassData((prev: any) => ({
           ...prev,
           target_position: editTargetPositionValue,
           reclass_position: editTargetPositionValue,
+          salary_grade: newSG,
           indicative_position: data.data?.indicative_position || editTargetPositionValue,
-          indicative_salary_grade: data.data?.indicative_salary_grade || null,
+          indicative_salary_grade: data.data?.indicative_salary_grade || newSG,
         }));
         setIsEditingTargetPosition(false);
         Swal.fire({
           icon: 'success',
           title: 'Target Position Updated',
-          text: `Your target reclassification position is now ${editTargetPositionValue}.`,
+          text: `Your target reclassification position is now ${editTargetPositionValue} (${getPositionSalaryGrade(editTargetPositionValue)}).`,
           timer: 2500,
           showConfirmButton: false,
           toast: true,
@@ -908,11 +915,15 @@ export default function ApplicantDashboard() {
                         </p>
                       </div>
 
-                      {/* Current Salary Grade */}
+                      {/* Salary Grade (Matches Target Reclass Position) */}
                       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Salary Grade</p>
                         <p className="text-[15px] font-extrabold text-[#022851] mt-0.5">
-                          {reclassData.salary_grade ? `SG-${reclassData.salary_grade}` : getPositionSalaryGrade(reclassData.position_title || reclassData.current_position)}
+                          {getPositionSalaryGrade(
+                            isEditingTargetPosition
+                              ? editTargetPositionValue
+                              : (reclassData.target_position || reclassData.reclass_position || reclassData.indicative_position || initialAssessment || 'SCHOOL COUNSELOR II')
+                          )}
                         </p>
                       </div>
 

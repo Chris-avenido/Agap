@@ -346,3 +346,73 @@ describe('Reclassification Auth & Registration Rules', () => {
   });
 });
 
+describe('Reclassification Position Salary Grade Resolution', () => {
+  const getSalaryGradeForPosition = (posName?: string | null): string | null => {
+    if (!posName) return null;
+    const upper = posName.toUpperCase().trim();
+
+    // Schools Division Counselor track
+    if (
+      upper.includes('SCHOOLS DIVISION COUNSELOR') ||
+      upper.includes('SCHOOL DIVISION COUNSELOR') ||
+      upper.includes('DIVISION COUNSELOR')
+    )
+      return '24';
+
+    // School Counselor Associate track
+    if (upper.includes('SCHOOL COUNSELOR ASSOCIATE V')) return '15';
+    if (upper.includes('SCHOOL COUNSELOR ASSOCIATE IV')) return '14';
+    if (upper.includes('SCHOOL COUNSELOR ASSOCIATE III')) return '13';
+    if (upper.includes('SCHOOL COUNSELOR ASSOCIATE II')) return '12';
+    if (
+      upper.includes('SCHOOL COUNSELOR ASSOCIATE I') ||
+      upper === 'SCHOOL COUNSELOR ASSOCIATE'
+    )
+      return '11';
+
+    // School Counselor track
+    if (upper.includes('SCHOOL COUNSELOR IV')) return '22';
+    if (upper.includes('SCHOOL COUNSELOR III')) return '20';
+    if (upper.includes('SCHOOL COUNSELOR II')) return '18';
+    if (upper.includes('SCHOOL COUNSELOR I') || upper === 'SCHOOL COUNSELOR')
+      return '16';
+
+    // Incumbent Guidance track
+    if (upper.includes('GUIDANCE SERVICES SPECIALIST II')) return '18';
+    if (
+      upper.includes('GUIDANCE SERVICES SPECIALIST I') ||
+      upper.includes('GUIDANCE SERVICES SPECIALIST')
+    )
+      return '16';
+    if (upper.includes('GUIDANCE COORDINATOR III')) return '16';
+    if (upper.includes('GUIDANCE COORDINATOR II')) return '15';
+    if (
+      upper.includes('GUIDANCE COORDINATOR I') ||
+      upper.includes('GUIDANCE COORDINATOR')
+    )
+      return '14';
+    if (upper.includes('GUIDANCE COUNSELOR III')) return '13';
+    if (upper.includes('GUIDANCE COUNSELOR II')) return '12';
+    if (
+      upper.includes('GUIDANCE COUNSELOR I') ||
+      upper === 'GUIDANCE COUNSELOR' ||
+      upper.includes('GUIDANCE COUNSELOR')
+    )
+      return '11';
+    return null;
+  };
+
+  it('should correctly resolve salary grades for all School Counselor and Associate tracks', () => {
+    expect(getSalaryGradeForPosition('Schools Division Counselor')).toBe('24');
+    expect(getSalaryGradeForPosition('School Counselor IV')).toBe('22');
+    expect(getSalaryGradeForPosition('School Counselor III')).toBe('20');
+    expect(getSalaryGradeForPosition('School Counselor II')).toBe('18');
+    expect(getSalaryGradeForPosition('School Counselor I')).toBe('16');
+    expect(getSalaryGradeForPosition('School Counselor Associate V')).toBe('15');
+    expect(getSalaryGradeForPosition('School Counselor Associate IV')).toBe('14');
+    expect(getSalaryGradeForPosition('School Counselor Associate III')).toBe('13');
+    expect(getSalaryGradeForPosition('School Counselor Associate II')).toBe('12');
+    expect(getSalaryGradeForPosition('School Counselor Associate I')).toBe('11');
+  });
+});
+
