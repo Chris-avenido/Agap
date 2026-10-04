@@ -2699,7 +2699,7 @@ class ApplicantsServiceClass {
 
         if (incRes.rows.length === 0) {
           throw new Error(
-            'Plantilla Item Number not found in DepEd incumbent guidance counselor records. Please verify your number.',
+            'Plantilla Item Number not found in DepEd incumbent records. Please verify your number.',
           );
         }
 

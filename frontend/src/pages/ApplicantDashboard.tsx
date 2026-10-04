@@ -661,7 +661,7 @@ export default function ApplicantDashboard() {
             <h1 className="text-[32px] font-extrabold text-[#022851] tracking-tight">Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}! 👋</h1>
             <p className="text-gray-500 font-medium text-[15px] mt-1">
               {isReclass
-                ? 'Here is the status of your reclassification from Guidance Counselor to School Counselor.'
+                ? 'Here is the status of your reclassification to School Counselor.'
                 : "Here's a quick overview of your application activity."}
             </p>
           </div>
@@ -739,7 +739,7 @@ export default function ApplicantDashboard() {
                 </div>
                 <div>
                   <h2 className="text-xl font-extrabold tracking-tight">Reclassification Status</h2>
-                  <p className="text-xs text-sky-100">DepEd Guidance Counselor → School Counselor</p>
+                  <p className="text-xs text-sky-100">DepEd Incumbent → School Counselor</p>
                 </div>
               </div>
               <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 border border-white/20 text-sky-100">

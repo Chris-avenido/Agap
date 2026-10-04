@@ -49,7 +49,7 @@ export default function PlantillaGateModal({ applicantId, onVerified }: Plantill
         Swal.fire({
           icon: 'success',
           title: 'Plantilla Item Verified',
-          text: `Position: ${data.data?.current_position || data.data?.position_title || 'Guidance Counselor'} - ${data.data?.station_division || ''}`,
+          text: `Position: ${data.data?.current_position || data.data?.position_title || 'Incumbent'} - ${data.data?.station_division || ''}`,
           timer: 2000,
           showConfirmButton: false,
         });
@@ -81,7 +81,7 @@ export default function PlantillaGateModal({ applicantId, onVerified }: Plantill
             Verify Plantilla Item Number
           </h2>
           <p className="text-xs text-sky-100/90 mt-1 max-w-sm mx-auto">
-            As an incumbent Guidance Counselor registering for reclassification, you must verify your existing plantilla item number before proceeding.
+            As an incumbent registering for reclassification, you must verify your existing plantilla item number before proceeding.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export default function PlantillaGateModal({ applicantId, onVerified }: Plantill
           </div>
 
           <p className="text-[11px] text-center text-gray-400">
-            Records are verified directly against the DepEd Incumbent Guidance Counselor Database.
+            Records are verified directly against the DepEd Incumbent Database.
           </p>
         </form>
       </div>

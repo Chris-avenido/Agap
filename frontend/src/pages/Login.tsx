@@ -388,7 +388,7 @@ export default function Login() {
         setStepAVerified(true);
         setGmisDetails({
           itemNumber: resData.data.item_number || cleanPlantilla,
-          designation: resData.data.current_position || 'Guidance Counselor',
+          designation: resData.data.current_position || 'Incumbent',
           region: resData.data.region || 'N/A',
           division: resData.data.division || 'N/A',
           schoolName: resData.data.school_name || '',
@@ -747,7 +747,7 @@ export default function Login() {
                       <div>
                         <h3 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider">Reclassification Portal</h3>
                         <p className="text-[11px] text-gray-500 font-medium">
-                          {reclassView === 'register' ? 'Incumbent Registration' : 'Guidance Counselor Gateway'}
+                          {reclassView === 'register' ? 'Incumbent Registration' : 'Incumbent Gateway'}
                         </p>
                       </div>
                     </div>
@@ -894,7 +894,7 @@ export default function Login() {
                   <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-3.5 text-xs text-sky-900 leading-relaxed">
                     <p className="font-bold text-[#0369a1] mb-0.5 flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-[#0369a1]" />
-                      Guidance Counselor Reclassification
+                      Incumbent Reclassification
                     </p>
                     <p className="text-[11px] text-sky-800">
                       Enter your official Plantilla Item Number, DepEd email, contact info, and create your credentials to register.
@@ -971,7 +971,7 @@ export default function Login() {
                       <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span>
-                          <strong>GMIS Match:</strong> {gmisDetails.designation || 'Guidance Counselor'} ({gmisDetails.division || 'DepEd'})
+                          <strong>GMIS Match:</strong> {gmisDetails.designation || 'Incumbent'} ({gmisDetails.division || 'DepEd'})
                         </span>
                       </div>
                     )}
@@ -1494,7 +1494,7 @@ export default function Login() {
             </div>
             <h2>
               {reclassView === 'register'
-                ? 'Guidance Counselor Registration'
+                ? 'Incumbent Registration'
                 : 'Welcome to the AGAP Portal'}
             </h2>
             <p>

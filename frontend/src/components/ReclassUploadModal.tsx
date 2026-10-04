@@ -289,7 +289,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                 Reclassification Document Submission
               </h2>
               <p className="text-xs text-sky-100 font-medium mt-0.5">
-                DepEd Guidance Counselor → School Counselor Requirements Folder
+                DepEd Incumbent → School Counselor Requirements Folder
               </p>
             </div>
           </div>

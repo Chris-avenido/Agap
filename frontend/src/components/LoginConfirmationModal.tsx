@@ -125,7 +125,7 @@ export const LoginConfirmationModal: React.FC<LoginConfirmationModalProps> = ({
                       <Briefcase className="w-3.5 h-3.5 text-gray-400" /> Current Position
                     </span>
                     <span className="font-bold text-gray-700 text-[13px]">
-                      {data.current_position || 'Guidance Counselor'}
+                      {data.current_position || 'Incumbent'}
                     </span>
                   </div>
                   <div>

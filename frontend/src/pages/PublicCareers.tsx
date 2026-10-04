@@ -627,7 +627,7 @@ export default function PublicCareers() {
                       <Award className="w-7 h-7 transition-transform group-hover:scale-110 duration-200" />
                     </div>
                     <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-50 text-[#0369a1] border border-cyan-100">
-                      Guidance Counselors
+                      Incumbents
                     </span>
                   </div>
                   <div>
@@ -635,7 +635,7 @@ export default function PublicCareers() {
                       Reclassification Portal
                     </h3>
                     <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                      For incumbent DepEd Guidance Counselors processing reclassification to School Counselor positions.
+                      For incumbent DepEd personnel processing reclassification to School Counselor positions.
                     </p>
                   </div>
                   <ul className="text-xs text-gray-600 space-y-2 pt-1 border-t border-gray-100">
