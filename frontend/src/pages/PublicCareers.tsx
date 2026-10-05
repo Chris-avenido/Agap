@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users, Award } from 'lucide-react';
+import { Search, Clock, Hash, MapPin, ChevronDown, ArrowRight, CalendarDays, Star, Building2, CircleDollarSign, X, EyeOff, Eye, Pen, HelpCircle, ArrowLeft, Briefcase, Trash2, LayoutGrid, List, Users, Award, Lock } from 'lucide-react';
 import modernLogo from '../assets/modern_logo.png';
 import { JobCard, JobTableList } from '../components/JobCards';
 import ApplicationModal from '../components/ApplicationModal';
@@ -619,36 +619,42 @@ export default function PublicCareers() {
                 </button>
               </div>
 
-              {/* Option 2: Reclassification */}
-              <div className="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-[#0369a1] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-200">
+              {/* Option 2: Reclassification (Locked) */}
+              <div className="relative bg-slate-50/70 rounded-2xl border-2 border-slate-200 p-6 flex flex-col justify-between shadow-xs select-none">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="w-14 h-14 rounded-2xl bg-[#0369a1]/10 group-hover:bg-[#0369a1] text-[#0369a1] group-hover:text-white flex items-center justify-center transition-colors shadow-inner">
-                      <Award className="w-7 h-7 transition-transform group-hover:scale-110 duration-200" />
+                    <div className="w-14 h-14 rounded-2xl bg-slate-200 text-slate-500 flex items-center justify-center shadow-inner relative">
+                      <Award className="w-7 h-7 text-slate-400" />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-600 rounded-full flex items-center justify-center shadow-xs">
+                        <Lock className="w-3 h-3 text-white" />
+                      </div>
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-50 text-[#0369a1] border border-cyan-100">
-                      Incumbents
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-200/80 text-slate-600 border border-slate-300/70 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Locked
+                      </span>
+                    </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[#0369a1] group-hover:text-[#02527e] transition-colors">
+                    <h3 className="text-lg font-bold text-slate-600">
                       Reclassification Portal
                     </h3>
-                    <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                       For incumbent DepEd personnel processing reclassification to School Counselor positions.
                     </p>
                   </div>
-                  <ul className="text-xs text-gray-600 space-y-2 pt-1 border-t border-gray-100">
+                  <ul className="text-xs text-slate-400 space-y-2 pt-1 border-t border-slate-200/80">
                     <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                       Verify Plantilla Item Number
                     </li>
                     <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                       Upload PDS &amp; eligibility credentials
                     </li>
                     <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                       Monitor regional DBM qualification
                     </li>
                   </ul>
@@ -656,14 +662,11 @@ export default function PublicCareers() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowLoginModal(false);
-                    navigate('/login?type=reclass&guide=true');
-                  }}
-                  className="mt-6 w-full py-3 px-4 rounded-xl bg-[#0369a1] hover:bg-[#02527e] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                  disabled
+                  className="mt-6 w-full py-3 px-4 rounded-xl bg-slate-200 text-slate-400 font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed border border-slate-300/60 shadow-none"
                 >
-                  <span>Login for Reclassification</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <Lock className="w-4 h-4 text-slate-400" />
+                  <span>Portal Locked</span>
                 </button>
               </div>
             </div>
