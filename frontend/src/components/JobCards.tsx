@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin, Users, Sparkles, Check } from 'lucide-react';
+import { FileText, Briefcase, Star, MapPin, Users, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob, handleApply, isPublic = false, onCardClick, onApplyClick }: any) => {
@@ -9,74 +9,81 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
   const isInvited = Boolean(job.is_invited || job.isInvited || job.has_allowed_email_access);
   const title = job.title || job.position || 'Unknown Position';
 
-  const borderColor = isInvited
-    ? 'border-emerald-500'
-    : (isApplied || tab === 'my-applications' ? 'border-[#2563eb]' : 'border-[#fbbf24]');
-
-  const borderWidth = isInvited ? 'border-[2px]' : 'border-[1.5px]';
-
-  const shadowClass = isInvited 
-    ? 'invited-glow-card shadow-[0_8px_25px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.45)]'
-    : (isApplied || tab === 'my-applications' 
-        ? 'shadow-[0_8px_25px_rgba(37,99,235,0.15)] hover:shadow-[0_12px_35px_rgba(37,99,235,0.25)]' 
-        : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]');
+  const containerClass = isInvited
+    ? 'relative overflow-hidden rounded-[26px] border-[1.5px] border-[#FDE68A] bg-[#FFFDF9] p-6 sm:p-7 flex flex-col shadow-[0_4px_25px_rgba(245,158,11,0.12)] transition-all'
+    : `relative rounded-[20px] border-[1.5px] ${
+        isApplied || tab === 'my-applications'
+          ? 'border-[#2563eb] shadow-[0_8px_25px_rgba(37,99,235,0.15)] hover:shadow-[0_12px_35px_rgba(37,99,235,0.25)]'
+          : 'border-[#fbbf24] shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]'
+      } bg-white p-6 flex flex-col transition-shadow`;
 
   return (
-    <div className={`bg-white rounded-[20px] ${borderWidth} ${borderColor} ${shadowClass} p-6 flex flex-col transition-all relative`}>
-      <div className="flex justify-between items-start mb-4">
+    <div className={containerClass}>
+      {/* Top-Right Diagonal Ribbon for Invited */}
+      {isInvited && (
+        <div className="absolute top-0 right-0 w-[76px] h-[76px] pointer-events-none z-10 overflow-hidden">
+          <svg viewBox="0 0 76 76" className="w-full h-full">
+            <polygon points="10,0 76,0 76,66" fill="#003875" />
+            <polygon points="50,0 76,0 76,26" fill="#F59E0B" />
+          </svg>
+        </div>
+      )}
+
+      <div className="flex justify-between items-start mb-4 relative z-1">
         <div className="flex flex-col gap-1 w-full">
           {/* Invited Badge */}
           {isInvited && (
-            <div className="mb-2">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-extrabold text-white invited-shimmer-badge shadow-[0_2px_10px_rgba(16,185,129,0.35)] uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-yellow-200 animate-pulse" />
-                YOU ARE INVITED
+            <div className="mb-2.5">
+              <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-[12.5px] font-extrabold bg-[#003875] text-white tracking-wider uppercase shadow-xs">
+                INVITED
               </span>
             </div>
           )}
 
           {/* Title */}
-          <h3 className="text-[18px] md:text-[20px] font-bold text-[#2563eb] leading-tight line-clamp-2">
+          <h3 className="text-[19px] md:text-[21px] font-bold text-[#1a56db] leading-snug line-clamp-2">
             {title}
           </h3>
 
           {/* Place of Assignment Tag */}
-          <div className="mt-2 mb-1">
-             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold tracking-wide border border-blue-100">
-               <MapPin className="w-3 h-3 mr-1" />
-               {job.region || job.location ? `${job.region || job.location} - ` : ''}{job.school || job.division || job.office || 'N/A'}
-             </span>
+          <div className="mt-2.5 mb-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#eef4ff] text-[#1d4ed8] text-[11px] font-bold tracking-wide border border-[#dbeafe]">
+              <MapPin className="w-3.5 h-3.5 mr-1 text-[#2563eb]" />
+              {job.region || job.location ? `${job.region || job.location} - ` : ''}{job.school || job.division || job.office || 'N/A'}
+            </span>
           </div>
 
-          <div className="w-full h-px bg-gray-100 my-4" />
+          <div className="w-full h-px bg-gray-100 my-3" />
 
           {/* SG & Vacancies */}
           <div className="flex gap-4">
-            <div className="flex flex-1 items-center justify-center gap-3 px-4 py-3 bg-[#f0f4f8] rounded-xl">
-              <CircleDollarSign className="w-6 h-6 text-blue-600 shrink-0" />
+            <div className="flex flex-1 items-center gap-3.5 px-4 py-3 bg-[#eff6ff] rounded-2xl border border-[#dbeafe]/60">
+              <div className="w-8 h-8 rounded-full border-[2px] border-[#2563eb] flex items-center justify-center text-[#2563eb] font-extrabold text-[15px] shrink-0 leading-none select-none">
+                ₱
+              </div>
               <div className="flex flex-col items-start justify-center">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide leading-none mb-1">SALARY GRADE</span>
-                <span className="text-[18px] font-extrabold text-gray-800 leading-none tracking-tight">{job.sg || 'N/A'}</span>
+                <span className="text-[10px] font-bold text-[#2563eb] uppercase tracking-wider leading-none mb-1">SALARY GRADE</span>
+                <span className="text-[20px] font-extrabold text-gray-900 leading-none tracking-tight">{job.sg || 'N/A'}</span>
               </div>
             </div>
 
-            <div className="flex flex-1 items-center justify-center gap-3 px-4 py-3 bg-[#f0fdf4] rounded-xl">
-              <Users className="w-6 h-6 text-emerald-600 shrink-0" />
+            <div className="flex flex-1 items-center gap-3.5 px-4 py-3 bg-[#f0fdf4] rounded-2xl border border-[#dcfce7]/60">
+              <Users className="w-7 h-7 text-emerald-600 shrink-0" />
               <div className="flex flex-col items-start justify-center">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide leading-none mb-1">VACANCIES</span>
-                <span className="text-[18px] font-extrabold text-gray-800 leading-none tracking-tight">{job.vacancyCount || 0}</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider leading-none mb-1">VACANCIES</span>
+                <span className="text-[20px] font-extrabold text-gray-900 leading-none tracking-tight">{job.vacancyCount || 0}</span>
               </div>
             </div>
           </div>
 
           {/* Qualification Standards */}
           {(job.qsEducation || job.qsExperience || job.qsTraining || job.qsEligibility) && (
-            <div className="flex flex-col gap-1.5 mt-5 text-[13px]">
-              <span className="text-[14px] font-bold text-gray-900 tracking-wide mb-1">Qualification Standards:</span>
-              {job.qsEducation && <div><strong className="text-gray-900 font-semibold">Education:</strong> <span className="text-gray-600">{job.qsEducation}</span></div>}
-              <div><strong className="text-gray-900 font-semibold">Minimum Years of Experience:</strong> <span className="text-gray-600">{(job.qsExperienceMin === 0 || job.qsExperienceMin === '0' || job.qsExperience === 0 || job.qsExperience === '0') ? 'None Required' : (job.qsExperienceMin ?? job.qsExperience ?? '—')}</span></div>
-              <div><strong className="text-gray-900 font-semibold">Minimum Hours of Training:</strong> <span className="text-gray-600">{(job.qsTrainingMin === 0 || job.qsTrainingMin === '0' || job.qsTraining === 0 || job.qsTraining === '0') ? 'None Required' : (job.qsTrainingMin ?? job.qsTraining ?? '—')}</span></div>
-              {job.qsEligibility && <div><strong className="text-gray-900 font-semibold">Eligibility:</strong> <span className="text-gray-600">{job.qsEligibility}</span></div>}
+            <div className="flex flex-col gap-1.5 mt-4 text-[12.5px] leading-relaxed">
+              <span className="text-[13px] font-bold text-gray-900 tracking-wide mb-1">Qualification Standards:</span>
+              {job.qsEducation && <div><strong className="text-gray-900 font-bold">Education:</strong> <span className="text-gray-600 ml-1">{job.qsEducation}</span></div>}
+              <div><strong className="text-gray-900 font-bold">Minimum Years of Experience:</strong> <span className="text-gray-600 ml-1">{(job.qsExperienceMin === 0 || job.qsExperienceMin === '0' || job.qsExperience === 0 || job.qsExperience === '0') ? 'None Required' : (job.qsExperienceMin ?? job.qsExperience ?? '—')}</span></div>
+              <div><strong className="text-gray-900 font-bold">Minimum Hours of Training:</strong> <span className="text-gray-600 ml-1">{(job.qsTrainingMin === 0 || job.qsTrainingMin === '0' || job.qsTraining === 0 || job.qsTraining === '0') ? 'None Required' : (job.qsTrainingMin ?? job.qsTraining ?? '—')}</span></div>
+              {job.qsEligibility && <div><strong className="text-gray-900 font-bold">Eligibility:</strong> <span className="text-gray-600 ml-1">{job.qsEligibility}</span></div>}
             </div>
           )}
         </div>
@@ -84,7 +91,7 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
 
       {/* Status Footer */}
       {tab === 'my-applications' && (
-        <div className="flex flex-col gap-2 pt-4 border-t border-gray-100 mb-4">
+        <div className="flex flex-col gap-2 pt-4 border-t border-gray-100 mb-4 relative z-1">
           <div className="flex flex-col gap-1.5 w-full mt-1">
             <div className="flex items-stretch gap-1.5 w-full">
               <div className="flex-1 min-w-0 px-2 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 tracking-wide uppercase shadow-sm flex flex-col items-center justify-center text-center p-2">
@@ -102,17 +109,17 @@ const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob
 
       {/* Buttons */}
       {tab !== 'my-applications' && (
-        <div className={`flex items-center gap-3 mt-auto pt-5`}>
+        <div className={`flex items-center gap-3 mt-auto pt-6 relative z-1`}>
           {isApplied ? (
             <button disabled className="flex-1 bg-gray-200 text-gray-500 font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide cursor-not-allowed flex justify-center items-center gap-2">
               <div className="bg-white rounded-full p-0.5"><Check className="w-3.5 h-3.5 text-gray-400" strokeWidth={4} /></div> APPLIED
             </button>
           ) : (
-            <button onClick={(e) => { e.stopPropagation(); isPublic && onApplyClick ? onApplyClick(job) : handleApply(job); }} className="flex-1 bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2">
-              <Briefcase className="w-4 h-4" /> APPLY NOW
+            <button onClick={(e) => { e.stopPropagation(); isPublic && onApplyClick ? onApplyClick(job) : handleApply(job); }} className="flex-1 bg-[#002855] hover:bg-[#001c3d] text-white font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 shadow-sm">
+              <FileText className="w-4 h-4" /> APPLY NOW
             </button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); toggleSaveJob(job.id || job.positionId); }} className={`flex-1 border font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
+          <button onClick={(e) => { e.stopPropagation(); toggleSaveJob(job.id || job.positionId); }} className={`flex-1 border font-bold py-3.5 px-4 rounded-xl text-[13px] tracking-wide transition-colors flex justify-center items-center gap-2 shadow-sm ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
             <Star className={`w-4 h-4 ${isSaved ? 'fill-blue-500' : ''}`} /> {isSaved ? 'SAVED' : 'SAVE'}
           </button>
         </div>
@@ -157,7 +164,7 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
               const title = job.title || job.position || 'Unknown Position';
 
               const rowClass = isInvited
-                ? 'bg-white hover:bg-gray-50 transition-colors group border-l-4 border-l-emerald-500'
+                ? 'bg-[#fffdf9] hover:bg-amber-50/50 transition-colors group border-l-[5px] border-l-[#f59e0b]'
                 : (isApplied || tab === 'my-applications')
                   ? 'hover:bg-blue-50/50 transition-colors group bg-blue-50/20'
                   : 'hover:bg-blue-50/50 transition-colors group';
@@ -171,12 +178,11 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
                   <td className="px-6 py-5 align-middle">
                     <div className="flex flex-col gap-1.5 items-start">
                       {isInvited && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-white invited-shimmer-badge shadow-sm uppercase tracking-wider">
-                          <Sparkles className="w-3 h-3 text-yellow-200 animate-pulse" />
-                          YOU ARE INVITED
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#003875] text-white uppercase tracking-wider shadow-2xs">
+                          INVITED
                         </span>
                       )}
-                      <span className="text-[15px] font-bold text-[#2563eb] group-hover:text-blue-700 transition-colors">{title}</span>
+                      <span className="text-[15px] font-bold text-[#1a56db] group-hover:text-blue-700 transition-colors">{title}</span>
                     </div>
                   </td>
 
@@ -227,8 +233,8 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
                           <Check className="w-3 h-3" strokeWidth={4} /> APPLIED
                         </button>
                       ) : (
-                        <button onClick={() => isPublic && onApplyClick ? onApplyClick(job) : handleApply(job)} className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-2 rounded-lg text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 shadow-sm">
-                          <Briefcase className="w-3 h-3" /> APPLY NOW
+                        <button onClick={() => isPublic && onApplyClick ? onApplyClick(job) : handleApply(job)} className="w-full bg-[#002855] hover:bg-[#001c3d] text-white font-bold py-2 rounded-lg text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 shadow-sm">
+                          <FileText className="w-3 h-3" /> APPLY NOW
                         </button>
                       )}
                       <button onClick={() => toggleSaveJob(job.id || job.positionId)} className={`w-full border font-bold py-2 rounded-lg text-[11px] tracking-wide transition-colors flex justify-center items-center gap-1.5 shadow-sm ${isSaved ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}>
@@ -247,4 +253,5 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
 };
 
 export { JobCard, JobTableList };
+
 

@@ -58,6 +58,7 @@ export default function ApplicantJobList() {
   const [currentJobPage, setCurrentJobPage] = useState(1);
   const [jobsPerPage, setJobsPerPage] = useState(10);
 
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRegion, setFilterRegion] = useState('All Regions');
   const [filterDivision, setFilterDivision] = useState('All Divisions');
@@ -107,6 +108,25 @@ export default function ApplicantJobList() {
     }
   };
 
+  const invitedJobs = useMemo(() => positions.filter(job => job.is_invited || job.isInvited), [positions]);
+
+  const filteredInvitedJobs = useMemo(() => {
+    return invitedJobs.filter(job => {
+      const matchSearch = !searchQuery ||
+        job.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (job.itemNo && job.itemNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (job.division && job.division.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (job.office && job.office.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (job.location && job.location.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchRegion = filterRegion === 'All Regions' || (job.location || 'Unknown') === filterRegion;
+      const matchDivision = filterDivision === 'All Divisions' || (job.division || job.office) === filterDivision;
+      const matchPosition = filterPosition === 'All Positions' || job.title === filterPosition;
+
+      return matchSearch && matchRegion && matchDivision && matchPosition;
+    });
+  }, [searchQuery, filterRegion, filterDivision, filterPosition, invitedJobs]);
+
   const filteredPositions = useMemo(() => positions.filter(job => {
     const matchSearch = !searchQuery ||
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,14 +142,20 @@ export default function ApplicantJobList() {
     return matchSearch && matchRegion && matchDivision && matchPosition;
   }), [searchQuery, filterRegion, filterDivision, filterPosition, positions]);
 
+  const nonInvitedFilteredPositions = useMemo(() => {
+    return filteredPositions.filter(job => !job.is_invited && !job.isInvited);
+  }, [filteredPositions]);
+
+  const displayOtherJobs = invitedJobs.length > 0 ? nonInvitedFilteredPositions : filteredPositions;
+
   useEffect(() => {
     setCurrentJobPage(1);
   }, [searchQuery, filterRegion, filterDivision, filterPosition, jobsPerPage]);
 
-  const totalJobPages = Math.ceil(filteredPositions.length / jobsPerPage);
+  const totalJobPages = Math.ceil(displayOtherJobs.length / jobsPerPage);
   const indexOfLastJob = currentJobPage * jobsPerPage;
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = filteredPositions.slice(indexOfFirstJob, indexOfLastJob);
+  const currentJobs = displayOtherJobs.slice(indexOfFirstJob, indexOfLastJob);
 
   const handleClearFilters = () => {
     setSearchQuery('');
@@ -1642,70 +1668,132 @@ export default function ApplicantJobList() {
                   </div>
                 </div>
 
-                {/* Job List */}
-                {viewMode === 'table' ? (
-                  <JobTableList
-                    jobs={currentJobs}
-                    tab={activeTab}
-                    appliedJobIds={appliedJobIds}
-                    savedJobIds={savedJobIds}
-                    toggleSaveJob={toggleSaveJob}
-                    handleApply={handleApply}
-                  />
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-gray-100">
-                    {currentJobs.map((job) => (
-                      <JobCard
-                        key={job.id}
-                        job={job}
+                {/* Invited Positions Section */}
+                {filteredInvitedJobs.length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-2 border-b border-amber-200/80">
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <h3 className="text-[19px] sm:text-[21px] font-bold text-[#003875]">Invited Positions</h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#003875] text-white">
+                            {filteredInvitedJobs.length} {filteredInvitedJobs.length === 1 ? 'Position' : 'Positions'}
+                          </span>
+                        </div>
+                        <p className="text-[13px] text-gray-500 mt-1">
+                          Positions where you have been specifically invited to apply based on a verified endorsement.
+                        </p>
+                      </div>
+                    </div>
+
+                    {viewMode === 'table' ? (
+                      <JobTableList
+                        jobs={filteredInvitedJobs}
                         tab={activeTab}
                         appliedJobIds={appliedJobIds}
                         savedJobIds={savedJobIds}
                         toggleSaveJob={toggleSaveJob}
                         handleApply={handleApply}
                       />
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {filteredInvitedJobs.map((job) => (
+                          <JobCard
+                            key={job.id}
+                            job={job}
+                            tab={activeTab}
+                            appliedJobIds={appliedJobIds}
+                            savedJobIds={savedJobIds}
+                            toggleSaveJob={toggleSaveJob}
+                            handleApply={handleApply}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Pagination Controls */}
-                <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-6">
-                  <div className="text-[13px] text-gray-500 font-bold uppercase tracking-wider">
-                    SHOWING {filteredPositions.length > 0 ? indexOfFirstJob + 1 : 0} TO {Math.min(indexOfLastJob, filteredPositions.length)} OF {filteredPositions.length} ENTRIES
+                {/* Open Vacancies Section Header if Invited Section is present */}
+                {filteredInvitedJobs.length > 0 && currentJobs.length > 0 && (
+                  <div className="flex items-center gap-2 mb-4 pt-4 border-t border-gray-100">
+                    <h3 className="text-[18px] font-bold text-gray-800">Other Available Vacancies</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">
+                      {nonInvitedFilteredPositions.length}
+                    </span>
                   </div>
-                  {totalJobPages > 1 && (
-                    <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
-                      <button
-                        onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
-                        disabled={currentJobPage === 1}
-                        className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-                      >
-                        Previous
-                      </button>
+                )}
 
-                      {Array.from({ length: totalJobPages }, (_, i) => i + 1).map(pageNum => (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentJobPage(pageNum)}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${currentJobPage === pageNum
-                            ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
-                            : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
+                {/* Job List */}
+                {currentJobs.length > 0 ? (
+                  viewMode === 'table' ? (
+                    <JobTableList
+                      jobs={currentJobs}
+                      tab={activeTab}
+                      appliedJobIds={appliedJobIds}
+                      savedJobIds={savedJobIds}
+                      toggleSaveJob={toggleSaveJob}
+                      handleApply={handleApply}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {currentJobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          tab={activeTab}
+                          appliedJobIds={appliedJobIds}
+                          savedJobIds={savedJobIds}
+                          toggleSaveJob={toggleSaveJob}
+                          handleApply={handleApply}
+                        />
                       ))}
-
-                      <button
-                        onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
-                        disabled={currentJobPage === totalJobPages}
-                        className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-                      >
-                        Next
-                      </button>
                     </div>
-                  )}
-                </div>
+                  )
+                ) : filteredInvitedJobs.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 font-medium bg-gray-50 rounded-xl border border-gray-200">
+                    No open vacancies found matching your search criteria.
+                  </div>
+                ) : null}
+
+                {/* Pagination Controls */}
+                {displayOtherJobs.length > 0 && (
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-6">
+                    <div className="text-[13px] text-gray-500 font-bold uppercase tracking-wider">
+                      SHOWING {displayOtherJobs.length > 0 ? indexOfFirstJob + 1 : 0} TO {Math.min(indexOfLastJob, displayOtherJobs.length)} OF {displayOtherJobs.length} ENTRIES
+                    </div>
+                    {totalJobPages > 1 && (
+                      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto hide-scrollbar max-w-full">
+                        <button
+                          onClick={() => setCurrentJobPage(p => Math.max(1, p - 1))}
+                          disabled={currentJobPage === 1}
+                          className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                        >
+                          Previous
+                        </button>
+
+                        {Array.from({ length: totalJobPages }, (_, i) => i + 1).map(pageNum => (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentJobPage(pageNum)}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold transition-colors ${currentJobPage === pageNum
+                              ? 'bg-[#0a6fa6] text-white border border-[#0a6fa6]'
+                              : 'text-gray-600 border border-gray-200 hover:bg-gray-50'
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+
+                        <button
+                          onClick={() => setCurrentJobPage(p => Math.min(totalJobPages, p + 1))}
+                          disabled={currentJobPage === totalJobPages}
+                          className="px-3 sm:px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
