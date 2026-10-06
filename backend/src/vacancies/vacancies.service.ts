@@ -84,15 +84,17 @@ export class VacanciesService {
     const vacancyCondition = `(
       (v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))
       OR ${allowedEmailCondition}
+      ${isTestApplicant ? "OR v.is_test IS TRUE OR (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))" : ""}
     )`;
 
     let filterCondition = '';
     if (isTestApplicant) {
-      // Test applicant: ONLY show CENTRAL OFFICE (BHROD & SED)
+      // Test applicant: ONLY show test vacancies (where is_test is true or CENTRAL OFFICE BHROD/SED or invited)
       filterCondition = `
         AND (
-          (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) = 'BHROD') OR
-          (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) = 'SED')
+          ${hasAllowedEmailClause}
+          OR (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))
+          OR (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE))
         )
       `;
     } else {
@@ -255,15 +257,7 @@ export class VacanciesService {
       }
     }
 
-    if (isTestApplicant) {
-      return {
-        regions: ['CENTRAL OFFICE'],
-        divisions: ['BHROD', 'SED'],
-        divisionsByRegion: {
-          'CENTRAL OFFICE': ['BHROD', 'SED'],
-        },
-      };
-    }
+    // Test applicants will have Central Office added to all other regions
 
     const [regionsResult, divisionsResult, regdivResult] = await Promise.all([
       pool.query(
@@ -313,6 +307,17 @@ export class VacanciesService {
           }
         }
       });
+    }
+
+    if (isTestApplicant) {
+      if (!regions.includes('CENTRAL OFFICE')) {
+        regions.unshift('CENTRAL OFFICE');
+      }
+      if (!divisions.includes('BHROD')) divisions.push('BHROD');
+      if (!divisions.includes('SED')) divisions.push('SED');
+      if (!divisionsByRegion['CENTRAL OFFICE']) divisionsByRegion['CENTRAL OFFICE'] = [];
+      if (!divisionsByRegion['CENTRAL OFFICE'].includes('BHROD')) divisionsByRegion['CENTRAL OFFICE'].push('BHROD');
+      if (!divisionsByRegion['CENTRAL OFFICE'].includes('SED')) divisionsByRegion['CENTRAL OFFICE'].push('SED');
     }
 
     return {
