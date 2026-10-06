@@ -702,42 +702,6 @@ export default function Login() {
             {/* Gateway Header & Switcher */}
             {!isRegistering && (
               <div className="mb-5" id="tour-reclass-portal">
-                {/* Gateway Switcher Tabs */}
-                <div className="flex bg-gray-100 p-1 rounded-xl mb-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPortalType('jobseeker');
-                      setIsRegistering(false);
-                      setReclassView('login');
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      portalType === 'jobseeker'
-                        ? 'bg-white text-[#022851] shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>Jobseeker</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPortalType('reclass');
-                      setIsRegistering(false);
-                      setShowWelcomeModal(true);
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      portalType === 'reclass'
-                        ? 'bg-[#0369a1] text-white shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    <Award className="w-3.5 h-3.5" />
-                    <span>Reclassification</span>
-                  </button>
-                </div>
-
                 {portalType === 'reclass' ? (
                   <div className="bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-2.5">
