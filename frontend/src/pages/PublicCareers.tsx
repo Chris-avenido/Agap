@@ -117,6 +117,8 @@ export default function PublicCareers() {
             qsEligibility: v.qualificationStandards?.eligibilityRequired || v.eligibility || v.required_eligibility,
             description: 'Details available in the full job posting.',
             is_test: Boolean(v.is_test || (v.positionTitle || v.title)?.toLowerCase().includes('test') || (v.positionTitle || v.title)?.toLowerCase().includes('do not apply')),
+            is_invited: Boolean(v.is_invited || v.isInvited || v.has_allowed_email_access),
+            isInvited: Boolean(v.is_invited || v.isInvited || v.has_allowed_email_access),
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);

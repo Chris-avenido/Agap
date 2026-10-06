@@ -8,7 +8,10 @@ router.get('/', async (req, res) => {
     const applicantId = req.query.applicantId
       ? String(req.query.applicantId)
       : undefined;
-    const vacancies = await VacanciesService.getOpenVacancies(applicantId);
+    const email = req.query.email
+      ? String(req.query.email)
+      : undefined;
+    const vacancies = await VacanciesService.getOpenVacancies(applicantId, email);
     res.json({ success: true, data: vacancies });
   } catch (error: any) {
     console.error('Error fetching vacancies:', error);
@@ -21,7 +24,10 @@ router.get('/locations', async (req, res) => {
     const applicantId = req.query.applicantId
       ? String(req.query.applicantId)
       : undefined;
-    const locations = await VacanciesService.getAgapLocations(applicantId);
+    const email = req.query.email
+      ? String(req.query.email)
+      : undefined;
+    const locations = await VacanciesService.getAgapLocations(applicantId, email);
     res.json({ success: true, data: locations });
   } catch (error: any) {
     console.error('Error fetching locations:', error);

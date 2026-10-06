@@ -563,7 +563,16 @@ class ApplicantsServiceClass {
              (SELECT MIN(v.posting_start) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_start,
              (SELECT MAX(v.posting_end) FROM vacancies v WHERE v.job_cluster_id = c.id) as posting_end,
              (SELECT v.item_no FROM vacancies v WHERE v.job_cluster_id = c.id LIMIT 1) as item_no,
-             p.salary_grade as salary_grade
+             p.salary_grade as salary_grade,
+             (EXISTS (
+               SELECT 1 FROM agap_invited ai 
+               JOIN applicants app ON LOWER(TRIM(ai.email)) IN (
+                 LOWER(TRIM(COALESCE(app.email_address, ''))), 
+                 LOWER(TRIM(COALESCE(app.alternate_email, ''))),
+                 LOWER(TRIM(COALESCE(app.email, '')))
+               )
+               WHERE app.id = $1 AND (ai.job_cluster_id IS NULL OR ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
+             )) as is_invited
       FROM applications a
       LEFT JOIN job_clusters c ON a.job_cluster_id::text = c.id::text
       LEFT JOIN positions p ON c.position_id = p.id
@@ -576,7 +585,12 @@ class ApplicantsServiceClass {
     `,
       [applicantId.toString()],
     );
-    return result.rows.map((r) => ({ ...r, position_id: r.job_cluster_id }));
+    return result.rows.map((r) => ({
+      ...r,
+      position_id: r.job_cluster_id,
+      is_invited: Boolean(r.is_invited),
+      isInvited: Boolean(r.is_invited),
+    }));
   }
 
   async toggleSavedJob(applicantId: number, jobClusterId: string) {

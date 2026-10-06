@@ -1,29 +1,36 @@
 import React from 'react';
-import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin, Users } from 'lucide-react';
+import { Briefcase, CalendarDays, Star, CircleDollarSign, GraduationCap, MapPin, Users, Sparkles, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-import { Check } from 'lucide-react'; // Make sure to add Check if needed
 
 const JobCard = ({ job, tab, appliedJobIds = [], savedJobIds = [], toggleSaveJob, handleApply, isPublic = false, onCardClick, onApplyClick }: any) => {
   const navigate = useNavigate();
   const isApplied = appliedJobIds.includes(job.id || job.positionId);
   const isSaved = savedJobIds.includes(job.id || job.positionId);
+  const isInvited = Boolean(job.is_invited || job.isInvited || job.has_allowed_email_access);
   const title = job.title || job.position || 'Unknown Position';
 
-  const borderColor = isApplied || tab === 'my-applications' ? 'border-[#2563eb]' : 'border-[#fbbf24]'; // blue if applied, amber/yellow otherwise
-  const shadowClass = isApplied || tab === 'my-applications' 
-    ? 'shadow-[0_8px_25px_rgba(37,99,235,0.15)] hover:shadow-[0_12px_35px_rgba(37,99,235,0.25)]' 
-    : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]';
+  const borderColor = isInvited
+    ? 'border-emerald-500'
+    : (isApplied || tab === 'my-applications' ? 'border-[#2563eb]' : 'border-[#fbbf24]');
+
+  const borderWidth = isInvited ? 'border-[2px]' : 'border-[1.5px]';
+
+  const shadowClass = isInvited 
+    ? 'invited-glow-card shadow-[0_8px_25px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.45)]'
+    : (isApplied || tab === 'my-applications' 
+        ? 'shadow-[0_8px_25px_rgba(37,99,235,0.15)] hover:shadow-[0_12px_35px_rgba(37,99,235,0.25)]' 
+        : 'shadow-[0_8px_25px_rgba(251,191,36,0.15)] hover:shadow-[0_12px_35px_rgba(251,191,36,0.25)]');
 
   return (
-    <div className={`bg-white rounded-[20px] border-[1.5px] ${borderColor} ${shadowClass} p-6 flex flex-col transition-shadow relative`}>
+    <div className={`bg-white rounded-[20px] ${borderWidth} ${borderColor} ${shadowClass} p-6 flex flex-col transition-all relative`}>
       <div className="flex justify-between items-start mb-4">
         <div className="flex flex-col gap-1 w-full">
-          {/* Test Data Badge */}
-          {job.is_test && (
-            <div className="mb-1">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
-                DO NOT APPLY (VALIDATION ONLY)
+          {/* Invited Badge */}
+          {isInvited && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-extrabold text-white invited-shimmer-badge shadow-[0_2px_10px_rgba(16,185,129,0.35)] uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-200 animate-pulse" />
+                YOU ARE INVITED
               </span>
             </div>
           )}
@@ -146,19 +153,27 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
             {jobs.map((job: any) => {
               const isApplied = appliedJobIds.includes(job.id || job.positionId);
               const isSaved = savedJobIds.includes(job.id || job.positionId);
+              const isInvited = Boolean(job.is_invited || job.isInvited || job.has_allowed_email_access);
               const title = job.title || job.position || 'Unknown Position';
+
+              const rowClass = isInvited
+                ? 'bg-white hover:bg-gray-50 transition-colors group border-l-4 border-l-emerald-500'
+                : (isApplied || tab === 'my-applications')
+                  ? 'hover:bg-blue-50/50 transition-colors group bg-blue-50/20'
+                  : 'hover:bg-blue-50/50 transition-colors group';
 
               return (
                 <tr 
                   key={job.id || job.positionId} 
-                  className={`hover:bg-blue-50/50 transition-colors group ${(isApplied || tab === 'my-applications') ? 'bg-blue-50/20' : ''}`}
+                  className={rowClass}
                 >
                   {/* Position Title Column */}
                   <td className="px-6 py-5 align-middle">
-                    <div className="flex flex-col gap-1 items-start">
-                      {job.is_test && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 shadow-sm uppercase tracking-wider">
-                          DO NOT APPLY (VALIDATION ONLY)
+                    <div className="flex flex-col gap-1.5 items-start">
+                      {isInvited && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-white invited-shimmer-badge shadow-sm uppercase tracking-wider">
+                          <Sparkles className="w-3 h-3 text-yellow-200 animate-pulse" />
+                          YOU ARE INVITED
                         </span>
                       )}
                       <span className="text-[15px] font-bold text-[#2563eb] group-hover:text-blue-700 transition-colors">{title}</span>
@@ -232,3 +247,4 @@ const JobTableList = ({ jobs, tab, appliedJobIds = [], savedJobIds = [], toggleS
 };
 
 export { JobCard, JobTableList };
+

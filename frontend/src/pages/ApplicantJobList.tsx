@@ -851,6 +851,8 @@ export default function ApplicantJobList() {
             qsEligibility: v.qualificationStandards?.eligibilityRequired,
             description: 'Details available in the full job posting.',
             is_test: Boolean(v.is_test || v.positionTitle?.toLowerCase().includes('test') || v.positionTitle?.toLowerCase().includes('do not apply')),
+            is_invited: Boolean(v.is_invited || v.isInvited || v.has_allowed_email_access),
+            isInvited: Boolean(v.is_invited || v.isInvited || v.has_allowed_email_access),
             daysLeft: v.posting_end ? Math.ceil((new Date(v.posting_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0
           }));
           setPositions(formatted);
@@ -892,7 +894,7 @@ export default function ApplicantJobList() {
             if (appData.success && appData.data) {
               setAppliedJobIds(appData.data.map((app: any) => app.position_id));
               setApplications(appData.data.map((app: any) => {
-                const jobDetails = jobs.find((p: any) => p.id === app.position_id) || {} as any;
+                const jobDetails = jobs.find((p: any) => p.id === app.position_id || p.jobClusterId === app.position_id) || {} as any;
                   return {
                     id: app.id,
                     positionId: app.position_id,
@@ -919,7 +921,9 @@ export default function ApplicantJobList() {
                     qsTraining: jobDetails.qsTraining,
                     qsEligibility: jobDetails.qsEligibility,
                     description: jobDetails.description,
-                    daysLeft: jobDetails.daysLeft
+                    daysLeft: jobDetails.daysLeft,
+                    is_invited: Boolean(app.is_invited || app.isInvited || jobDetails.is_invited || jobDetails.isInvited),
+                    isInvited: Boolean(app.is_invited || app.isInvited || jobDetails.is_invited || jobDetails.isInvited)
                   };
                 }));
               }
@@ -927,6 +931,7 @@ export default function ApplicantJobList() {
             .catch(err => console.error('Error fetching applications:', err));
       })
       .catch(err => console.error('Error fetching vacancies:', err));
+
 
     fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`)
       .then(res => res.json())
