@@ -332,31 +332,50 @@ class ApplicantsServiceClass {
   ) {
     const result = await pool.query(
       `SELECT * FROM applicants 
-       WHERE LOWER(email_address) = LOWER($1) 
-          OR UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))`,
+       WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+          OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))
+       ORDER BY updated_at DESC NULLS LAST, id DESC`,
       [email_address],
     );
-    const applicant = result.rows[0];
-    if (!applicant) return null;
+    if (!result.rows || result.rows.length === 0) return null;
 
-    let isMatch = false;
-    if (loginMethod === 'passcode') {
-      isMatch = Boolean(
-        applicant.passcode && applicant.passcode === password_raw,
-      );
-    } else if (loginMethod === 'password') {
-      if (applicant.password_hash) {
-        isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
+    let matchedApplicant: any = null;
+
+    for (const app of result.rows) {
+      let isMatch = false;
+      if (loginMethod === 'passcode') {
+        if (app.passcode && app.passcode === password_raw) {
+          isMatch = true;
+        } else if (app.passcode_hash) {
+          isMatch = await bcrypt.compare(password_raw, app.passcode_hash);
+        }
+      } else if (loginMethod === 'password') {
+        if (app.password_hash) {
+          isMatch = await bcrypt.compare(password_raw, app.password_hash);
+        } else if (app.password) {
+          isMatch = app.password === password_raw;
+        }
+      } else {
+        if (app.passcode && app.passcode === password_raw) {
+          isMatch = true;
+        } else if (app.passcode_hash) {
+          isMatch = await bcrypt.compare(password_raw, app.passcode_hash);
+        } else if (app.password_hash) {
+          isMatch = await bcrypt.compare(password_raw, app.password_hash);
+        } else if (app.password) {
+          isMatch = app.password === password_raw;
+        }
       }
-    } else {
-      if (applicant.passcode && applicant.passcode === password_raw) {
-        isMatch = true;
-      } else if (applicant.password_hash) {
-        isMatch = await bcrypt.compare(password_raw, applicant.password_hash);
+
+      if (isMatch) {
+        matchedApplicant = app;
+        break;
       }
     }
 
-    if (!isMatch) return null;
+    if (!matchedApplicant) return null;
+    const applicant = matchedApplicant;
 
     let plantillaToEnsure = applicant.plantilla_item_number;
     if (!plantillaToEnsure && applicant.surname && applicant.first_name) {
@@ -637,15 +656,24 @@ class ApplicantsServiceClass {
       JSON.stringify(data, null, 2),
       '\n========================',
     );
-    const email = data.email_address || `no-email-${Date.now()}@test.com`;
+    const rawEmail = (data.email_address || data.email || '').trim();
+    const email = rawEmail ? rawEmail.toLowerCase() : `no-email-${Date.now()}@test.com`;
 
-    if (data.email_address) {
+    if (rawEmail && !rawEmail.startsWith('no-email-')) {
       const existing = await pool.query(
-        'SELECT id FROM applicants WHERE email_address = $1',
-        [data.email_address],
+        `SELECT id FROM applicants 
+         WHERE (LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+            OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+            OR LOWER(TRIM(COALESCE(alternate_email, ''))) = LOWER(TRIM($1)))
+         LIMIT 1`,
+        [rawEmail],
       );
       if (existing.rows.length > 0) {
-        throw new Error('Email address already exists');
+        const err: any = new Error(
+          'Email address is already registered. Please sign in instead.',
+        );
+        err.statusCode = 409;
+        throw err;
       }
     }
 
@@ -663,6 +691,24 @@ class ApplicantsServiceClass {
     try {
       await client.query('BEGIN');
       await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
+
+      if (rawEmail && !rawEmail.startsWith('no-email-')) {
+        const existingInTx = await client.query(
+          `SELECT id FROM applicants 
+           WHERE (LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
+              OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
+              OR LOWER(TRIM(COALESCE(alternate_email, ''))) = LOWER(TRIM($1)))
+           LIMIT 1`,
+          [rawEmail],
+        );
+        if (existingInTx.rows.length > 0) {
+          const err: any = new Error(
+            'Email address is already registered. Please sign in instead.',
+          );
+          err.statusCode = 409;
+          throw err;
+        }
+      }
 
       const lastApplicant = await client.query(
         `SELECT applicant_number FROM public.applicants WHERE applicant_number LIKE 'AGAP-%' ORDER BY id DESC LIMIT 1`,
@@ -2478,11 +2524,39 @@ class ApplicantsServiceClass {
        WHERE LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
           OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
           OR UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1))
-       LIMIT 1`,
+       ORDER BY updated_at DESC NULLS LAST, id DESC`,
       [cleanIdentifier],
     );
 
-    let applicant = appRes.rows[0] || null;
+    let applicant: any = null;
+
+    if (appRes.rows && appRes.rows.length > 0) {
+      for (const app of appRes.rows) {
+        let isMatch = false;
+        if (method === 'passcode') {
+          if (app.passcode_hash) {
+            isMatch = await bcrypt.compare(credential, app.passcode_hash);
+          } else if (app.passcode) {
+            if (app.passcode.startsWith('$2')) {
+              isMatch = await bcrypt.compare(credential, app.passcode);
+            } else {
+              isMatch = app.passcode === credential;
+            }
+          }
+        } else {
+          if (app.password_hash) {
+            isMatch = await bcrypt.compare(credential, app.password_hash);
+          } else if (app.password) {
+            isMatch = app.password === credential;
+          }
+        }
+
+        if (isMatch) {
+          applicant = app;
+          break;
+        }
+      }
+    }
 
     if (!applicant) {
       // Fallback: check if record exists in reclass_gc directly
@@ -2555,30 +2629,6 @@ class ApplicantsServiceClass {
     }
 
     if (!applicant) {
-      return null;
-    }
-
-    let isMatch = false;
-
-    if (method === 'passcode') {
-      if (applicant.passcode_hash) {
-        isMatch = await bcrypt.compare(credential, applicant.passcode_hash);
-      } else if (applicant.passcode) {
-        if (applicant.passcode.startsWith('$2')) {
-          isMatch = await bcrypt.compare(credential, applicant.passcode);
-        } else {
-          isMatch = applicant.passcode === credential;
-        }
-      }
-    } else {
-      if (applicant.password_hash) {
-        isMatch = await bcrypt.compare(credential, applicant.password_hash);
-      } else if (applicant.password) {
-        isMatch = applicant.password === credential;
-      }
-    }
-
-    if (!isMatch) {
       return null;
     }
 

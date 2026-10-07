@@ -296,6 +296,17 @@ describe('Reclassification Auth & Registration Rules', () => {
     expect(emailRegex.test('@example.com')).toBe(false);
   });
 
+  it('should treat emails with different casing or surrounding whitespace as duplicates', () => {
+    const normalizeEmail = (e: string) => (e || '').trim().toLowerCase();
+    expect(normalizeEmail('Cruzdonna174@gmail.com')).toBe('cruzdonna174@gmail.com');
+    expect(normalizeEmail('  cruzdonna174@gmail.com  ')).toBe('cruzdonna174@gmail.com');
+    expect(normalizeEmail('CRUZDONNA174@GMAIL.COM')).toBe('cruzdonna174@gmail.com');
+    expect(
+      normalizeEmail('Cruzdonna174@gmail.com') ===
+        normalizeEmail('cruzdonna174@gmail.com')
+    ).toBe(true);
+  });
+
   it('should normalize Plantilla Item Number by trimming and uppercasing', () => {
     const normalize = (input: string) => (input || '').trim().toUpperCase();
     expect(normalize('  osec-decsb-12345-gdc-01  ')).toBe('OSEC-DECSB-12345-GDC-01');

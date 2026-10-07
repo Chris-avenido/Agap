@@ -704,8 +704,14 @@ router.post('/', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error saving applicant:', error);
+    const statusCode =
+      error.statusCode ||
+      (error.message?.includes('already registered') ||
+      error.message?.includes('already exists')
+        ? 409
+        : 500);
     res
-      .status(500)
+      .status(statusCode)
       .json({ message: error.message || 'Error submitting application' });
   }
 });
