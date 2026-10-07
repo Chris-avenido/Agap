@@ -1,6 +1,13 @@
 import { pool } from '../database';
 
 export class VacanciesService {
+  private static cachedBaseLocations: {
+    regions: string[];
+    divisions: string[];
+    divisionsByRegion: Record<string, string[]>;
+    timestamp: number;
+  } | null = null;
+
   static async getOpenVacancies(applicantId?: string | number | null, explicitEmail?: string | null) {
     let isTestApplicant = false;
     const applicantEmails: string[] = [];
@@ -51,60 +58,57 @@ export class VacanciesService {
       }
     }
 
-    const queryParams: any[] = [];
-    let hasAllowedEmailClause = 'FALSE';
-    let allowedEmailCondition = 'FALSE';
-    let alreadyAppliedClause = 'FALSE';
+    // Pre-fetch invited clusters and already applied clusters in parallel (Fast indexed queries)
+    const [invitedRes, appliedRes] = await Promise.all([
+      applicantEmails.length > 0
+        ? pool.query(
+            `SELECT DISTINCT job_cluster_id FROM agap_invited WHERE LOWER(TRIM(email)) = ANY($1::text[])`,
+            [applicantEmails],
+          )
+        : Promise.resolve({ rows: [] }),
+      authenticatedApplicantNumId !== null
+        ? pool.query(
+            `SELECT DISTINCT job_cluster_id FROM applications WHERE applicant_id = $1 OR applicant_id::text = $2`,
+            [authenticatedApplicantNumId, String(authenticatedApplicantNumId)],
+          )
+        : Promise.resolve({ rows: [] }),
+    ]);
 
-    if (authenticatedApplicantNumId !== null) {
-      queryParams.push(authenticatedApplicantNumId);
-      const appNumIdIndex = `$${queryParams.length}`;
-      alreadyAppliedClause = `(
-        EXISTS (
-          SELECT 1 FROM applications a 
-          WHERE (a.applicant_id = ${appNumIdIndex} OR a.applicant_id::text = ${appNumIdIndex}::text)
-            AND (a.job_cluster_id = c.id OR a.job_cluster_id::text = c.id::text)
-        )
-      )`;
-    }
+    const invitedClusterIds: string[] = [];
+    let hasGlobalInvite = false;
+    invitedRes.rows.forEach((r: any) => {
+      if (!r.job_cluster_id) {
+        hasGlobalInvite = true;
+      } else {
+        invitedClusterIds.push(String(r.job_cluster_id).trim());
+      }
+    });
 
-    if (applicantEmails.length > 0) {
-      queryParams.push(applicantEmails);
-      const emailParamIndex = `$${queryParams.length}`;
-      hasAllowedEmailClause = `(
-        EXISTS (
-          SELECT 1 FROM agap_invited ai 
-          WHERE (ai.job_cluster_id IS NULL OR ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
-            AND LOWER(TRIM(ai.email)) = ANY(${emailParamIndex}::text[])
-        )
-      )`;
-      allowedEmailCondition = hasAllowedEmailClause;
-    }
-
-    const vacancyCondition = `(
-      (v.status = 'open' AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL))
-      OR ${allowedEmailCondition}
-      ${isTestApplicant ? "OR v.is_test IS TRUE OR (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))" : ""}
-    )`;
+    const appliedClusterIds = new Set<string>();
+    appliedRes.rows.forEach((r: any) => {
+      if (r.job_cluster_id) {
+        appliedClusterIds.add(String(r.job_cluster_id).trim());
+      }
+    });
 
     let filterCondition = '';
     if (isTestApplicant) {
-      // Test applicant: ONLY show test vacancies (where is_test is true or CENTRAL OFFICE BHROD/SED or invited)
       filterCondition = `
         AND (
-          ${hasAllowedEmailClause}
+          $1::boolean IS TRUE
+          OR c.id = ANY($2::text[])
           OR (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))
-          OR (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE))
+          OR mv."is_test" IS TRUE
         )
       `;
     } else {
-      // Regular applicant / Public: DO NOT display BHROD & SED under CENTRAL OFFICE and DO NOT display test vacancies (unless explicitly permitted via agap_invited)
       filterCondition = `
         AND (
-          ${hasAllowedEmailClause}
+          $1::boolean IS TRUE
+          OR c.id = ANY($2::text[])
           OR NOT (
             (UPPER(c.region) = 'CENTRAL OFFICE' AND UPPER(c.division) IN ('BHROD', 'SED'))
-            OR (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE))
+            OR mv."is_test" IS TRUE
           )
         )
       `;
@@ -112,62 +116,64 @@ export class VacanciesService {
 
     const result = await pool.query(
       `
+      WITH matched_vacancies AS (
+        SELECT 
+          v.job_cluster_id,
+          COUNT(*)::int as "vacantItemCount",
+          MIN(v.posting_start) as "posting_start",
+          MAX(v.posting_end) as "posting_end",
+          BOOL_OR(v.status = 'open' AND (UPPER(TRIM(COALESCE(v.filling_up_status, ''))) = 'UNFILLED' OR v.filling_up_status IS NULL)) as "has_open_vacancies",
+          BOOL_OR(v.is_test IS TRUE) as "is_test"
+        FROM vacancies v
+        WHERE (
+          (UPPER(TRIM(COALESCE(v.filling_up_status, ''))) = 'UNFILLED' OR v.filling_up_status IS NULL)
+          AND (
+            v.status = 'open'
+            OR $1::boolean IS TRUE
+            OR v.job_cluster_id = ANY($2::text[])
+            ${isTestApplicant ? "OR v.is_test IS TRUE" : ""}
+          )
+        )
+        GROUP BY v.job_cluster_id
+      )
       SELECT 
         c.id as "jobClusterId",
         p.title as "positionTitle",
         c.region as "region",
         c.division as "division",
         p.salary_grade as "salaryGrade",
-        (SELECT COUNT(*) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition})::int as "vacantItemCount",
-        (SELECT MIN(posting_start) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition}) as "posting_start",
-        (SELECT MAX(posting_end) FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND ${vacancyCondition}) as "posting_end",
-        ${hasAllowedEmailClause} as "has_allowed_email_access",
-        (EXISTS (
-          SELECT 1 FROM vacancies v 
-          WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
-            AND v.status = 'open' 
-            AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
-        )) as "has_open_vacancies",
-        ${alreadyAppliedClause} as "already_applied",
+        mv."vacantItemCount",
+        mv."posting_start",
+        mv."posting_end",
+        mv."has_open_vacancies",
+        COALESCE(mv."is_test", false) as "is_test",
         p.required_bachelor_degree,
         p.required_degree_keywords,
         p.years_experience as "min_years_experience",
         p.training_hours as "min_training_hours",
-        p.eligibility_required,
-        (EXISTS (SELECT 1 FROM vacancies v WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) AND v.is_test IS TRUE)) as "is_test"
-      FROM job_clusters c
+        p.eligibility_required
+      FROM matched_vacancies mv
+      JOIN job_clusters c ON c.id = mv.job_cluster_id
       JOIN positions p ON c.position_id = p.id
-      WHERE EXISTS (
-        SELECT 1 FROM vacancies v 
-        WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
-          AND ${vacancyCondition}
-      )
-      AND NOT (
-        -- If cluster has NO open vacancies (status is closed / expired)
-        NOT EXISTS (
-          SELECT 1 FROM vacancies v 
-          WHERE (v.job_cluster_id = c.id OR v.job_cluster_id::text = c.id::text) 
-            AND v.status = 'open' 
-            AND (v.filling_up_status = 'UNFILLED' OR v.filling_up_status IS NULL)
-        )
-        -- AND applicant has already applied for this job cluster in applications
-        AND ${alreadyAppliedClause}
-      )
+      WHERE mv."vacantItemCount" > 0
       ${filterCondition}
-      ORDER BY posting_start DESC
+      ORDER BY mv."posting_start" DESC NULLS LAST
     `,
-      queryParams,
+      [hasGlobalInvite, invitedClusterIds],
     );
 
     // Process response shape and check posting window
     const now = new Date();
     return result.rows
       .filter((row) => {
+        const isInvited = hasGlobalInvite || invitedClusterIds.includes(String(row.jobClusterId).trim());
+        const alreadyApplied = appliedClusterIds.has(String(row.jobClusterId).trim());
+
         // If the cluster has NO open vacancies (closed/expired) and applicant already applied, do NOT display
-        if (!row.has_open_vacancies && row.already_applied) {
+        if (!row.has_open_vacancies && alreadyApplied) {
           return false;
         }
-        if (row.has_allowed_email_access) {
+        if (isInvited) {
           return true;
         }
         const start = row.posting_start ? new Date(row.posting_start) : null;
@@ -176,28 +182,30 @@ export class VacanciesService {
         if (end && end < now) return false;
         return true;
       })
-      .map((row) => ({
-        jobClusterId: row.jobClusterId,
-        positionTitle: row.positionTitle,
-        region: row.region,
-        division: row.division,
-        salaryGrade: row.salaryGrade,
-        vacantItemCount: row.vacantItemCount,
-        qualificationStandards: {
-          requiredBachelorDegree: row.required_bachelor_degree,
-          requiredDegreeKeywords: row.required_degree_keywords,
-          minYearsExperience: row.min_years_experience,
-          minTrainingHours: row.min_training_hours,
-          eligibilityRequired: row.eligibility_required,
-        },
-        // Keep posting_start and end for frontend display if needed
-        posting_start: row.posting_start,
-        posting_end: row.posting_end,
-        is_test: Boolean(row.is_test),
-        has_allowed_email_access: Boolean(row.has_allowed_email_access),
-        is_invited: Boolean(row.has_allowed_email_access),
-        isInvited: Boolean(row.has_allowed_email_access),
-      }));
+      .map((row) => {
+        const isInvited = hasGlobalInvite || invitedClusterIds.includes(String(row.jobClusterId).trim());
+        return {
+          jobClusterId: row.jobClusterId,
+          positionTitle: row.positionTitle,
+          region: row.region,
+          division: row.division,
+          salaryGrade: row.salaryGrade,
+          vacantItemCount: row.vacantItemCount,
+          qualificationStandards: {
+            requiredBachelorDegree: row.required_bachelor_degree,
+            requiredDegreeKeywords: row.required_degree_keywords,
+            minYearsExperience: row.min_years_experience,
+            minTrainingHours: row.min_training_hours,
+            eligibilityRequired: row.eligibility_required,
+          },
+          posting_start: row.posting_start,
+          posting_end: row.posting_end,
+          is_test: Boolean(row.is_test),
+          has_allowed_email_access: Boolean(isInvited),
+          is_invited: Boolean(isInvited),
+          isInvited: Boolean(isInvited),
+        };
+      });
   }
 
   static async markExpiredVacancies() {
@@ -257,37 +265,50 @@ export class VacanciesService {
       }
     }
 
-    // Test applicants will have Central Office added to all other regions
-
-    const [regionsResult, divisionsResult, regdivResult] = await Promise.all([
-      pool.query(
-        "SELECT region FROM agap_schools WHERE region IS NOT NULL AND region != 'CENTRAL OFFICE' GROUP BY region ORDER BY region",
-      ),
-      pool.query(
-        "SELECT division FROM agap_schools WHERE division IS NOT NULL AND division NOT IN ('BHROD', 'SED') GROUP BY division ORDER BY division",
-      ),
-      pool.query(
+    // Cache base locations from agap_schools in-memory for 10 minutes to avoid slow multi-second scans
+    const now = Date.now();
+    if (!this.cachedBaseLocations || now - this.cachedBaseLocations.timestamp > 10 * 60 * 1000) {
+      const regdivResult = await pool.query(
         "SELECT DISTINCT region, division FROM agap_schools WHERE region IS NOT NULL AND division IS NOT NULL AND NOT (region = 'CENTRAL OFFICE' AND division IN ('BHROD', 'SED')) ORDER BY region, division",
-      ),
-    ]);
+      );
+      const divisionsByRegion: Record<string, string[]> = {};
+      const regionsSet = new Set<string>();
+      const divisionsSet = new Set<string>();
 
+      regdivResult.rows.forEach((r) => {
+        const reg = String(r.region).trim();
+        const div = String(r.division).trim();
+        if (reg) regionsSet.add(reg);
+        if (div) divisionsSet.add(div);
+        if (reg) {
+          if (!divisionsByRegion[reg]) divisionsByRegion[reg] = [];
+          if (div && !divisionsByRegion[reg].includes(div)) {
+            divisionsByRegion[reg].push(div);
+          }
+        }
+      });
+
+      this.cachedBaseLocations = {
+        regions: Array.from(regionsSet).sort(),
+        divisions: Array.from(divisionsSet).sort(),
+        divisionsByRegion,
+        timestamp: now,
+      };
+    }
+
+    const regions = [...this.cachedBaseLocations.regions];
+    const divisions = [...this.cachedBaseLocations.divisions];
     const divisionsByRegion: Record<string, string[]> = {};
-    const regions: string[] = regionsResult.rows.map((r) => r.region);
-    const divisions: string[] = divisionsResult.rows.map((r) => r.division);
-
-    regdivResult.rows.forEach((r) => {
-      if (!divisionsByRegion[r.region]) divisionsByRegion[r.region] = [];
-      if (r.division && !divisionsByRegion[r.region].includes(r.division)) {
-        divisionsByRegion[r.region].push(r.division);
-      }
-    });
+    for (const [k, v] of Object.entries(this.cachedBaseLocations.divisionsByRegion)) {
+      divisionsByRegion[k] = [...v];
+    }
 
     // If applicant has invited clusters in agap_invited, also include those regions and divisions in the available locations
     if (applicantEmails.length > 0) {
       const invitedLocs = await pool.query(
         `SELECT DISTINCT c.region, c.division 
          FROM agap_invited ai
-         JOIN job_clusters c ON (ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
+         JOIN job_clusters c ON (ai.job_cluster_id = c.id OR ai.job_cluster_id::text = c.id::text)
          WHERE LOWER(TRIM(ai.email)) = ANY($1::text[]) AND c.region IS NOT NULL AND c.division IS NOT NULL`,
         [applicantEmails],
       );
