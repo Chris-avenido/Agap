@@ -62,7 +62,7 @@ export class VacanciesService {
     const [invitedRes, appliedRes] = await Promise.all([
       applicantEmails.length > 0
         ? pool.query(
-            `SELECT DISTINCT job_cluster_id FROM agap_invited WHERE LOWER(TRIM(email)) = ANY($1::text[])`,
+            `SELECT DISTINCT job_cluster_id FROM agap_invited WHERE LOWER(TRIM(email)) = ANY($1::text[]) AND (is_revoked IS NOT TRUE)`,
             [applicantEmails],
           )
         : Promise.resolve({ rows: [] }),
@@ -309,7 +309,7 @@ export class VacanciesService {
         `SELECT DISTINCT c.region, c.division 
          FROM agap_invited ai
          JOIN job_clusters c ON (ai.job_cluster_id = c.id OR ai.job_cluster_id::text = c.id::text)
-         WHERE LOWER(TRIM(ai.email)) = ANY($1::text[]) AND c.region IS NOT NULL AND c.division IS NOT NULL`,
+         WHERE LOWER(TRIM(ai.email)) = ANY($1::text[]) AND c.region IS NOT NULL AND c.division IS NOT NULL AND (ai.is_revoked IS NOT TRUE)`,
         [applicantEmails],
       );
       invitedLocs.rows.forEach((r) => {

@@ -591,6 +591,7 @@ class ApplicantsServiceClass {
                  LOWER(TRIM(COALESCE(app.email, '')))
                )
                WHERE app.id = $1 AND (ai.job_cluster_id IS NULL OR ai.job_cluster_id::text = c.id::text OR REPLACE(ai.job_cluster_id::text, '-', '') = REPLACE(c.id::text, '-', ''))
+                 AND (ai.is_revoked IS NOT TRUE)
              )) as is_invited
       FROM applications a
       LEFT JOIN job_clusters c ON a.job_cluster_id::text = c.id::text
