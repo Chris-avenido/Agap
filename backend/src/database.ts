@@ -79,6 +79,7 @@ async function runSchemaMigrations(client: any) {
         nosca_serial_no VARCHAR(150),
         is_test BOOLEAN DEFAULT FALSE,
         reupload BOOLEAN DEFAULT FALSE,
+        new_application BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
@@ -89,6 +90,7 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS passcode_hash VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
@@ -125,6 +127,7 @@ async function runSchemaMigrations(client: any) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;
+      ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS email VARCHAR(255);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_psi_cd ON gmis_gc_items(psi_cd);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_region ON gmis_gc_items(region);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_division ON gmis_gc_items(division);

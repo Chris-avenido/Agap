@@ -8,7 +8,7 @@ import { uploadToAzure, uploadToReclassAzure } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
 
 export interface ReclassRegisterDto {
-  item_number: string;
+  item_number?: string;
   first_name: string;
   middle_name?: string;
   last_name: string;
@@ -16,6 +16,13 @@ export interface ReclassRegisterDto {
   email: string;
   password: string;
   passcode: string;
+  new_application?: boolean;
+  region?: string;
+  division?: string;
+  school_id?: string;
+  school_name?: string;
+  current_position?: string;
+  reclass_position?: string;
 }
 
 function parseAndSanitizeDate(dateInput: any): Date | null {
@@ -1804,25 +1811,26 @@ class ApplicantsServiceClass {
       throw new Error('Plantilla item number is required.');
     }
 
-    // Look up in reclass_gc (primary source)
+    // Look up in both reclass_gc AND gmis_gc_items
     const incumbentRes = await pool.query(
-      `SELECT * FROM reclass_gc
-       WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
+      `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region
+       FROM reclass_gc r
+       INNER JOIN gmis_gc_items g 
+         ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
+              (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+              OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+            ))
+       WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
+          OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
+          OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
+       LIMIT 1`,
       [normalized],
     );
 
     if (incumbentRes.rows.length === 0) {
-      // Fallback: check reclass_applications
-      const reclassRes = await pool.query(
-        `SELECT * FROM reclass_applications
-         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
-        [normalized],
+      throw new Error(
+        'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
       );
-      if (reclassRes.rows.length === 0) {
-        throw new Error(
-          'Plantilla item number not found. Please verify and try again.',
-        );
-      }
     }
 
     // Link the applicant's record to the verified plantilla item number
@@ -2073,7 +2081,10 @@ class ApplicantsServiceClass {
     return this.getReclassDetails(applicantId);
   }
 
-  async verifyReclassItemNumber(itemNumber: string) {
+  async verifyReclassItemNumber(
+    itemNumber: string,
+    category: 'existing' | 'new' = 'existing',
+  ) {
     const normalized = (itemNumber || '').trim().toUpperCase();
     if (!normalized) {
       return {
@@ -2082,53 +2093,113 @@ class ApplicantsServiceClass {
       };
     }
 
-    // 1. Verify existence in GMIS records: first check reclass_gc, then gmis_gc_items
-    let incRes = await pool.query(
-      `SELECT * FROM reclass_gc 
-       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
+    if (category === 'new') {
+      // 1. New Reclassification Application:
+      // The Plantilla Item Number should exist in gmis_gc_items where email is null and (first_name is not null or last_name is not null)
+      const gmisRes = await pool.query(
+        `SELECT g.*, r.email as reclass_email, r.password_hash as reclass_password_hash
+         FROM gmis_gc_items g
+         LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
+         WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
+           AND (g.email IS NULL OR TRIM(g.email) = '')
+           AND (r.email IS NULL OR TRIM(r.email) = '')
+           AND (NULLIF(TRIM(COALESCE(g.first_name, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(g.last_name, '')), '') IS NOT NULL)
+         LIMIT 1`,
+        [normalized],
+      );
+
+      if (gmisRes.rows.length === 0) {
+        // Check if item exists in gmis_gc_items or reclass_gc but has already registered credentials
+        const existingAny = await pool.query(
+          `SELECT g.*, r.email as reclass_email
+           FROM gmis_gc_items g
+           LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
+           WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
+           LIMIT 1`,
+          [normalized],
+        );
+
+        if (existingAny.rows.length > 0) {
+          const row = existingAny.rows[0];
+          const hasEmail = (row.email && row.email.trim()) || (row.reclass_email && row.reclass_email.trim());
+          if (hasEmail) {
+            return {
+              status: 'already_registered',
+              message: 'This Plantilla Item Number is already registered. Please sign in.',
+            };
+          }
+        }
+
+        return {
+          status: 'not_found',
+          message: 'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.',
+        };
+      }
+
+      const gmisItem = gmisRes.rows[0];
+
+      // Check if already registered in applicants table
+      const appRes = await pool.query(
+        `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
+         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+         LIMIT 1`,
+        [normalized],
+      );
+
+      if (appRes.rows.length > 0) {
+        const appRow = appRes.rows[0];
+        const hasRealEmail =
+          (appRow.email && appRow.email.trim()) ||
+          (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+        const hasPassword = appRow.password_hash || appRow.passcode_hash;
+
+        if (hasRealEmail && hasPassword) {
+          return {
+            status: 'already_registered',
+            message: 'This Plantilla Item Number is already registered. Please sign in.',
+          };
+        }
+      }
+
+      return {
+        status: 'valid',
+        data: {
+          item_number: gmisItem.psi_cd || normalized,
+          current_position: gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+          region: gmisItem.region || '',
+          division: gmisItem.division || '',
+          school_name: gmisItem.school_name || '',
+          first_name: (gmisItem.first_name || '').trim(),
+          last_name: (gmisItem.last_name || '').trim(),
+          email: '',
+          mobile_number: '',
+        },
+      };
+    }
+
+    // Incumbent GMIS Plantilla Record:
+    // 1. Verify existence in GMIS records: MUST exist in both reclass_gc and gmis_gc_items
+    const incRes = await pool.query(
+      `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region, g.first_name as gmis_first_name, g.last_name as gmis_last_name
+       FROM reclass_gc r
+       INNER JOIN gmis_gc_items g 
+         ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
+              (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+              OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+            ))
+       WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
+          OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
+          OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
        LIMIT 1`,
       [normalized],
     );
 
-    let inc = incRes.rows[0] || null;
-
-    if (!inc) {
-      const gmisRes = await pool.query(
-        `SELECT * FROM gmis_gc_items 
-         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
-         LIMIT 1`,
-        [normalized],
-      );
-      if (gmisRes.rows.length > 0) {
-        const gmisItem = gmisRes.rows[0];
-        const insertGcRes = await pool.query(
-          `INSERT INTO reclass_gc (
-            item_no, first_name, last_name, region, division,
-            school_id, school_name, current_position, reclass_position,
-            stage_of_reclassification, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, NOW(), NOW())
-          RETURNING *`,
-          [
-            normalized,
-            gmisItem.first_name || '',
-            gmisItem.last_name || '',
-            gmisItem.region || null,
-            gmisItem.division || null,
-            gmisItem.school_id || null,
-            gmisItem.school_name || null,
-            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
-            'N/A',
-            Boolean(gmisItem.is_test),
-          ],
-        );
-        inc = insertGcRes.rows[0];
-      }
-    }
+    const inc = incRes.rows[0] || null;
 
     if (!inc) {
       return {
         status: 'not_found',
-        message: 'Plantilla Item Number not found in GMIS records.',
+        message: 'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
       };
     }
 
@@ -2166,8 +2237,8 @@ class ApplicantsServiceClass {
         region: inc.region || '',
         division: inc.division || '',
         school_name: inc.school_name || '',
-        first_name: inc.first_name || '',
-        last_name: inc.last_name || '',
+        first_name: (inc.first_name || '').trim(),
+        last_name: (inc.last_name || '').trim(),
         email: inc.email || '',
         mobile_number: inc.mobile_number || '',
       },
@@ -2175,7 +2246,11 @@ class ApplicantsServiceClass {
   }
 
   async registerReclassAccount(data: ReclassRegisterDto) {
+    const isNewApp = Boolean(data.new_application);
     const normalizedItemNo = (data.item_number || '').trim().toUpperCase();
+    if (!normalizedItemNo) {
+      throw new Error('Plantilla Item Number is required.');
+    }
     const cleanFirstName = (data.first_name || '').trim();
     const cleanMiddleName = (data.middle_name || '').trim() || null;
     const cleanLastName = (data.last_name || '').trim();
@@ -2184,9 +2259,6 @@ class ApplicantsServiceClass {
     const password = data.password;
     const passcode = (data.passcode || '').trim();
 
-    if (!normalizedItemNo) {
-      throw new Error('Plantilla Item Number is required.');
-    }
     if (!cleanFirstName || !cleanLastName) {
       throw new Error('First Name and Last Name are required.');
     }
@@ -2206,56 +2278,96 @@ class ApplicantsServiceClass {
     }
 
     // 1. Verify against GMIS records in reclass_gc or gmis_gc_items
-    let incRes = await pool.query(
-      `SELECT * FROM reclass_gc 
-       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) 
-       LIMIT 1`,
-      [normalizedItemNo],
-    );
-    let inc = incRes.rows[0] || null;
+    let inc: any = null;
 
-    if (!inc) {
+    if (isNewApp) {
+      // For New Reclassification Application:
+      // Must exist in gmis_gc_items where email is null and personnel name is not null/empty
       const gmisRes = await pool.query(
-        `SELECT * FROM gmis_gc_items 
-         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1)) 
+        `SELECT g.*, r.email as reclass_email
+         FROM gmis_gc_items g
+         LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
+         WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
+           AND (g.email IS NULL OR TRIM(g.email) = '')
+           AND (r.email IS NULL OR TRIM(r.email) = '')
+           AND (NULLIF(TRIM(COALESCE(g.first_name, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(g.last_name, '')), '') IS NOT NULL)
          LIMIT 1`,
         [normalizedItemNo],
       );
-      if (gmisRes.rows.length > 0) {
-        const gmisItem = gmisRes.rows[0];
+
+      if (gmisRes.rows.length === 0) {
+        const err: any = new Error(
+          'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.'
+        );
+        err.statusCode = 404;
+        throw err;
+      }
+
+      const gmisItem = gmisRes.rows[0];
+
+      let incRes = await pool.query(
+        `SELECT * FROM reclass_gc WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) LIMIT 1`,
+        [normalizedItemNo],
+      );
+
+      if (incRes.rows.length === 0) {
         const insertGcRes = await pool.query(
           `INSERT INTO reclass_gc (
             item_no, first_name, last_name, region, division,
             school_id, school_name, current_position, reclass_position,
             stage_of_reclassification, email, password, password_hash,
-            passcode, passcode_hash, mobile_number, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+            passcode, passcode_hash, mobile_number, new_application, is_test, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, TRUE, false, NOW(), NOW())
           RETURNING *`,
           [
             normalizedItemNo,
             cleanFirstName || gmisItem.first_name || '',
             cleanLastName || gmisItem.last_name || '',
-            gmisItem.region || null,
-            gmisItem.division || null,
-            gmisItem.school_id || null,
-            gmisItem.school_name || null,
-            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
-            'N/A',
+            data.region || gmisItem.region || null,
+            data.division || gmisItem.division || null,
+            data.school_id || gmisItem.school_id || null,
+            data.school_name || gmisItem.school_name || null,
+            data.current_position || gmisItem.pos_dsc || 'Guidance Counselor',
+            data.reclass_position || 'N/A',
             cleanEmail,
             password,
             await bcrypt.hash(password, 10),
             passcode,
             await bcrypt.hash(passcode, 10),
             cleanMobile,
-            Boolean(gmisItem.is_test),
           ],
         );
         inc = insertGcRes.rows[0];
+      } else {
+        inc = incRes.rows[0];
       }
-    }
+    } else {
+      // For Incumbent GMIS Plantilla Record:
+      // Plantilla Item Number MUST exist in BOTH reclass_gc AND gmis_gc_items (on psi_cd)
+      const incRes = await pool.query(
+        `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region, g.first_name as gmis_first_name, g.last_name as gmis_last_name
+         FROM reclass_gc r
+         INNER JOIN gmis_gc_items g 
+           ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
+                (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+                OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+              ))
+         WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
+            OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
+            OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
+         LIMIT 1`,
+        [normalizedItemNo],
+      );
 
-    if (!inc) {
-      throw new Error('Plantilla Item Number not found in GMIS records.');
+      inc = incRes.rows[0] || null;
+
+      if (!inc) {
+        const err: any = new Error(
+          'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
+        );
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const finalFirstName = cleanFirstName || inc.first_name || 'Applicant';
@@ -2333,9 +2445,9 @@ class ApplicantsServiceClass {
       await client.query('BEGIN');
       await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
 
-      const designation = inc.current_position || 'Guidance Counselor';
-      const region = inc.region || null;
-      const division = inc.division || null;
+      const designation = inc.current_position || data.current_position || 'Guidance Counselor';
+      const region = inc.region || data.region || null;
+      const division = inc.division || data.division || null;
 
       let applicant: any;
 
@@ -2436,10 +2548,11 @@ class ApplicantsServiceClass {
           mobile_number = $6, 
           first_name = $7,
           last_name = $8,
+          new_application = CASE WHEN $9 = TRUE THEN TRUE ELSE new_application END,
           updated_at = NOW() 
-        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($9)) 
-           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($9))
-           OR id = $10`,
+        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($10)) 
+           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($10))
+           OR id = $11`,
         [
           cleanEmail,
           password,
@@ -2449,10 +2562,22 @@ class ApplicantsServiceClass {
           cleanMobile,
           finalFirstName,
           finalLastName,
+          isNewApp,
           normalizedItemNo,
           inc.id,
         ],
       );
+
+      // Update email in gmis_gc_items if column exists
+      try {
+        await client.query(
+          `UPDATE gmis_gc_items SET email = $1 
+           WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($2))`,
+          [cleanEmail, normalizedItemNo],
+        );
+      } catch (gmisErr) {
+        console.warn('Note: Could not update email in gmis_gc_items:', gmisErr);
+      }
 
       await client.query('COMMIT');
 

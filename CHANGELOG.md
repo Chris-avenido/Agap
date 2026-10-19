@@ -1,5 +1,49 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-19] Reclassification Registration Category Selection & Plantilla Verification Rules
+
+### 1. Plantilla Item Number Verification & Registration Rules
+- **Incumbent GMIS Plantilla Record** (*Existing Application*):
+  - Verification & Registration strictly require the `Plantilla Item Number` to exist in **BOTH** `reclass_gc` **AND** `gmis_gc_items` (`psi_cd`):
+    - Uses an `INNER JOIN` matching `gmis_gc_items.psi_cd` with `reclass_gc.item_no` or `reclass_gc.new_item_no`.
+    - If the item has **NO records on `gmis_gc_items.psi_cd`** (e.g. test items like `GC-01`, `GC-02`, `GC-03`), or does not exist in `reclass_gc`: registration and verification return `404 not_found` (`"No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records."`). Registration cannot proceed.
+    - If existing in both and not yet registered: returns status `valid` with pre-filled incumbent data (First Name, Last Name, Position, Region, Division, Station).
+    - If already registered with credentials: returns status `already_registered` (409) prompting the user to sign in.
+- **New Reclassification Application** (*New Application*):
+  - Verification requires the `Plantilla Item Number` to exist in `gmis_gc_items` (`psi_cd`) where:
+    1. `email IS NULL` (or empty string in both `gmis_gc_items` and `reclass_gc`), and
+    2. `first_name IS NOT NULL` OR `last_name IS NOT NULL` (filled position / non-empty personnel name).
+  - If matching: returns status `valid` with verified personnel details pre-populated (First Name, Last Name, Position, Region, Division).
+  - If already registered: returns status `already_registered`.
+  - If not matching (e.g. unfilled position with blank name, already assigned email, or not in GMIS): returns status `not_found` (`"No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name."`). Registration cannot proceed.
+
+### 2. Frontend Inline Form Experience
+- In [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx):
+  - Both **Incumbent GMIS Plantilla Record** and **New Reclassification Application** registration forms feature dedicated **Plantilla Item Number Verification** with a "Verify" button.
+  - The "Register" button is disabled until the Plantilla Item Number has been verified (`disabled={!stepAVerified}` / `disabled={!newAppVerified}`).
+  - Verification auto-populates candidate fields from GMIS records while locking against unregistered or unfilled item numbers.
+
+### 3. Backend & Database Schema Support
+- **Database Column**: Added `new_application BOOLEAN DEFAULT FALSE` to `reclass_gc` and `email VARCHAR(255)` to `gmis_gc_items` in [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts), [`reclass_feature_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/reclass_feature_migration.sql), and [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma).
+- **Backend Service & Route**:
+  - In [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts):
+    - `POST /api/applicants/reclass-verify-item` accepts `{ item_number, category }` and dispatches to `verifyReclassItemNumber`.
+    - `POST /api/applicants/reclass-register` enforces `item_number` validation.
+  - In [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts):
+    - `verifyReclassItemNumber` enforces the strict dual existence `INNER JOIN` (`reclass_gc` AND `gmis_gc_items.psi_cd`) for `'existing'`, and the unassigned email + filled position criteria for `'new'`.
+    - `registerReclassAccount` enforces the exact same `INNER JOIN` before registering incumbent applications, rejecting any attempt if no records exist on `gmis_gc_items.psi_cd`.
+    - `verifyPlantillaItem` gates access inside applicant dashboard by strictly enforcing the dual existence `INNER JOIN`.
+
+---
+
+## [2026-10-19] Unlock Reclassification Portal Access
+
+### 1. Reclassification Portal Login Availability
+- **Removed Locked State on Portal Gateway**: In [`PublicCareers.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/PublicCareers.tsx), unlocked the **Reclassification Portal** card in the "Select Login Portal" modal.
+- **Restored Navigation Action**: Removed `disabled`, `cursor-not-allowed`, and `Locked` badges; reinstated the active interactive card leading to `/login?type=reclass&guide=true` with the "Login for Reclassification" action.
+
+---
+
 ## [2026-10-03] Reclassification Salary Grade Mapping Updates (Hardcoded)
 
 ### 1. Position to Salary Grade Mapping

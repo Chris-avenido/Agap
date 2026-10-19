@@ -132,7 +132,7 @@ function clearFailedAttempts(key: string): void {
 
 router.post('/reclass-verify-item', async (req, res) => {
   try {
-    const { item_number } = req.body;
+    const { item_number, category, new_application } = req.body;
     if (!item_number || typeof item_number !== 'string' || !item_number.trim()) {
       return res.status(400).json({
         status: 'not_found',
@@ -140,7 +140,13 @@ router.post('/reclass-verify-item', async (req, res) => {
       });
     }
 
-    const result = await ApplicantsService.verifyReclassItemNumber(item_number);
+    const resolvedCategory: 'existing' | 'new' =
+      category === 'new' || Boolean(new_application) ? 'new' : 'existing';
+
+    const result = await ApplicantsService.verifyReclassItemNumber(
+      item_number,
+      resolvedCategory,
+    );
     if (result.status === 'not_found') {
       return res.status(404).json(result);
     }
@@ -168,7 +174,16 @@ router.post('/reclass-register', async (req, res) => {
       email,
       password,
       passcode,
+      new_application,
+      region,
+      division,
+      school_id,
+      school_name,
+      current_position,
+      reclass_position,
     } = req.body;
+
+    const isNewApp = Boolean(new_application);
 
     if (
       !item_number ||
@@ -181,7 +196,7 @@ router.post('/reclass-register', async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ message: 'All required fields (including First Name and Last Name) must be provided.' });
+        .json({ message: 'All required fields (including Plantilla Item Number, First Name, and Last Name) must be provided.' });
     }
 
     const cleanMobile = String(mobile_number).trim();
@@ -217,7 +232,7 @@ router.post('/reclass-register', async (req, res) => {
     }
 
     const regResult = await ApplicantsService.registerReclassAccount({
-      item_number: String(item_number),
+      item_number: item_number ? String(item_number) : undefined,
       first_name: String(first_name),
       middle_name: middle_name ? String(middle_name) : undefined,
       last_name: String(last_name),
@@ -225,6 +240,13 @@ router.post('/reclass-register', async (req, res) => {
       email: cleanEmail,
       password: String(password),
       passcode: cleanPasscode,
+      new_application: isNewApp,
+      region: region ? String(region) : undefined,
+      division: division ? String(division) : undefined,
+      school_id: school_id ? String(school_id) : undefined,
+      school_name: school_name ? String(school_name) : undefined,
+      current_position: current_position ? String(current_position) : undefined,
+      reclass_position: reclass_position ? String(reclass_position) : undefined,
     });
 
     return res.status(201).json({

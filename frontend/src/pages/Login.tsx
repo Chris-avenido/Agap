@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
@@ -144,6 +144,38 @@ export default function Login() {
   const [showStepBConfirmPassword, setShowStepBConfirmPassword] = useState(false);
   const [stepBError, setStepBError] = useState<string | null>(null);
   const [stepBRegistering, setStepBRegistering] = useState(false);
+
+  // Reclassification Registration Category: 'existing' (incumbent) vs 'new' (new application)
+  const [reclassRegType, setReclassRegType] = useState<'existing' | 'new'>('existing');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // New Application Registration Form state
+  const [newAppFirstName, setNewAppFirstName] = useState('');
+  const [newAppMiddleName, setNewAppMiddleName] = useState('');
+  const [newAppLastName, setNewAppLastName] = useState('');
+  const [newAppEmail, setNewAppEmail] = useState('');
+  const [newAppMobile, setNewAppMobile] = useState('');
+  const [newAppPlantilla, setNewAppPlantilla] = useState('');
+  const [newAppDesignation, setNewAppDesignation] = useState('Guidance Counselor I');
+  const [newAppRegion, setNewAppRegion] = useState('');
+  const [newAppDivision, setNewAppDivision] = useState('');
+  const [newAppSchoolName, setNewAppSchoolName] = useState('');
+  const [newAppPassword, setNewAppPassword] = useState('');
+  const [newAppConfirmPassword, setNewAppConfirmPassword] = useState('');
+  const [newAppPasscode, setNewAppPasscode] = useState('');
+  const [showNewAppPassword, setShowNewAppPassword] = useState(false);
+  const [showNewAppConfirmPassword, setShowNewAppConfirmPassword] = useState(false);
+  const [newAppError, setNewAppError] = useState<string | null>(null);
+  const [newAppRegistering, setNewAppRegistering] = useState(false);
+  const [newAppVerifying, setNewAppVerifying] = useState(false);
+  const [newAppVerified, setNewAppVerified] = useState(false);
+  const [newAppIsAlreadyRegistered, setNewAppIsAlreadyRegistered] = useState(false);
+
+  // Incumbent locations
+  const [incumbentLocations, setIncumbentLocations] = useState<{
+    regions: string[];
+    divisionsByRegion: Record<string, string[]>;
+  }>({ regions: [], divisionsByRegion: {} });
 
   // Tour positioning logic
   const placeTour = (index: number, retries = 4) => {
@@ -296,6 +328,36 @@ export default function Login() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (portalType === 'reclass') {
+      fetch(`${API_BASE_URL}/api/applicants/incumbent-locations`)
+        .then(res => res.json())
+        .then(resData => {
+          if (resData.success && resData.data) {
+            setIncumbentLocations(resData.data);
+            if (resData.data.regions?.length > 0 && !newAppRegion) {
+              const firstReg = resData.data.regions[0];
+              setNewAppRegion(firstReg);
+              const firstDivs = resData.data.divisionsByRegion[firstReg];
+              if (firstDivs?.length > 0) {
+                setNewAppDivision(firstDivs[0]);
+              }
+            }
+          }
+        })
+        .catch(err => console.warn('Could not load incumbent locations:', err));
+    }
+  }, [portalType]);
+
+  useEffect(() => {
+    if (newAppRegion && incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0) {
+      const divs = incumbentLocations.divisionsByRegion[newAppRegion];
+      if (!divs.includes(newAppDivision)) {
+        setNewAppDivision(divs[0]);
+      }
+    }
+  }, [newAppRegion, incumbentLocations]);
+
   // Handle Reclass Login
   const handleReclassLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,7 +426,7 @@ export default function Login() {
     }
   };
 
-  // Inline Item Number Verify
+  // Inline Item Number Verify (Incumbent GMIS)
   const handleVerifyPlantillaInline = async (itemNo?: string) => {
     const cleanPlantilla = (itemNo || stepAPlantilla).trim().toUpperCase();
     if (!cleanPlantilla) {
@@ -380,7 +442,7 @@ export default function Login() {
       const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-verify-item`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_number: cleanPlantilla }),
+        body: JSON.stringify({ item_number: cleanPlantilla, category: 'existing' }),
       });
 
       const resData = await response.json();
@@ -404,13 +466,58 @@ export default function Login() {
         setStepAError('This Plantilla Item Number is already registered. Please sign in.');
       } else {
         setStepAVerified(false);
-        setStepAError('Plantilla Item Number not found in GMIS records.');
+        setStepAError(resData.message || 'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.');
       }
     } catch (err) {
       console.error('Verification error:', err);
       setStepAError('Unable to verify with GMIS records. Please try again.');
     } finally {
       setStepAVerifying(false);
+    }
+  };
+
+  // Verify Plantilla Item Number for New Reclassification Application
+  const handleVerifyNewAppPlantilla = async () => {
+    const cleanPlantilla = newAppPlantilla.trim().toUpperCase();
+    if (!cleanPlantilla) {
+      setNewAppError('Please enter your Plantilla Item Number.');
+      return;
+    }
+
+    setNewAppVerifying(true);
+    setNewAppError(null);
+    setNewAppIsAlreadyRegistered(false);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-verify-item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_number: cleanPlantilla, category: 'new' }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.status === 'valid') {
+        setNewAppVerified(true);
+        if (resData.data.first_name) setNewAppFirstName(resData.data.first_name);
+        if (resData.data.last_name) setNewAppLastName(resData.data.last_name);
+        if (resData.data.current_position) setNewAppDesignation(resData.data.current_position);
+        if (resData.data.region) setNewAppRegion(resData.data.region);
+        if (resData.data.division) setNewAppDivision(resData.data.division);
+        if (resData.data.school_name) setNewAppSchoolName(resData.data.school_name);
+        setNewAppError(null);
+      } else if (resData.status === 'already_registered' || response.status === 409) {
+        setNewAppIsAlreadyRegistered(true);
+        setNewAppVerified(false);
+        setNewAppError('This Plantilla Item Number is already registered. Please sign in.');
+      } else {
+        setNewAppVerified(false);
+        setNewAppError(resData.message || 'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.');
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+      setNewAppError('Unable to verify with GMIS records. Please try again.');
+    } finally {
+      setNewAppVerifying(false);
     }
   };
 
@@ -422,6 +529,11 @@ export default function Login() {
     const cleanPlantilla = stepAPlantilla.trim().toUpperCase();
     if (!cleanPlantilla) {
       setStepBError('Plantilla Item Number is required.');
+      return;
+    }
+
+    if (!stepAVerified) {
+      setStepBError('Please verify your Plantilla Item Number before registering.');
       return;
     }
 
@@ -503,6 +615,116 @@ export default function Login() {
       setStepBError('Unable to connect to the server. Please try again.');
     } finally {
       setStepBRegistering(false);
+    }
+  };
+
+  // Handle New Application Registration
+  const handleNewApplicationRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewAppError(null);
+
+    const cleanPlantilla = newAppPlantilla.trim().toUpperCase();
+    if (!cleanPlantilla) {
+      setNewAppError('Plantilla Item Number is required.');
+      return;
+    }
+
+    if (!newAppVerified) {
+      setNewAppError('Please verify your Plantilla Item Number before registering.');
+      return;
+    }
+
+    const cleanFirstName = newAppFirstName.trim();
+    const cleanLastName = newAppLastName.trim();
+    if (!cleanFirstName || !cleanLastName) {
+      setNewAppError('First Name and Last Name are required.');
+      return;
+    }
+
+    const cleanEmail = newAppEmail.trim().toLowerCase();
+    if (!cleanEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)) {
+      setNewAppError('Only official @deped.gov.ph email addresses are allowed (e.g. juan.delacruz@deped.gov.ph).');
+      return;
+    }
+
+    const cleanMobile = newAppMobile.trim();
+    if (!/^09\d{9}$/.test(cleanMobile)) {
+      setNewAppError('Mobile number must be an 11-digit Philippine mobile number starting with 09 (09XXXXXXXXX).');
+      return;
+    }
+
+    if (!newAppPassword || !newAppPassword.trim()) {
+      setNewAppError('Password is required.');
+      return;
+    }
+
+    if (newAppPassword !== newAppConfirmPassword) {
+      setNewAppError('Passwords do not match.');
+      return;
+    }
+
+    const cleanPasscode = newAppPasscode.trim();
+    if (!/^\d{6}$/.test(cleanPasscode)) {
+      setNewAppError('Passcode must be exactly 6 numeric digits.');
+      return;
+    }
+
+    setNewAppRegistering(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          new_application: true,
+          item_number: cleanPlantilla,
+          first_name: cleanFirstName,
+          middle_name: newAppMiddleName.trim() || undefined,
+          last_name: cleanLastName,
+          mobile_number: cleanMobile,
+          email: cleanEmail,
+          password: newAppPassword,
+          passcode: cleanPasscode,
+          current_position: newAppDesignation.trim() || 'Guidance Counselor I',
+          region: newAppRegion.trim() || undefined,
+          division: newAppDivision.trim() || undefined,
+          school_name: newAppSchoolName.trim() || undefined,
+        }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const user = resData.user || resData.data;
+        const now = new Date();
+        const sessionItem = {
+          id: user.id,
+          applicant_number: user.applicant_number,
+          email: user.email,
+          registrant_type: 'reclass',
+          plantilla_item_number: user.plantilla_item_number || cleanPlantilla,
+          current_position: user.current_position || newAppDesignation,
+          region: user.region || newAppRegion,
+          division: user.division || newAppDivision,
+          expiry: now.getTime() + 3 * 60 * 60 * 1000,
+          token: resData.token,
+        };
+        localStorage.setItem('session_data', JSON.stringify(sessionItem));
+        Swal.fire({
+          icon: 'success',
+          title: 'Account Registered',
+          text: 'Your new reclassification application profile has been registered.',
+          timer: 1800,
+          showConfirmButton: false,
+        }).then(() => {
+          navigate('/applicant-dashboard');
+        });
+      } else {
+        setNewAppError(resData.message || 'Registration failed. Please check your information.');
+      }
+    } catch (err) {
+      console.error('New application registration error:', err);
+      setNewAppError('Unable to connect to the server. Please try again.');
+    } finally {
+      setNewAppRegistering(false);
     }
   };
 
@@ -652,11 +874,40 @@ export default function Login() {
     }
   };
 
+  const handleBack = () => {
+    // If category modal is open, close it and return to reclass login
+    if (showCategoryModal) {
+      setShowCategoryModal(false);
+      setReclassView('login');
+      return;
+    }
+
+    // If on Reclassification registration page (either Incumbent or New Application)
+    if (portalType === 'reclass' && reclassView === 'register') {
+      setShowCategoryModal(true);
+      return;
+    }
+
+    // If on Jobseeker registration, return to login form
+    if (isRegistering) {
+      setIsRegistering(false);
+      return;
+    }
+
+    // Default: navigate back in history if possible, else go to landing page
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-[var(--bg-2)] relative" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Back Button */}
       <button
-        onClick={() => navigate('/')}
+        type="button"
+        onClick={handleBack}
         className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium cursor-pointer"
       >
         <ArrowLeft className="w-5 h-5" /> Back
@@ -664,7 +915,7 @@ export default function Login() {
 
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className={`mx-auto w-full transition-all duration-300 ${portalType === 'reclass' && reclassView === 'register'
-            ? 'max-w-md sm:max-w-lg lg:w-[480px]'
+            ? 'max-w-md sm:max-w-xl lg:w-[520px]'
             : 'max-w-sm lg:w-96'
           }`}>
           <div className="flex items-center gap-3">
@@ -682,7 +933,9 @@ export default function Login() {
             {isRegistering
               ? 'Create an Account'
               : portalType === 'reclass'
-                ? (reclassView === 'register' ? 'Reclassification Registration' : 'Reclassification Login')
+                ? (reclassView === 'register'
+                    ? (reclassRegType === 'new' ? 'New Reclassification Application' : 'Incumbent Plantilla Registration')
+                    : 'Reclassification Login')
                 : 'Welcome back!'}
           </h2>
           <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
@@ -690,7 +943,9 @@ export default function Login() {
               ? 'Join AGAP Portal to start your application'
               : portalType === 'reclass'
                 ? (reclassView === 'register'
-                  ? 'Enter your Plantilla Item Number, DepEd email, and password to set up your account'
+                  ? (reclassRegType === 'new'
+                    ? 'Enter your professional profile, station details, and security credentials to register'
+                    : 'Enter your Plantilla Item Number, DepEd email, and password to set up your account')
                   : 'Sign in using your Plantilla Item Number or DepEd email')
                 : 'Sign in to access your account'}
           </p>
@@ -711,7 +966,9 @@ export default function Login() {
                       <div>
                         <h3 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider">Reclassification Portal</h3>
                         <p className="text-[11px] text-gray-500 font-medium">
-                          {reclassView === 'register' ? 'Incumbent Registration' : 'Incumbent Gateway'}
+                          {reclassView === 'register'
+                            ? (reclassRegType === 'new' ? 'New Application Registration' : 'Incumbent Plantilla Registration')
+                            : 'Incumbent Gateway'}
                         </p>
                       </div>
                     </div>
@@ -853,8 +1110,380 @@ export default function Login() {
             ) : portalType === 'reclass' ? (
               /* RECLASSIFICATION FLOW */
               reclassView === 'register' ? (
-                /* RECLASSIFICATION INLINE REGISTRATION FORM */
-                <form onSubmit={handleReclassRegisterInline} className="space-y-4">
+                <div className="space-y-4">
+                  {reclassRegType === 'new' ? (
+                    /* FORM: NEW APPLICATION REGISTRATION */
+                    <form onSubmit={handleNewApplicationRegister} className="space-y-3.5">
+                      <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-900 leading-relaxed">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="font-bold text-indigo-800 flex items-center gap-1.5">
+                            <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
+                            New Reclassification Application
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReclassRegType('existing');
+                              navigate('/login?type=reclass&guide=true');
+                            }}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                          >
+                            Incumbent Registration &rarr;
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-indigo-700">
+                          Register your personal details, division, and station to create your candidate profile under DM-OUHROD-2024.
+                        </p>
+                      </div>
+
+                      {/* Error Alert */}
+                      {newAppError && (
+                        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                            <span className="font-medium">{newAppError}</span>
+                          </div>
+                          {newAppIsAlreadyRegistered && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReclassView('login');
+                                setNewAppError(null);
+                                setNewAppIsAlreadyRegistered(false);
+                              }}
+                              className="self-start text-xs font-bold text-indigo-700 hover:underline cursor-pointer ml-6"
+                            >
+                              Proceed to Sign in &rarr;
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Plantilla Item Number Verification */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Plantilla Item Number <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="relative rounded-lg shadow-2xs flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Award className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={newAppPlantilla}
+                              onChange={e => {
+                                setNewAppPlantilla(e.target.value.toUpperCase());
+                                setNewAppVerified(false);
+                                setNewAppError(null);
+                                setNewAppIsAlreadyRegistered(false);
+                              }}
+                              className="block w-full pl-9 pr-3 text-xs border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
+                              placeholder="e.g. OSEC-DECSB-GSS2-14-2015"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleVerifyNewAppPlantilla}
+                            disabled={newAppVerifying || !newAppPlantilla.trim()}
+                            className="px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+                          >
+                            {newAppVerifying ? (
+                              <span>Checking...</span>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Verify</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        {newAppVerified && (
+                          <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              <strong>GMIS Record Verified:</strong> {newAppDesignation} &bull; {newAppFirstName} {newAppLastName} ({newAppDivision || newAppRegion || 'DepEd'})
+                            </span>
+                          </div>
+                        )}
+                        {!newAppVerified && (
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            Must be an active plantilla item in GMIS records with unassigned email.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Name Fields */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="sm:col-span-1">
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            First Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={newAppFirstName}
+                            onChange={e => setNewAppFirstName(e.target.value)}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                            placeholder="Juan"
+                          />
+                        </div>
+                        <div className="sm:col-span-1">
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Middle Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newAppMiddleName}
+                            onChange={e => setNewAppMiddleName(e.target.value)}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                            placeholder="Santos"
+                          />
+                        </div>
+                        <div className="sm:col-span-1">
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Last Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={newAppLastName}
+                            onChange={e => setNewAppLastName(e.target.value)}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                            placeholder="Dela Cruz"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Official DepEd Email & Mobile */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Official DepEd Email <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-2xs">
+                            <input
+                              type="email"
+                              required
+                              value={newAppEmail}
+                              onChange={e => {
+                                setNewAppEmail(e.target.value);
+                                setNewAppError(null);
+                              }}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                              placeholder="name@deped.gov.ph"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Mobile Number <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-2xs">
+                            <input
+                              type="tel"
+                              maxLength={11}
+                              required
+                              value={newAppMobile}
+                              onChange={e => setNewAppMobile(e.target.value.replace(/\D/g, ''))}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                              placeholder="09XXXXXXXXX"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Current Position */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Current Position <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={newAppDesignation}
+                          onChange={e => setNewAppDesignation(e.target.value)}
+                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
+                          placeholder="e.g. Guidance Services Specialist II"
+                        />
+                      </div>
+
+                      {/* Region & Division */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Region <span className="text-red-500">*</span>
+                          </label>
+                          {incumbentLocations.regions?.length > 0 ? (
+                            <select
+                              value={newAppRegion}
+                              onChange={e => setNewAppRegion(e.target.value)}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
+                            >
+                              <option value="">Select Region</option>
+                              {incumbentLocations.regions.map(r => (
+                                <option key={r} value={r}>{r}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={newAppRegion}
+                              onChange={e => setNewAppRegion(e.target.value)}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                              placeholder="e.g. REGION IV-A"
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Division <span className="text-red-500">*</span>
+                          </label>
+                          {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
+                            <select
+                              value={newAppDivision}
+                              onChange={e => setNewAppDivision(e.target.value)}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
+                            >
+                              <option value="">Select Division</option>
+                              {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={newAppDivision}
+                              onChange={e => setNewAppDivision(e.target.value)}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                              placeholder="e.g. QUEZON"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* School Name */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          School / Station Name <span className="text-gray-400 font-normal">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newAppSchoolName}
+                          onChange={e => setNewAppSchoolName(e.target.value)}
+                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                          placeholder="e.g. Quezon National High School"
+                        />
+                      </div>
+
+                      {/* Password & Confirm Password */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Password <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-2xs">
+                            <input
+                              type={showNewAppPassword ? 'text' : 'password'}
+                              required
+                              value={newAppPassword}
+                              onChange={e => setNewAppPassword(e.target.value)}
+                              className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                              placeholder="••••••••"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewAppPassword(!showNewAppPassword)}
+                              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              {showNewAppPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Confirm Password <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-2xs">
+                            <input
+                              type={showNewAppConfirmPassword ? 'text' : 'password'}
+                              required
+                              value={newAppConfirmPassword}
+                              onChange={e => setNewAppConfirmPassword(e.target.value)}
+                              className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                              placeholder="••••••••"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewAppConfirmPassword(!showNewAppConfirmPassword)}
+                              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              {showNewAppConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 6-Digit Passcode */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-gray-700">
+                            6-Digit Passcode <span className="text-red-500">*</span>
+                          </label>
+                          <span className="text-[10px] text-gray-400">Used for quick passcode sign-in</span>
+                        </div>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={6}
+                          required
+                          value={newAppPasscode}
+                          onChange={e => setNewAppPasscode(e.target.value.replace(/\D/g, ''))}
+                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none tracking-widest font-mono text-center font-bold"
+                          placeholder="••••••"
+                        />
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={newAppRegistering || !newAppVerified}
+                          className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-colors disabled:opacity-60 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          {newAppRegistering ? 'Registering New Application...' : !newAppVerified ? 'Verify Plantilla Item First' : 'Register New Application'}
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
+                        <div>
+                          Already have an account?{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReclassView('login');
+                              setNewAppError(null);
+                            }}
+                            className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                          >
+                            Sign in here
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowCategoryModal(true)}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer"
+                        >
+                          &larr; Back to category selection
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* RECLASSIFICATION INLINE REGISTRATION FORM (EXISTING INCUMBENT) */
+                    <form onSubmit={handleReclassRegisterInline} className="space-y-4">
                   <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-3.5 text-xs text-sky-900 leading-relaxed">
                     <p className="font-bold text-[#0369a1] mb-0.5 flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-[#0369a1]" />
@@ -1119,30 +1748,41 @@ export default function Login() {
                   <div id="tour-reg-submit" className="pt-2">
                     <button
                       type="submit"
-                      disabled={stepBRegistering}
+                      disabled={stepBRegistering || !stepAVerified}
                       className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
                     >
                       <ShieldCheck className="w-4 h-4" />
-                      {stepBRegistering ? 'Registering Account...' : 'Register Account'}
+                      {stepBRegistering ? 'Registering Account...' : !stepAVerified ? 'Verify Plantilla Item First' : 'Register Account'}
                     </button>
                   </div>
 
-                  <div className="mt-4 text-center text-sm text-[var(--muted)]">
-                    Already have an account?{' '}
+                  <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
+                    <div>
+                      Already have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReclassView('login');
+                          setStepBError(null);
+                          setStepAError(null);
+                          setStepAIsAlreadyRegistered(false);
+                        }}
+                        className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                      >
+                        Sign in here
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setReclassView('login');
-                        setStepBError(null);
-                        setStepAError(null);
-                        setStepAIsAlreadyRegistered(false);
-                      }}
-                      className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                      onClick={() => setShowCategoryModal(true)}
+                      className="text-xs text-[#0369a1] hover:text-[#02527e] underline transition-colors cursor-pointer"
                     >
-                      Sign in here
+                      &larr; Back to category selection
                     </button>
                   </div>
                 </form>
+                  )}
+                </div>
               ) : (
                 /* RECLASSIFICATION DEFAULT: ACCOUNT LOGIN */
                 <form onSubmit={handleReclassLogin} className="space-y-5">
@@ -1269,12 +1909,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => {
-                        setReclassView('register');
-                        setStepAPlantilla('');
-                        setStepAError(null);
-                        setStepBError(null);
-                        setStepAIsAlreadyRegistered(false);
-                        setShowWelcomeModal(true);
+                        setShowCategoryModal(true);
                       }}
                       className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
                     >
@@ -1448,6 +2083,116 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Reclassification Registration Category Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-sky-100 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Top gradient stripe */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#06345F] via-[#0A6FA6] to-[#FDBA22]" />
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowCategoryModal(false);
+                setReclassView('login');
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <span className="inline-block px-3 py-1 bg-sky-100 border border-sky-200 text-[#0369a1] text-[11px] font-bold rounded-full uppercase tracking-wider mb-2">
+                DepEd Reclassification Portal
+              </span>
+              <h3 className="text-xl font-extrabold text-[var(--ink)] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+                Select Application Category
+              </h3>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed max-w-md mx-auto">
+                Please select your registration classification to proceed with the appropriate setup process under DepEd guidelines.
+              </p>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Option 1: Incumbent GMIS Plantilla Record */}
+              <div
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setReclassRegType('existing');
+                  setReclassView('register');
+                  navigate('/login?type=reclass&guide=true');
+                }}
+                className="group border-2 border-sky-200 hover:border-[#0369a1] bg-sky-50/50 hover:bg-sky-50 rounded-2xl p-4 transition-all cursor-pointer shadow-xs hover:shadow-md flex items-start gap-4"
+              >
+                <div className="w-11 h-11 rounded-xl bg-white border border-sky-200 group-hover:border-[#0369a1] text-[#0369a1] flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-all">
+                  <Award className="w-6 h-6 text-[#0369a1]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#0369a1] transition-colors">
+                      Incumbent GMIS Plantilla Record
+                    </h4>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wide shrink-0">
+                      GMIS Masterlist
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    For incumbent Guidance Counselors who have an active Plantilla Item Number registered in the DepEd GMIS central database.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-1.5 text-xs font-bold text-[#0369a1]">
+                    <span>Verify Plantilla Item &rarr;</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: New Reclassification Application */}
+              <div
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setReclassRegType('new');
+                  setReclassView('register');
+                }}
+                className="group border-2 border-indigo-200 hover:border-indigo-600 bg-indigo-50/40 hover:bg-indigo-50/70 rounded-2xl p-4 transition-all cursor-pointer shadow-xs hover:shadow-md flex items-start gap-4"
+              >
+                <div className="w-11 h-11 rounded-xl bg-white border border-indigo-200 group-hover:border-indigo-600 text-indigo-600 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-all">
+                  <UserPlus className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <h4 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                      New Reclassification Application
+                    </h4>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 uppercase tracking-wide shrink-0">
+                      New Candidate Profile
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    For personnel filing a new reclassification application without an existing pre-loaded GMIS incumbent record. Create a fresh candidate profile.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-1.5 text-xs font-bold text-indigo-600">
+                    <span>Create New Application &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setReclassView('login');
+                }}
+                className="text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+              >
+                Cancel and return to sign in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Welcome Onboarding Modal */}
       <div className={`welcome-overlay ${showWelcomeModal ? 'open' : ''}`}>

@@ -50,12 +50,14 @@ CREATE TABLE IF NOT EXISTS reclass_gc (
   nosca_serial_no VARCHAR(150),
   is_test BOOLEAN DEFAULT FALSE,
   reupload BOOLEAN DEFAULT FALSE,
+  new_application BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS stage_of_reclassification VARCHAR(100) DEFAULT 'UPDATING OF DOCUMENTS';
+ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
 CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
@@ -110,3 +112,4 @@ ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT F
 CREATE INDEX IF NOT EXISTS idx_reclass_docs_app_id ON reclass_documents(reclass_application_id);
 CREATE INDEX IF NOT EXISTS idx_reclass_docs_plantilla ON reclass_documents(plantilla_item_number);
 CREATE INDEX IF NOT EXISTS idx_reclass_docs_title ON reclass_documents(document_title);
+ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS email VARCHAR(255);

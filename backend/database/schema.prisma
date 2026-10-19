@@ -4125,6 +4125,7 @@ model reclass_gc {
   nosca_serial_no           String?   @db.VarChar(150)
   is_test                   Boolean?  @default(false)
   reupload                  Boolean?  @default(false)
+  new_application           Boolean?  @default(false)
   created_at                DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                DateTime? @default(now()) @db.Timestamptz(6)
 
@@ -4157,6 +4158,7 @@ model gmis_gc_items {
   current_position String?   @db.VarChar(255)
   school_id        String?   @db.VarChar(50)
   school_name      String?   @db.VarChar(255)
+  email            String?   @db.VarChar(255)
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
 
