@@ -23,6 +23,10 @@ export interface ReclassRegisterDto {
   school_name?: string;
   current_position?: string;
   reclass_position?: string;
+  education?: string;
+  years_experience?: number | string;
+  hours_of_training?: number | string;
+  eligibility?: string;
 }
 
 function parseAndSanitizeDate(dateInput: any): Date | null {
@@ -1829,7 +1833,7 @@ class ApplicantsServiceClass {
 
     if (incumbentRes.rows.length === 0) {
       throw new Error(
-        'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
+        'No records found.',
       );
     }
 
@@ -2095,34 +2099,39 @@ class ApplicantsServiceClass {
 
     if (category === 'new') {
       // 1. New Reclassification Application:
-      // The Plantilla Item Number should exist in gmis_gc_items where email is null and (first_name is not null or last_name is not null)
-      const gmisRes = await pool.query(
-        `SELECT g.*, r.email as reclass_email, r.password_hash as reclass_password_hash
-         FROM gmis_gc_items g
-         LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
-         WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
-           AND (g.email IS NULL OR TRIM(g.email) = '')
+      // The Plantilla Item Number should exist in reclass_gc where:
+      // first_name is empty or null, last_name is empty or null, and email is empty or null
+      const reclassRes = await pool.query(
+        `SELECT r.*
+         FROM reclass_gc r
+         WHERE (UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM($1))
+            OR UPPER(TRIM(COALESCE(r.new_item_no, ''))) = UPPER(TRIM($1)))
+           AND (r.first_name IS NULL OR TRIM(r.first_name) = '')
+           AND (r.last_name IS NULL OR TRIM(r.last_name) = '')
            AND (r.email IS NULL OR TRIM(r.email) = '')
-           AND (NULLIF(TRIM(COALESCE(g.first_name, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(g.last_name, '')), '') IS NOT NULL)
          LIMIT 1`,
         [normalized],
       );
 
-      if (gmisRes.rows.length === 0) {
-        // Check if item exists in gmis_gc_items or reclass_gc but has already registered credentials
+      if (reclassRes.rows.length === 0) {
+        // Check if item exists in reclass_gc but has already registered credentials or assigned personnel
         const existingAny = await pool.query(
-          `SELECT g.*, r.email as reclass_email
-           FROM gmis_gc_items g
-           LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
-           WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
+          `SELECT r.*
+           FROM reclass_gc r
+           WHERE UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM($1))
+              OR UPPER(TRIM(COALESCE(r.new_item_no, ''))) = UPPER(TRIM($1))
            LIMIT 1`,
           [normalized],
         );
 
         if (existingAny.rows.length > 0) {
           const row = existingAny.rows[0];
-          const hasEmail = (row.email && row.email.trim()) || (row.reclass_email && row.reclass_email.trim());
-          if (hasEmail) {
+          const hasEmail = Boolean(row.email && row.email.trim());
+          const hasName = Boolean(
+            (row.first_name && row.first_name.trim()) ||
+            (row.last_name && row.last_name.trim()),
+          );
+          if (hasEmail || hasName) {
             return {
               status: 'already_registered',
               message: 'This Plantilla Item Number is already registered. Please sign in.',
@@ -2132,11 +2141,11 @@ class ApplicantsServiceClass {
 
         return {
           status: 'not_found',
-          message: 'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.',
+          message: 'No records found',
         };
       }
 
-      const gmisItem = gmisRes.rows[0];
+      const reclassItem = reclassRes.rows[0];
 
       // Check if already registered in applicants table
       const appRes = await pool.query(
@@ -2164,15 +2173,19 @@ class ApplicantsServiceClass {
       return {
         status: 'valid',
         data: {
-          item_number: gmisItem.psi_cd || normalized,
-          current_position: gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
-          region: gmisItem.region || '',
-          division: gmisItem.division || '',
-          school_name: gmisItem.school_name || '',
-          first_name: (gmisItem.first_name || '').trim(),
-          last_name: (gmisItem.last_name || '').trim(),
+          item_number: (reclassItem.item_no || normalized).toUpperCase(),
+          current_position: (reclassItem.current_position || 'GUIDANCE COUNSELOR').toUpperCase(),
+          region: (reclassItem.region || '').toUpperCase(),
+          division: (reclassItem.division || '').toUpperCase(),
+          school_name: (reclassItem.school_name || '').toUpperCase(),
+          first_name: (reclassItem.first_name || '').trim().toUpperCase(),
+          last_name: (reclassItem.last_name || '').trim().toUpperCase(),
           email: '',
           mobile_number: '',
+          education: (reclassItem.education || '').toUpperCase(),
+          years_experience: reclassItem.years_experience !== undefined && reclassItem.years_experience !== null ? String(reclassItem.years_experience) : '',
+          hours_of_training: reclassItem.hours_of_training !== undefined && reclassItem.hours_of_training !== null ? String(reclassItem.hours_of_training) : '',
+          eligibility: (reclassItem.eligibility || '').toUpperCase(),
         },
       };
     }
@@ -2199,7 +2212,7 @@ class ApplicantsServiceClass {
     if (!inc) {
       return {
         status: 'not_found',
-        message: 'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
+        message: 'No records found.',
       };
     }
 
@@ -2251,9 +2264,15 @@ class ApplicantsServiceClass {
     if (!normalizedItemNo) {
       throw new Error('Plantilla Item Number is required.');
     }
-    const cleanFirstName = (data.first_name || '').trim();
-    const cleanMiddleName = (data.middle_name || '').trim() || null;
-    const cleanLastName = (data.last_name || '').trim();
+    const cleanFirstName = isNewApp
+      ? (data.first_name || '').trim().toUpperCase()
+      : (data.first_name || '').trim();
+    const cleanMiddleName = data.middle_name && data.middle_name.trim()
+      ? (isNewApp ? data.middle_name.trim().toUpperCase() : data.middle_name.trim())
+      : null;
+    const cleanLastName = isNewApp
+      ? (data.last_name || '').trim().toUpperCase()
+      : (data.last_name || '').trim();
     const cleanMobile = (data.mobile_number || '').trim();
     const cleanEmail = (data.email || '').trim().toLowerCase();
     const password = data.password;
@@ -2267,7 +2286,8 @@ class ApplicantsServiceClass {
         'Mobile number must be an 11-digit Philippine mobile number (09XXXXXXXXX).',
       );
     }
-    if (!cleanEmail || !cleanEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)) {
+    const checkEmail = cleanEmail.toLowerCase();
+    if (!checkEmail || !checkEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(checkEmail)) {
       throw new Error('Only official @deped.gov.ph email addresses are allowed for Reclassification.');
     }
     if (!password || !String(password).trim()) {
@@ -2282,65 +2302,28 @@ class ApplicantsServiceClass {
 
     if (isNewApp) {
       // For New Reclassification Application:
-      // Must exist in gmis_gc_items where email is null and personnel name is not null/empty
-      const gmisRes = await pool.query(
-        `SELECT g.*, r.email as reclass_email
-         FROM gmis_gc_items g
-         LEFT JOIN reclass_gc r ON UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM(COALESCE(g.psi_cd, '')))
-         WHERE UPPER(TRIM(COALESCE(g.psi_cd, ''))) = UPPER(TRIM($1))
-           AND (g.email IS NULL OR TRIM(g.email) = '')
-           AND (r.email IS NULL OR TRIM(r.email) = '')
-           AND (NULLIF(TRIM(COALESCE(g.first_name, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(g.last_name, '')), '') IS NOT NULL)
+      // Must exist in reclass_gc where first_name is empty or null, last_name is empty or null, and email is empty or null
+      const reclassRes = await pool.query(
+        `SELECT *
+         FROM reclass_gc
+         WHERE (UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+            OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1)))
+           AND (first_name IS NULL OR TRIM(first_name) = '')
+           AND (last_name IS NULL OR TRIM(last_name) = '')
+           AND (email IS NULL OR TRIM(email) = '')
          LIMIT 1`,
         [normalizedItemNo],
       );
 
-      if (gmisRes.rows.length === 0) {
+      if (reclassRes.rows.length === 0) {
         const err: any = new Error(
-          'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.'
+          'No records found'
         );
         err.statusCode = 404;
         throw err;
       }
 
-      const gmisItem = gmisRes.rows[0];
-
-      let incRes = await pool.query(
-        `SELECT * FROM reclass_gc WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) LIMIT 1`,
-        [normalizedItemNo],
-      );
-
-      if (incRes.rows.length === 0) {
-        const insertGcRes = await pool.query(
-          `INSERT INTO reclass_gc (
-            item_no, first_name, last_name, region, division,
-            school_id, school_name, current_position, reclass_position,
-            stage_of_reclassification, email, password, password_hash,
-            passcode, passcode_hash, mobile_number, new_application, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'UPDATING OF DOCUMENTS', $10, $11, $12, $13, $14, $15, TRUE, false, NOW(), NOW())
-          RETURNING *`,
-          [
-            normalizedItemNo,
-            cleanFirstName || gmisItem.first_name || '',
-            cleanLastName || gmisItem.last_name || '',
-            data.region || gmisItem.region || null,
-            data.division || gmisItem.division || null,
-            data.school_id || gmisItem.school_id || null,
-            data.school_name || gmisItem.school_name || null,
-            data.current_position || gmisItem.pos_dsc || 'Guidance Counselor',
-            data.reclass_position || 'N/A',
-            cleanEmail,
-            password,
-            await bcrypt.hash(password, 10),
-            passcode,
-            await bcrypt.hash(passcode, 10),
-            cleanMobile,
-          ],
-        );
-        inc = insertGcRes.rows[0];
-      } else {
-        inc = incRes.rows[0];
-      }
+      inc = reclassRes.rows[0];
     } else {
       // For Incumbent GMIS Plantilla Record:
       // Plantilla Item Number MUST exist in BOTH reclass_gc AND gmis_gc_items (on psi_cd)
@@ -2363,15 +2346,19 @@ class ApplicantsServiceClass {
 
       if (!inc) {
         const err: any = new Error(
-          'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.',
+          'No records found.',
         );
         err.statusCode = 404;
         throw err;
       }
     }
 
-    const finalFirstName = cleanFirstName || inc.first_name || 'Applicant';
-    const finalLastName = cleanLastName || inc.last_name || 'Reclass';
+    const finalFirstName = isNewApp
+      ? (cleanFirstName || (inc.first_name ? inc.first_name.trim().toUpperCase() : 'APPLICANT'))
+      : (cleanFirstName || inc.first_name || 'Applicant');
+    const finalLastName = isNewApp
+      ? (cleanLastName || (inc.last_name ? inc.last_name.trim().toUpperCase() : 'RECLASS'))
+      : (cleanLastName || inc.last_name || 'Reclass');
 
     // 2. Check existing applicant for this plantilla item number
     const existingItem = await pool.query(
@@ -2445,9 +2432,24 @@ class ApplicantsServiceClass {
       await client.query('BEGIN');
       await client.query('LOCK TABLE applicants IN EXCLUSIVE MODE');
 
-      const designation = inc.current_position || data.current_position || 'Guidance Counselor';
-      const region = inc.region || data.region || null;
-      const division = inc.division || data.division || null;
+      const designation = isNewApp
+        ? (data.current_position || inc.current_position || 'GUIDANCE COUNSELOR').trim().toUpperCase()
+        : (inc.current_position || data.current_position || 'Guidance Counselor');
+      const region = isNewApp
+        ? (data.region || inc.region ? String(data.region || inc.region).trim().toUpperCase() : null)
+        : (inc.region || data.region || null);
+      const division = isNewApp
+        ? (data.division || inc.division ? String(data.division || inc.division).trim().toUpperCase() : null)
+        : (inc.division || data.division || null);
+      const schoolName = isNewApp
+        ? (data.school_name || inc.school_name ? String(data.school_name || inc.school_name).trim().toUpperCase() : null)
+        : (data.school_name || null);
+      const education = isNewApp
+        ? (data.education ? String(data.education).trim().toUpperCase() : (inc.education ? String(inc.education).trim().toUpperCase() : null))
+        : (data.education || null);
+      const eligibility = isNewApp
+        ? (data.eligibility ? String(data.eligibility).trim().toUpperCase() : (inc.eligibility ? String(inc.eligibility).trim().toUpperCase() : null))
+        : (data.eligibility || null);
 
       let applicant: any;
 
@@ -2469,8 +2471,13 @@ class ApplicantsServiceClass {
             current_designation = COALESCE(current_designation, $10),
             region = COALESCE(region, $11),
             division = COALESCE(division, $12),
+            bachelor_degree = COALESCE($13::varchar, bachelor_degree),
+            bachelors_degree = COALESCE($13::text, bachelors_degree),
+            eligibility = COALESCE($14, eligibility),
+            years_experience = COALESCE($15, years_experience),
+            training_hours = COALESCE($16, training_hours),
             updated_at = NOW()
-          WHERE id = $13
+          WHERE id = $17
           RETURNING *`,
           [
             finalLastName,
@@ -2485,6 +2492,10 @@ class ApplicantsServiceClass {
             designation,
             region,
             division,
+            education,
+            eligibility,
+            data.years_experience !== undefined && data.years_experience !== null && String(data.years_experience).trim() !== '' ? Number(data.years_experience) : null,
+            data.hours_of_training !== undefined && data.hours_of_training !== null && String(data.hours_of_training).trim() !== '' ? Number(data.hours_of_training) : null,
             existingApplicantId,
           ],
         );
@@ -2511,12 +2522,16 @@ class ApplicantsServiceClass {
             applicant_number, surname, first_name, middle_name,
             email_address, email, password_hash, passcode_hash, passcode,
             mobile_no, mobile_number, registrant_type, plantilla_item_number,
-            current_designation, region, division, is_test, created_at, updated_at
+            current_designation, region, division,
+            bachelor_degree, bachelors_degree, eligibility, years_experience, training_hours,
+            is_test, created_at, updated_at
           ) VALUES (
             $1, $2, $3, $4,
             $5, $5, $6, $7, $8,
             $9, $9, 'reclass', $10,
-            $11, $12, $13, false, NOW(), NOW()
+            $11, $12, $13,
+            $14::varchar, $14::text, $15, $16, $17,
+            false, NOW(), NOW()
           ) RETURNING *`,
           [
             newApplicantNumber,
@@ -2532,6 +2547,10 @@ class ApplicantsServiceClass {
             designation,
             region,
             division,
+            education,
+            eligibility,
+            data.years_experience !== undefined && data.years_experience !== null && String(data.years_experience).trim() !== '' ? Number(data.years_experience) : null,
+            data.hours_of_training !== undefined && data.hours_of_training !== null && String(data.hours_of_training).trim() !== '' ? Number(data.hours_of_training) : null,
           ],
         );
         applicant = insertRes.rows[0];
@@ -2549,10 +2568,19 @@ class ApplicantsServiceClass {
           first_name = $7,
           last_name = $8,
           new_application = CASE WHEN $9 = TRUE THEN TRUE ELSE new_application END,
+          education = COALESCE($10, education),
+          years_experience = COALESCE($11, years_experience),
+          hours_of_training = COALESCE($12, hours_of_training),
+          eligibility = COALESCE($13, eligibility),
+          region = COALESCE($14, region),
+          division = COALESCE($15, division),
+          school_name = COALESCE($16, school_name),
+          current_position = COALESCE($17, current_position),
+          stage_of_reclassification = COALESCE(stage_of_reclassification, 'UPDATING OF DOCUMENTS'),
           updated_at = NOW() 
-        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($10)) 
-           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($10))
-           OR id = $11`,
+        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($18)) 
+           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($18))
+           OR id = $19`,
         [
           cleanEmail,
           password,
@@ -2563,6 +2591,14 @@ class ApplicantsServiceClass {
           finalFirstName,
           finalLastName,
           isNewApp,
+          education,
+          data.years_experience !== undefined && data.years_experience !== null && String(data.years_experience).trim() !== '' ? Number(data.years_experience) : null,
+          data.hours_of_training !== undefined && data.hours_of_training !== null && String(data.hours_of_training).trim() !== '' ? Number(data.hours_of_training) : null,
+          eligibility,
+          region,
+          division,
+          schoolName,
+          designation,
           normalizedItemNo,
           inc.id,
         ],

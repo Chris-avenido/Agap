@@ -1,12 +1,61 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-20] Strict Uppercase Input & Database Insertion Standardization for New Reclassification Application (Excluding DepEd Email)
+
+### 1. Frontend Form Input Uppercase Enforcement
+- **Real-Time Uppercase Transformation**:
+  - In [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx):
+    - Text input and selection fields in the **New Reclassification Application** form transform values to `.toUpperCase()` directly in their `onChange` handlers:
+      - `Plantilla Item Number`
+      - `First Name`, `Middle Name`, `Last Name`
+      - `Current Position`
+      - `Region`, `Division`, `School / Station Name`
+      - `Education / Degree`, `Eligibility / License`
+    - Form inputs apply the Tailwind `uppercase` class for clean visual consistency.
+    - Form placeholders updated to uppercase conventions (e.g., `JUAN`, `SANTOS`, `DELA CRUZ`).
+    - **Excluded Fields**:
+      - `Official DepEd Email`: Does not force uppercase, allows lowercase typing, and placeholder set to `name@deped.gov.ph`.
+      - `Mobile Number`, `Passcode`, `Years of Experience`, `Hours of Relevant Training`: Retain standard numeric input handling.
+      - `Password`, `Confirm Password`: Retain strict case-sensitivity for credential security.
+
+### 2. Backend & Database Uppercase Guarantee with Lowercase Email
+- **API Payload Normalization**:
+  - In [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts#L166):
+    - `POST /reclass-register` converts candidate profile and plantilla fields to uppercase when `new_application: true`, while preserving standard lowercase formatting for the DepEd email address (`checkEmail`).
+- **Database Insertion and Update Sanitization**:
+  - In [`ApplicantsService.registerReclassAccount`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2261):
+    - Sanitizes `cleanFirstName`, `cleanMiddleName`, `cleanLastName`, `designation`, `region`, `division`, `schoolName`, `education`, and `eligibility` to uppercase.
+    - DepEd email (`cleanEmail`) is formatted to lowercase (`.toLowerCase()`).
+    - Writes uppercase profile values and lowercase email to both `applicants` table (`first_name`, `middle_name`, `surname`, `email`, `email_address`, `current_designation`, `region`, `division`, `bachelor_degree`, `bachelors_degree`, `eligibility`) and `reclass_gc` table (`first_name`, `last_name`, `email`, `current_position`, `region`, `division`, `school_name`, `education`, `eligibility`).
+    - Database trigger `trg_uppercase_reclass_gc` updated to format `NEW.email := LOWER(TRIM(NEW.email))` while enforcing uppercase for all other text fields.
+    - Explicit SQL type casting (`$14::varchar`, `$14::text`) ensures complete type safety between `bachelor_degree` (varchar) and `bachelors_degree` (text).
+- **Item Verification Pre-Fill Normalization**:
+  - In [`ApplicantsService.verifyReclassItemNumber`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2088):
+    - Pre-populated fields returned for New Reclassification Applications (`category: 'new'`) are normalized to `.toUpperCase()`.
+
+## [2026-10-20] New Reclassification Application Verification via Vacant `reclass_gc` Slots
+
+### 1. Updated Plantilla Validation for "New Reclassification Application"
+- **Switched Source Table from `gmis_gc_items` to `reclass_gc`**:
+  - In [`ApplicantsService.verifyReclassItemNumber`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2088) and [`ApplicantsService.registerReclassAccount`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2262), the validation for New Reclassification Applications (`category === 'new'`, `isNewApp === true`) now directly targets `reclass_gc`.
+- **Vacant / Unassigned Slot Validation Rules**:
+  - Requires the `Plantilla Item Number` (`item_no` or `new_item_no`) to exist in `reclass_gc` where:
+    1. `first_name IS NULL OR TRIM(first_name) = ''`,
+    2. `last_name IS NULL OR TRIM(last_name) = ''`, and
+    3. `email IS NULL OR TRIM(email) = ''`.
+  - If a matching vacant slot is found: verification passes (`status: 'valid'`), auto-populating position, region, and division while allowing the new applicant to enter their personal credentials and name.
+  - If the item exists in `reclass_gc` but is already registered or assigned to personnel: returns `already_registered` (`409`).
+  - If no record exists for that item: returns `not_found` (`404`, `"No records found"`).
+- **Post-Registration State**:
+  - Upon successful registration, the vacant record in `reclass_gc` is updated with applicant credentials and explicitly sets `new_application = TRUE`.
+
 ## [2026-10-19] Reclassification Registration Category Selection & Plantilla Verification Rules
 
 ### 1. Plantilla Item Number Verification & Registration Rules
 - **Incumbent GMIS Plantilla Record** (*Existing Application*):
   - Verification & Registration strictly require the `Plantilla Item Number` to exist in **BOTH** `reclass_gc` **AND** `gmis_gc_items` (`psi_cd`):
     - Uses an `INNER JOIN` matching `gmis_gc_items.psi_cd` with `reclass_gc.item_no` or `reclass_gc.new_item_no`.
-    - If the item has **NO records on `gmis_gc_items.psi_cd`** (e.g. test items like `GC-01`, `GC-02`, `GC-03`), or does not exist in `reclass_gc`: registration and verification return `404 not_found` (`"No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records."`). Registration cannot proceed.
+    - If the item has **NO records on `gmis_gc_items.psi_cd`** (e.g. test items like `GC-01`, `GC-02`, `GC-03`), or does not exist in `reclass_gc`: registration and verification return `404 not_found` (`"No records found."`). Registration cannot proceed.
     - If existing in both and not yet registered: returns status `valid` with pre-filled incumbent data (First Name, Last Name, Position, Region, Division, Station).
     - If already registered with credentials: returns status `already_registered` (409) prompting the user to sign in.
 - **New Reclassification Application** (*New Application*):
@@ -15,7 +64,7 @@
     2. `first_name IS NOT NULL` OR `last_name IS NOT NULL` (filled position / non-empty personnel name).
   - If matching: returns status `valid` with verified personnel details pre-populated (First Name, Last Name, Position, Region, Division).
   - If already registered: returns status `already_registered`.
-  - If not matching (e.g. unfilled position with blank name, already assigned email, or not in GMIS): returns status `not_found` (`"No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name."`). Registration cannot proceed.
+  - If not matching (e.g. unfilled position with blank name, already assigned email, or not in GMIS): returns status `not_found` (`"No records found"`). Registration cannot proceed.
 
 ### 2. Frontend Inline Form Experience
 - In [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx):

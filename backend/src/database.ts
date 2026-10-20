@@ -91,11 +91,123 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS education VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS years_experience NUMERIC;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS hours_of_training NUMERIC;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS eligibility VARCHAR(255);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
+
+      CREATE OR REPLACE FUNCTION public.trg_uppercase_reclass_gc()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $function$
+      DECLARE
+        has_approved BOOLEAN := FALSE;
+        elem JSONB;
+      BEGIN
+        IF NEW.item_no IS NOT NULL THEN 
+          NEW.item_no := NULLIF(UPPER(TRIM(NEW.item_no)), ''); 
+        END IF;
+        IF NEW.current_position IS NOT NULL THEN NEW.current_position := UPPER(TRIM(NEW.current_position)); END IF;
+        IF NEW.first_name IS NOT NULL THEN NEW.first_name := UPPER(TRIM(NEW.first_name)); END IF;
+        IF NEW.last_name IS NOT NULL THEN NEW.last_name := UPPER(TRIM(NEW.last_name)); END IF;
+        IF NEW.email IS NOT NULL THEN NEW.email := LOWER(TRIM(NEW.email)); END IF;
+        IF NEW.region IS NOT NULL THEN NEW.region := UPPER(TRIM(NEW.region)); END IF;
+        IF NEW.division IS NOT NULL THEN NEW.division := UPPER(TRIM(NEW.division)); END IF;
+        IF NEW.school_id IS NOT NULL THEN NEW.school_id := UPPER(TRIM(NEW.school_id)); END IF;
+        IF NEW.school_name IS NOT NULL THEN NEW.school_name := UPPER(TRIM(NEW.school_name)); END IF;
+        IF NEW.education IS NOT NULL THEN NEW.education := UPPER(TRIM(NEW.education)); END IF;
+        IF NEW.eligibility IS NOT NULL THEN NEW.eligibility := UPPER(TRIM(NEW.eligibility)); END IF;
+        IF NEW.qs_status IS NULL OR TRIM(NEW.qs_status) = '' THEN 
+          NEW.qs_status := 'PENDING QS EVALUATION';
+        ELSE
+          NEW.qs_status := UPPER(TRIM(NEW.qs_status)); 
+          IF NEW.qs_status IN ('NOT QUALIFIED', 'QS NOT QUALIFIED', 'DISQUALIFIED') THEN
+            NEW.qs_status := 'EXCLUDED';
+          ELSIF NEW.qs_status IN ('PENDING', 'PENDING QS', 'PENDING EVALUATION') THEN
+            NEW.qs_status := 'PENDING QS EVALUATION';
+          END IF;
+        END IF;
+
+        IF NEW.qs_eval_result IS NULL OR TRIM(NEW.qs_eval_result) = '' THEN
+          NEW.qs_eval_result := 'PENDING QS EVALUATION';
+        ELSE
+          NEW.qs_eval_result := UPPER(TRIM(NEW.qs_eval_result));
+          IF NEW.qs_eval_result IN ('NOT QUALIFIED', 'QS NOT QUALIFIED', 'DISQUALIFIED') THEN
+            NEW.qs_eval_result := 'EXCLUDED';
+          ELSIF NEW.qs_eval_result IN ('PENDING', 'PENDING QS', 'PENDING EVALUATION') THEN
+            NEW.qs_eval_result := 'PENDING QS EVALUATION';
+          END IF;
+        END IF;
+        IF NEW.stage_of_reclassification IS NOT NULL THEN 
+          NEW.stage_of_reclassification := UPPER(TRIM(NEW.stage_of_reclassification)); 
+          IF NEW.stage_of_reclassification = 'UPDATING OF DOCUMENTS' THEN
+            NEW.stage_of_reclassification := 'FOR REVIEW';
+          END IF;
+        END IF;
+        IF NEW.reclass_position IS NOT NULL THEN NEW.reclass_position := UPPER(TRIM(NEW.reclass_position)); END IF;
+        IF NEW.new_item_no IS NOT NULL THEN NEW.new_item_no := UPPER(TRIM(NEW.new_item_no)); END IF;
+
+        -- Automatically calculate document_status in ALL CAPS based on document_checklist
+        IF NEW.document_checklist IS NOT NULL AND jsonb_typeof(NEW.document_checklist) = 'array' THEN
+          DECLARE
+            has_loi BOOLEAN := FALSE;
+            has_pds BOOLEAN := FALSE;
+            has_elig BOOLEAN := FALSE;
+            has_tor BOOLEAN := FALSE;
+            has_cav BOOLEAN := FALSE;
+            req_count INT := 0;
+            req_approved_count INT := 0;
+            e_id TEXT;
+            e_key TEXT;
+            e_status TEXT;
+            e_req BOOLEAN;
+            is_item_approved BOOLEAN;
+          BEGIN
+            FOR elem IN SELECT jsonb_array_elements(NEW.document_checklist)
+            LOOP
+              e_id := LOWER(TRIM(COALESCE(elem->>'id', '')));
+              e_key := LOWER(TRIM(COALESCE(elem->>'key', '')));
+              e_status := LOWER(TRIM(COALESCE(elem->>'status', '')));
+              e_req := COALESCE((elem->>'required')::boolean, FALSE);
+              is_item_approved := (e_status = 'approved' OR (COALESCE((elem->>'verified')::boolean, FALSE) AND COALESCE((elem->>'submitted')::boolean, FALSE) AND e_status <> 'for_revision'));
+
+              IF e_req THEN
+                req_count := req_count + 1;
+                IF is_item_approved THEN
+                  req_approved_count := req_approved_count + 1;
+                END IF;
+              END IF;
+
+              IF is_item_approved THEN
+                has_approved := TRUE;
+                IF e_id = 'loi' OR e_key = 'letter_of_intent' THEN has_loi := TRUE; END IF;
+                IF e_id = 'pds' OR e_key = 'pds' THEN has_pds := TRUE; END IF;
+                IF e_id = 'eligibility' OR e_key = 'eligibility' THEN has_elig := TRUE; END IF;
+                IF e_id = 'tor' OR e_key = 'tor' THEN has_tor := TRUE; END IF;
+                IF e_id = 'cav' OR e_key = 'sworn_declaration' THEN has_cav := TRUE; END IF;
+              END IF;
+            END LOOP;
+
+            IF (req_count > 0 AND req_approved_count = req_count) OR (has_loi AND has_pds AND has_elig AND has_tor AND has_cav) THEN
+              NEW.document_status := 'ALL DOCUMENT REVIEWED';
+            ELSIF has_approved THEN
+              NEW.document_status := 'PENDING DOCUMENT REVIEW';
+            ELSE
+              NEW.document_status := 'DOCUMENTS SUBMITTED';
+            END IF;
+          END;
+        ELSE
+          NEW.document_status := 'DOCUMENTS SUBMITTED';
+        END IF;
+
+        RETURN NEW;
+      END;
+      $function$;
     `);
 
     // Ensure gmis_gc_items table exists matching GMIS production schema

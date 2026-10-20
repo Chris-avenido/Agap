@@ -170,6 +170,10 @@ export default function Login() {
   const [newAppVerifying, setNewAppVerifying] = useState(false);
   const [newAppVerified, setNewAppVerified] = useState(false);
   const [newAppIsAlreadyRegistered, setNewAppIsAlreadyRegistered] = useState(false);
+  const [newAppEducation, setNewAppEducation] = useState('');
+  const [newAppYearsExperience, setNewAppYearsExperience] = useState('');
+  const [newAppHoursTraining, setNewAppHoursTraining] = useState('');
+  const [newAppEligibility, setNewAppEligibility] = useState('');
 
   // Incumbent locations
   const [incumbentLocations, setIncumbentLocations] = useState<{
@@ -466,7 +470,7 @@ export default function Login() {
         setStepAError('This Plantilla Item Number is already registered. Please sign in.');
       } else {
         setStepAVerified(false);
-        setStepAError(resData.message || 'No records found. The Plantilla Item Number does not exist in official DepEd GMIS incumbent records.');
+        setStepAError(resData.message || 'No records found.');
       }
     } catch (err) {
       console.error('Verification error:', err);
@@ -498,12 +502,20 @@ export default function Login() {
       const resData = await response.json();
       if (response.ok && resData.status === 'valid') {
         setNewAppVerified(true);
-        if (resData.data.first_name) setNewAppFirstName(resData.data.first_name);
-        if (resData.data.last_name) setNewAppLastName(resData.data.last_name);
-        if (resData.data.current_position) setNewAppDesignation(resData.data.current_position);
-        if (resData.data.region) setNewAppRegion(resData.data.region);
-        if (resData.data.division) setNewAppDivision(resData.data.division);
-        if (resData.data.school_name) setNewAppSchoolName(resData.data.school_name);
+        if (resData.data.first_name) setNewAppFirstName(String(resData.data.first_name).toUpperCase());
+        if (resData.data.last_name) setNewAppLastName(String(resData.data.last_name).toUpperCase());
+        if (resData.data.current_position) setNewAppDesignation(String(resData.data.current_position).toUpperCase());
+        if (resData.data.region) setNewAppRegion(String(resData.data.region).toUpperCase());
+        if (resData.data.division) setNewAppDivision(String(resData.data.division).toUpperCase());
+        if (resData.data.school_name) setNewAppSchoolName(String(resData.data.school_name).toUpperCase());
+        if (resData.data.education) setNewAppEducation(String(resData.data.education).toUpperCase());
+        if (resData.data.years_experience !== undefined && resData.data.years_experience !== null && resData.data.years_experience !== '') {
+          setNewAppYearsExperience(String(resData.data.years_experience));
+        }
+        if (resData.data.hours_of_training !== undefined && resData.data.hours_of_training !== null && resData.data.hours_of_training !== '') {
+          setNewAppHoursTraining(String(resData.data.hours_of_training));
+        }
+        if (resData.data.eligibility) setNewAppEligibility(String(resData.data.eligibility).toUpperCase());
         setNewAppError(null);
       } else if (resData.status === 'already_registered' || response.status === 409) {
         setNewAppIsAlreadyRegistered(true);
@@ -511,11 +523,11 @@ export default function Login() {
         setNewAppError('This Plantilla Item Number is already registered. Please sign in.');
       } else {
         setNewAppVerified(false);
-        setNewAppError(resData.message || 'No records found. The Plantilla Item Number must exist in GMIS records with unassigned email and valid personnel name.');
+        setNewAppError(resData.message || 'No records found');
       }
     } catch (err) {
       console.error('Verification error:', err);
-      setNewAppError('Unable to verify with GMIS records. Please try again.');
+      setNewAppError('Unable to verify with reclassification records. Please try again.');
     } finally {
       setNewAppVerifying(false);
     }
@@ -634,15 +646,16 @@ export default function Login() {
       return;
     }
 
-    const cleanFirstName = newAppFirstName.trim();
-    const cleanLastName = newAppLastName.trim();
+    const cleanFirstName = newAppFirstName.trim().toUpperCase();
+    const cleanLastName = newAppLastName.trim().toUpperCase();
     if (!cleanFirstName || !cleanLastName) {
       setNewAppError('First Name and Last Name are required.');
       return;
     }
 
-    const cleanEmail = newAppEmail.trim().toLowerCase();
-    if (!cleanEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)) {
+    const rawEmail = newAppEmail.trim();
+    const checkEmail = rawEmail.toLowerCase();
+    if (!checkEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(checkEmail)) {
       setNewAppError('Only official @deped.gov.ph email addresses are allowed (e.g. juan.delacruz@deped.gov.ph).');
       return;
     }
@@ -676,18 +689,22 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           new_application: true,
-          item_number: cleanPlantilla,
-          first_name: cleanFirstName,
-          middle_name: newAppMiddleName.trim() || undefined,
-          last_name: cleanLastName,
+          item_number: cleanPlantilla.toUpperCase(),
+          first_name: cleanFirstName.toUpperCase(),
+          middle_name: newAppMiddleName.trim() ? newAppMiddleName.trim().toUpperCase() : undefined,
+          last_name: cleanLastName.toUpperCase(),
           mobile_number: cleanMobile,
-          email: cleanEmail,
+          email: checkEmail,
           password: newAppPassword,
           passcode: cleanPasscode,
-          current_position: newAppDesignation.trim() || 'Guidance Counselor I',
-          region: newAppRegion.trim() || undefined,
-          division: newAppDivision.trim() || undefined,
-          school_name: newAppSchoolName.trim() || undefined,
+          current_position: (newAppDesignation.trim() || 'GUIDANCE COUNSELOR I').toUpperCase(),
+          region: newAppRegion.trim() ? newAppRegion.trim().toUpperCase() : undefined,
+          division: newAppDivision.trim() ? newAppDivision.trim().toUpperCase() : undefined,
+          school_name: newAppSchoolName.trim() ? newAppSchoolName.trim().toUpperCase() : undefined,
+          education: newAppEducation.trim() ? newAppEducation.trim().toUpperCase() : undefined,
+          years_experience: newAppYearsExperience.trim() !== '' ? newAppYearsExperience.trim() : undefined,
+          hours_of_training: newAppHoursTraining.trim() !== '' ? newAppHoursTraining.trim() : undefined,
+          eligibility: newAppEligibility.trim() ? newAppEligibility.trim().toUpperCase() : undefined,
         }),
       });
 
@@ -949,8 +966,9 @@ export default function Login() {
                   : 'Sign in using your Plantilla Item Number or DepEd email')
                 : 'Sign in to access your account'}
           </p>
-          <p className="mt-1 text-xs text-[var(--muted)]/70">
-            Government HR Management Information System
+          <p className="mt-1.5 text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-600 shrink-0"></span>
+            Government HR Management Information System &bull; DepEd
           </p>
 
           <div className="mt-8">
@@ -958,10 +976,14 @@ export default function Login() {
             {!isRegistering && (
               <div className="mb-5" id="tour-reclass-portal">
                 {portalType === 'reclass' ? (
-                  <div className="bg-sky-50 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                  <div className="bg-sky-50/80 border border-sky-200 rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-[#0369a1] text-white flex items-center justify-center shadow-sm">
-                        <Award className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-lg bg-[#0369a1] text-white flex items-center justify-center shadow-xs shrink-0">
+                        {reclassRegType === 'new' && reclassView === 'register' ? (
+                          <UserPlus className="w-4 h-4" />
+                        ) : (
+                          <Award className="w-4 h-4" />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider">Reclassification Portal</h3>
@@ -972,14 +994,28 @@ export default function Login() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => startTour(reclassView)}
-                      className="text-xs font-bold text-[#0369a1] hover:text-[#02527e] flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-sky-200 shadow-2xs hover:bg-sky-50 transition-colors"
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span>{reclassView === 'register' ? 'Register Tutorial' : 'Login Tutorial'}</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {reclassView === 'register' && reclassRegType === 'new' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReclassRegType('existing');
+                            navigate('/login?type=reclass&guide=true');
+                          }}
+                          className="text-xs font-bold text-[#0369a1] hover:text-[#02527e] hover:underline cursor-pointer px-1.5 py-1"
+                        >
+                          Incumbent Registration &rarr;
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => startTour(reclassView)}
+                        className="text-xs font-bold text-[#0369a1] hover:text-[#02527e] flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-sky-200 shadow-2xs hover:bg-sky-50 transition-colors"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>{reclassView === 'register' ? 'Register Tutorial' : 'Login Tutorial'}</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center justify-between">
@@ -1114,28 +1150,6 @@ export default function Login() {
                   {reclassRegType === 'new' ? (
                     /* FORM: NEW APPLICATION REGISTRATION */
                     <form onSubmit={handleNewApplicationRegister} className="space-y-3.5">
-                      <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-900 leading-relaxed">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className="font-bold text-indigo-800 flex items-center gap-1.5">
-                            <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
-                            New Reclassification Application
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReclassRegType('existing');
-                              navigate('/login?type=reclass&guide=true');
-                            }}
-                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
-                          >
-                            Incumbent Registration &rarr;
-                          </button>
-                        </div>
-                        <p className="text-[11px] text-indigo-700">
-                          Register your personal details, division, and station to create your candidate profile under DM-OUHROD-2024.
-                        </p>
-                      </div>
-
                       {/* Error Alert */}
                       {newAppError && (
                         <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">
@@ -1203,13 +1217,13 @@ export default function Login() {
                           <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>
-                              <strong>GMIS Record Verified:</strong> {newAppDesignation} &bull; {newAppFirstName} {newAppLastName} ({newAppDivision || newAppRegion || 'DepEd'})
+                              <strong>Plantilla Record Verified:</strong> {newAppDesignation} {newAppFirstName ? `• ${newAppFirstName} ${newAppLastName}` : ''} ({newAppDivision || newAppRegion || 'DepEd'})
                             </span>
                           </div>
                         )}
                         {!newAppVerified && (
                           <p className="text-[11px] text-gray-400 mt-1">
-                            Must be an active plantilla item in GMIS records with unassigned email.
+                            Must be an active plantilla item in reclassification records with unassigned personnel and email.
                           </p>
                         )}
                       </div>
@@ -1224,9 +1238,9 @@ export default function Login() {
                             type="text"
                             required
                             value={newAppFirstName}
-                            onChange={e => setNewAppFirstName(e.target.value)}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                            placeholder="Juan"
+                            onChange={e => setNewAppFirstName(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="JUAN"
                           />
                         </div>
                         <div className="sm:col-span-1">
@@ -1236,9 +1250,9 @@ export default function Login() {
                           <input
                             type="text"
                             value={newAppMiddleName}
-                            onChange={e => setNewAppMiddleName(e.target.value)}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                            placeholder="Santos"
+                            onChange={e => setNewAppMiddleName(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="SANTOS"
                           />
                         </div>
                         <div className="sm:col-span-1">
@@ -1249,9 +1263,9 @@ export default function Login() {
                             type="text"
                             required
                             value={newAppLastName}
-                            onChange={e => setNewAppLastName(e.target.value)}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                            placeholder="Dela Cruz"
+                            onChange={e => setNewAppLastName(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="DELA CRUZ"
                           />
                         </div>
                       </div>
@@ -1303,9 +1317,9 @@ export default function Login() {
                           type="text"
                           required
                           value={newAppDesignation}
-                          onChange={e => setNewAppDesignation(e.target.value)}
-                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
-                          placeholder="e.g. Guidance Services Specialist II"
+                          onChange={e => setNewAppDesignation(e.target.value.toUpperCase())}
+                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                          placeholder="E.G. GUIDANCE SERVICES SPECIALIST II"
                         />
                       </div>
 
@@ -1318,21 +1332,21 @@ export default function Login() {
                           {incumbentLocations.regions?.length > 0 ? (
                             <select
                               value={newAppRegion}
-                              onChange={e => setNewAppRegion(e.target.value)}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
+                              onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
                             >
                               <option value="">Select Region</option>
                               {incumbentLocations.regions.map(r => (
-                                <option key={r} value={r}>{r}</option>
+                                <option key={r} value={r.toUpperCase()}>{r.toUpperCase()}</option>
                               ))}
                             </select>
                           ) : (
                             <input
                               type="text"
                               value={newAppRegion}
-                              onChange={e => setNewAppRegion(e.target.value)}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                              placeholder="e.g. REGION IV-A"
+                              onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                              placeholder="E.G. REGION IV-A"
                             />
                           )}
                         </div>
@@ -1343,21 +1357,21 @@ export default function Login() {
                           {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
                             <select
                               value={newAppDivision}
-                              onChange={e => setNewAppDivision(e.target.value)}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium"
+                              onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
                             >
                               <option value="">Select Division</option>
                               {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
-                                <option key={d} value={d}>{d}</option>
+                                <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>
                               ))}
                             </select>
                           ) : (
                             <input
                               type="text"
                               value={newAppDivision}
-                              onChange={e => setNewAppDivision(e.target.value)}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                              placeholder="e.g. QUEZON"
+                              onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                              placeholder="E.G. QUEZON"
                             />
                           )}
                         </div>
@@ -1371,10 +1385,70 @@ export default function Login() {
                         <input
                           type="text"
                           value={newAppSchoolName}
-                          onChange={e => setNewAppSchoolName(e.target.value)}
-                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                          placeholder="e.g. Quezon National High School"
+                          onChange={e => setNewAppSchoolName(e.target.value.toUpperCase())}
+                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                          placeholder="E.G. QUEZON NATIONAL HIGH SCHOOL"
                         />
+                      </div>
+
+                      {/* Qualification Details: Education & Eligibility */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Education / Degree
+                          </label>
+                          <input
+                            type="text"
+                            value={newAppEducation}
+                            onChange={e => setNewAppEducation(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="E.G. BACHELOR / MASTER IN GUIDANCE & COUNSELING"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Eligibility / Professional License
+                          </label>
+                          <input
+                            type="text"
+                            value={newAppEligibility}
+                            onChange={e => setNewAppEligibility(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="E.G. RA 1080 (REGISTERED GUIDANCE COUNSELOR)"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Qualification Details: Experience & Training Hours */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Years of Experience
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={newAppYearsExperience}
+                            onChange={e => setNewAppYearsExperience(e.target.value)}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                            placeholder="e.g. 5"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Hours of Relevant Training
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={newAppHoursTraining}
+                            onChange={e => setNewAppHoursTraining(e.target.value)}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                            placeholder="e.g. 40"
+                          />
+                        </div>
                       </div>
 
                       {/* Password & Confirm Password */}
@@ -1484,16 +1558,6 @@ export default function Login() {
                   ) : (
                     /* RECLASSIFICATION INLINE REGISTRATION FORM (EXISTING INCUMBENT) */
                     <form onSubmit={handleReclassRegisterInline} className="space-y-4">
-                  <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-3.5 text-xs text-sky-900 leading-relaxed">
-                    <p className="font-bold text-[#0369a1] mb-0.5 flex items-center gap-1.5">
-                      <Award className="w-3.5 h-3.5 text-[#0369a1]" />
-                      Incumbent Reclassification
-                    </p>
-                    <p className="text-[11px] text-sky-800">
-                      Enter your official Plantilla Item Number, DepEd email, contact info, and create your credentials to register.
-                    </p>
-                  </div>
-
                   {/* Error Alert */}
                   {(stepBError || stepAError) && (
                     <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">

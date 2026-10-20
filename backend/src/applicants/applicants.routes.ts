@@ -181,6 +181,10 @@ router.post('/reclass-register', async (req, res) => {
       school_name,
       current_position,
       reclass_position,
+      education,
+      years_experience,
+      hours_of_training,
+      eligibility,
     } = req.body;
 
     const isNewApp = Boolean(new_application);
@@ -207,10 +211,11 @@ router.post('/reclass-register', async (req, res) => {
       });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const rawEmail = String(email).trim();
+    const checkEmail = rawEmail.toLowerCase();
     if (
-      !cleanEmail.endsWith('@deped.gov.ph') ||
-      !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(cleanEmail)
+      !checkEmail.endsWith('@deped.gov.ph') ||
+      !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(checkEmail)
     ) {
       return res.status(400).json({
         message:
@@ -232,21 +237,25 @@ router.post('/reclass-register', async (req, res) => {
     }
 
     const regResult = await ApplicantsService.registerReclassAccount({
-      item_number: item_number ? String(item_number) : undefined,
-      first_name: String(first_name),
-      middle_name: middle_name ? String(middle_name) : undefined,
-      last_name: String(last_name),
+      item_number: item_number ? String(item_number).trim().toUpperCase() : undefined,
+      first_name: isNewApp ? String(first_name).trim().toUpperCase() : String(first_name),
+      middle_name: middle_name ? (isNewApp ? String(middle_name).trim().toUpperCase() : String(middle_name)) : undefined,
+      last_name: isNewApp ? String(last_name).trim().toUpperCase() : String(last_name),
       mobile_number: cleanMobile,
-      email: cleanEmail,
+      email: checkEmail,
       password: String(password),
       passcode: cleanPasscode,
       new_application: isNewApp,
-      region: region ? String(region) : undefined,
-      division: division ? String(division) : undefined,
+      region: region ? (isNewApp ? String(region).trim().toUpperCase() : String(region)) : undefined,
+      division: division ? (isNewApp ? String(division).trim().toUpperCase() : String(division)) : undefined,
       school_id: school_id ? String(school_id) : undefined,
-      school_name: school_name ? String(school_name) : undefined,
-      current_position: current_position ? String(current_position) : undefined,
+      school_name: school_name ? (isNewApp ? String(school_name).trim().toUpperCase() : String(school_name)) : undefined,
+      current_position: current_position ? (isNewApp ? String(current_position).trim().toUpperCase() : String(current_position)) : undefined,
       reclass_position: reclass_position ? String(reclass_position) : undefined,
+      education: education !== undefined && education !== null ? (isNewApp ? String(education).trim().toUpperCase() : String(education).trim()) : undefined,
+      years_experience: years_experience !== undefined && years_experience !== null && String(years_experience).trim() !== '' ? Number(years_experience) : undefined,
+      hours_of_training: hours_of_training !== undefined && hours_of_training !== null && String(hours_of_training).trim() !== '' ? Number(hours_of_training) : undefined,
+      eligibility: eligibility !== undefined && eligibility !== null ? (isNewApp ? String(eligibility).trim().toUpperCase() : String(eligibility).trim()) : undefined,
     });
 
     return res.status(201).json({
