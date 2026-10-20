@@ -2006,17 +2006,13 @@ class ApplicantsServiceClass {
       docCount = parseInt(cRes.rows[0]?.cnt || '0', 10);
     }
 
-    let stageOfReclass = incumbent?.stage_of_reclassification || 'UPDATING OF DOCUMENTS';
-    const isEndorsed =
-      stageOfReclass.toUpperCase().includes('RO') ||
-      stageOfReclass.toUpperCase().includes('DBM');
-    if (!isEndorsed) {
-      if (docCount >= 8) {
-        stageOfReclass = 'FOR REVIEW';
-      } else {
-        stageOfReclass = 'UPDATING OF DOCUMENTS';
-      }
-    }
+    const stageOfReclass = (incumbent?.stage_of_reclassification && String(incumbent.stage_of_reclassification).trim())
+      ? String(incumbent.stage_of_reclassification).trim().toUpperCase()
+      : (docCount >= 8 ? 'FOR REVIEW' : 'UPDATING OF DOCUMENTS');
+
+    const documentStatus = (incumbent?.document_status && String(incumbent.document_status).trim())
+      ? String(incumbent.document_status).trim().toUpperCase()
+      : (docCount >= 8 ? 'DOCUMENTS SUBMITTED' : 'DOCUMENTS SUBMITTED');
 
     const targetSalaryGrade = getSalaryGradeForPosition(targetPosition);
     const indicativeSalaryGrade = getSalaryGradeForPosition(indicativePosition);
@@ -2038,10 +2034,17 @@ class ApplicantsServiceClass {
       application_number:
         reclassApp?.school_name || incumbent?.school_name || null,
       school_name: reclassApp?.school_name || incumbent?.school_name || null,
+      document_status: documentStatus,
+      documents_status: documentStatus,
+      document_checklist: incumbent?.document_checklist || null,
+      documents_checklist: incumbent?.document_checklist || null,
+      qs_status: incumbent?.qs_status || 'PENDING QS EVALUATION',
+      new_item_no: incumbent?.new_item_no || null,
       evaluation_status:
         incumbent?.qs_status ||
         stageOfReclass,
       stage_of_reclassification: stageOfReclass,
+      staging_of_reclassification: stageOfReclass,
       initial_assessment_position: initialPosition,
       initial_assessment_salary_grade: initialSalaryGrade,
       documents_count: docCount,

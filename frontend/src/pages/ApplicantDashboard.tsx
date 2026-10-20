@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, Calendar, FileText, Info, Send, Landmark } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
@@ -54,6 +54,102 @@ function getPositionSalaryGrade(posName?: string | null): string {
   return '—';
 }
 
+export interface ChecklistDocumentItem {
+  id?: string;
+  key?: string;
+  title: string;
+  status: string;
+  rawStatus: string;
+  remarks?: string;
+  required?: boolean;
+  fileName?: string;
+  fileUrl?: string;
+}
+
+export type RevisionDocumentItem = ChecklistDocumentItem;
+
+export function parseChecklistDocuments(checklist: any): ChecklistDocumentItem[] {
+  if (!checklist) return [];
+
+  let list: any[] = [];
+  if (Array.isArray(checklist)) {
+    list = checklist;
+  } else if (typeof checklist === 'string') {
+    const trimmed = checklist.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          list = parsed;
+        } else if (typeof parsed === 'object' && parsed !== null) {
+          list = Object.entries(parsed).map(([key, val]) => {
+            if (typeof val === 'object' && val !== null) {
+              return { key, ...val };
+            }
+            return { key, status: val };
+          });
+        }
+      } catch {
+        list = [];
+      }
+    } else {
+      list = [];
+    }
+  } else if (typeof checklist === 'object' && checklist !== null) {
+    list = Object.entries(checklist).map(([key, val]) => {
+      if (typeof val === 'object' && val !== null) {
+        return { key, ...val };
+      }
+      return { key, status: val };
+    });
+  }
+
+  if (!list || list.length === 0) return [];
+
+  return list
+    .map((item: any, idx: number) => {
+      if (!item || typeof item !== 'object') return null;
+
+      // Display all status except for null / undefined / empty string / 'null'
+      if (item.status === null || item.status === undefined || item.status === '') {
+        return null;
+      }
+      const rawStatusStr = String(item.status).trim();
+      if (rawStatusStr.toLowerCase() === 'null') {
+        return null;
+      }
+
+      const rawStatus = rawStatusStr.toLowerCase().replace(/[\s-]/g, '_');
+      const title =
+        item.shortTitle ||
+        item.label ||
+        item.title ||
+        item.name ||
+        item.id ||
+        item.key ||
+        `Document ${idx + 1}`;
+      const remarks = item.remarks || item.comment || item.reason || '';
+
+      return {
+        id: item.id || item.key || `chk-${idx}`,
+        key: item.key || item.id || '',
+        title,
+        status: rawStatusStr,
+        rawStatus,
+        remarks,
+        required: Boolean(item.required),
+        fileName: item.file_name || item.fileName,
+        fileUrl: item.file_url || item.url,
+      };
+    })
+    .filter(Boolean) as ChecklistDocumentItem[];
+}
+
+export function parseRevisionDocuments(checklist: any): ChecklistDocumentItem[] {
+  const allDocs = parseChecklistDocuments(checklist);
+  return allDocs.filter((doc) => doc.rawStatus === 'for_revision' || doc.rawStatus.includes('revision'));
+}
+
 export default function ApplicantDashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<any[]>([]);
@@ -61,6 +157,17 @@ export default function ApplicantDashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [reclassData, setReclassData] = useState<any>(null);
+
+  const checklistDocuments = useMemo(() => {
+    if (!reclassData) return [];
+    const rawChecklist = reclassData.documents_checklist || reclassData.document_checklist;
+    return parseChecklistDocuments(rawChecklist);
+  }, [reclassData]);
+
+  const revisionDocuments = useMemo(() => {
+    return checklistDocuments.filter((doc) => doc.rawStatus === 'for_revision');
+  }, [checklistDocuments]);
+  const revisionDocsCount = revisionDocuments.length;
   const [showGateModal, setShowGateModal] = useState(false);
   const [isReclassUploadModalOpen, setIsReclassUploadModalOpen] = useState(false);
   const [isEditingTargetPosition, setIsEditingTargetPosition] = useState(false);
@@ -683,12 +790,31 @@ export default function ApplicantDashboard() {
               </button>
             )}
             {isReclass && (
-              <button
-                onClick={() => setIsReclassUploadModalOpen(true)}
-                className="bg-[#022851] hover:bg-[#033a76] text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group"
-              >
-                <Upload className="w-4 h-4" /> Upload Requirements
-              </button>
+              <div className="flex flex-col items-start sm:items-end gap-1">
+                <button
+                  onClick={() => setIsReclassUploadModalOpen(true)}
+                  className={`px-5 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group cursor-pointer ${
+                    revisionDocsCount > 0
+                      ? 'bg-[#022851] hover:bg-[#033a76] text-white ring-2 ring-rose-500 shadow-rose-200'
+                      : 'bg-[#022851] hover:bg-[#033a76] text-white'
+                  }`}
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Upload Requirements</span>
+                  {revisionDocsCount > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-600 text-white shadow-xs animate-pulse tracking-wide">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{revisionDocsCount} For Revision</span>
+                    </span>
+                  )}
+                </button>
+                {revisionDocsCount > 0 && (
+                  <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1 pr-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping shrink-0"></span>
+                    Documents need to be re-uploaded
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -748,13 +874,6 @@ export default function ApplicantDashboard() {
             </div>
 
             {reclassData ? (() => {
-              const rawStatus = String(
-                reclassData.stage_of_reclassification ||
-                reclassData.qs_status ||
-                reclassData.evaluation_status ||
-                ''
-              ).trim().toLowerCase();
-
               const rawInitial =
                 reclassData.initial_assessment_position ||
                 reclassData.initial_assessment ||
@@ -775,32 +894,97 @@ export default function ApplicantDashboard() {
 
               const uploadedDocsCount = reclassDocs.length;
               const TOTAL_MANDATORY_DOCS = 7;
-              const hasSubmittedAllDocs = uploadedDocsCount >= TOTAL_MANDATORY_DOCS;
               const submissionDeadline = reclassData.submission_deadline || 'October 31, 2026';
 
-              const isReclassProper =
-                rawStatus.includes('appointed') ||
-                rawStatus.includes('reclass proper') ||
-                rawStatus.includes('reclassification proper') ||
-                rawStatus.includes('reclassified') ||
-                Boolean(reclassData.nosca_serial_no && reclassData.new_item_no);
+              // Normalize database fields from reclass_gc
+              const docStatus = String(
+                reclassData.documents_status ||
+                reclassData.document_status ||
+                ''
+              ).trim().toUpperCase();
 
+              const stageOfReclass = String(
+                reclassData.staging_of_reclassification ||
+                reclassData.stage_of_reclassification ||
+                ''
+              ).trim().toUpperCase();
+
+              const qsStatus = String(reclassData.qs_status || '').trim();
+              const isQsExcluded =
+                qsStatus.toUpperCase().includes('EXCLUDED') ||
+                qsStatus.toUpperCase().includes('DISQUALIFIED') ||
+                qsStatus.toUpperCase().includes('NOT QUALIFIED');
+              const isQsQualified =
+                qsStatus.toUpperCase().includes('QUALIFIED') && !isQsExcluded;
+
+              const newItemNo = reclassData.new_item_no
+                ? String(reclassData.new_item_no).trim()
+                : '';
+              const hasNewItemNo = Boolean(
+                newItemNo &&
+                newItemNo.toUpperCase() !== 'NULL' &&
+                newItemNo !== ''
+              );
+
+              // Revision Upload Documents: reclass_gc.documents_checklist
+              const rawChecklist = reclassData.documents_checklist || reclassData.document_checklist;
+              const revisionDocuments = parseRevisionDocuments(rawChecklist);
+              const hasRevisionDocuments = revisionDocuments.length > 0;
+              const isRevision =
+                hasRevisionDocuments ||
+                docStatus === 'FOR REVISION' ||
+                docStatus === 'FOR_REVISION' ||
+                docStatus.includes('REVISION') ||
+                checklistDocuments.some(
+                  (d) => d.rawStatus === 'for_revision' || d.rawStatus.includes('revision')
+                );
+
+              const isAllDocReviewed = docStatus === 'ALL DOCUMENT REVIEWED';
+              const isDocsSubmitted =
+                docStatus === 'DOCUMENTS SUBMITTED' ||
+                isAllDocReviewed;
+
+              const hasSubmittedAllDocs =
+                uploadedDocsCount >= TOTAL_MANDATORY_DOCS ||
+                isDocsSubmitted;
+
+              // 5 Explicit Stages:
+              // Stage 5: Appointment / Reclass Proper = reclass_gc.new_item_no is not null
+              const isReclassProper =
+                hasNewItemNo ||
+                stageOfReclass === 'APPOINTMENT' ||
+                stageOfReclass === 'RECLASS PROPER' ||
+                stageOfReclass.includes('RECLASSIFIED') ||
+                Boolean(reclassData.nosca_serial_no && hasNewItemNo);
+
+              // Stage 4: Endorsed to DBM RO = reclass_gc.staging_of_reclassification = 'ENDORSED TO DBM RO'
               const isEndorsedToDbm =
                 !isReclassProper &&
-                (rawStatus.includes('dbm') ||
-                  rawStatus.includes('endorsed to dbm') ||
-                  rawStatus.includes('endorsed to dbm ro'));
+                (stageOfReclass === 'ENDORSED TO DBM RO' ||
+                  stageOfReclass.includes('DBM'));
 
+              // Stage 3: Endorsed to RO (Final Eval) = reclass_gc.staging_of_reclassification = 'ENDORSED TO RO'
               const isEndorsedToRo =
                 !isReclassProper &&
                 !isEndorsedToDbm &&
-                (rawStatus.includes('ro') ||
-                  rawStatus.includes('endorsed to ro') ||
-                  rawStatus.includes('endorsed'));
+                (stageOfReclass === 'ENDORSED TO RO' ||
+                  stageOfReclass.includes('RO') ||
+                  stageOfReclass.includes('REGIONAL'));
+
+              // Stage 2: HRMO Review & Evaluation = reclass_gc.documents_status = "DOCUMENTS SUBMITTED"
+              // (or if documents_status = "ALL DOCUMENT REVIEWED", display reclass_gc.qs_status)
+              const isHrmoReview =
+                !isReclassProper &&
+                !isEndorsedToDbm &&
+                !isEndorsedToRo &&
+                (isRevision ||
+                  isDocsSubmitted ||
+                  stageOfReclass === 'FOR REVIEW' ||
+                  hasSubmittedAllDocs);
 
               const isEndorsedToRegional = isEndorsedToRo || isEndorsedToDbm || isReclassProper;
 
-              // Step Calculation (5 Explicit Stages: Updating of Documents -> SDO HRMO Review -> Endorsed to RO -> Endorsed to DBM -> Appointment)
+              // Step Calculation & Display Mapping
               let currentStep = 1;
               let currentLabel = 'Updating of Documents';
               let stepBadge = 'Step 1 of 5: Updating of Documents';
@@ -809,36 +993,54 @@ export default function ApplicantDashboard() {
 
               if (isReclassProper) {
                 currentStep = 5;
-                currentLabel = 'Appointment';
-                stepBadge = 'Step 5 of 5: Appointment';
-                defaultRemarks =
-                  'Your plantilla position has been officially reclassified and appointed with NOSCA allocation and salary adjustment.';
+                currentLabel = 'Appointment / Reclass Proper';
+                stepBadge = 'Step 5 of 5: Appointment / Reclass Proper';
+                defaultRemarks = hasNewItemNo
+                  ? `Your plantilla position has been officially reclassified and appointed under Item No. ${newItemNo}.`
+                  : 'Your plantilla position has been officially reclassified and appointed with NOSCA allocation and salary adjustment.';
               } else if (isEndorsedToDbm) {
                 currentStep = 4;
                 currentLabel = 'Endorsed to DBM RO';
-                stepBadge = 'Step 4 of 5: DBM RO Endorsement';
+                stepBadge = 'Step 4 of 5: Endorsed to DBM RO';
                 defaultRemarks =
                   'Your reclassification application has been endorsed to the Department of Budget and Management (DBM) Regional Office for NOSCA issuance.';
               } else if (isEndorsedToRo) {
                 currentStep = 3;
-                currentLabel = 'Endorsed to RO';
-                stepBadge = 'Step 3 of 5: DepEd Regional Office Final Evaluation';
+                currentLabel = 'Endorsed to RO (Final Eval)';
+                stepBadge = 'Step 3 of 5: Endorsed to RO (Final Eval)';
                 defaultRemarks =
-                  'Your documents have been verified and endorsed to the DepEd Regional Office for final evaluation and transmittal to DBM.';
-              } else if (hasSubmittedAllDocs) {
+                  'Your reclassification documents have been verified and endorsed to the DepEd Regional Office for final evaluation and regional consolidation.';
+              } else if (isHrmoReview) {
                 currentStep = 2;
-                currentLabel = 'SDO HRMO Review';
-                stepBadge = 'Step 2 of 5: SDO HRMO Review';
-                defaultRemarks =
-                  'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
+                if (isRevision) {
+                  currentLabel = 'HRMO Review & Evaluation';
+                  stepBadge = 'Step 2 of 5: Revision Required';
+                  defaultRemarks = revisionDocuments.length > 0
+                    ? `The Division HRMO has requested revisions on ${revisionDocuments.length} requirement(s). Please review the evaluator remarks below and re-upload the updated documents.`
+                    : 'The Division HRMO has requested document revisions. Please review the evaluator remarks and re-upload the updated documents.';
+                } else if (isAllDocReviewed) {
+                  currentLabel = qsStatus ? `${qsStatus}` : 'ALL DOCUMENT REVIEWED';
+                  stepBadge = isQsExcluded
+                    ? `Step 2 of 5: ${qsStatus || 'EXCLUDED'}`
+                    : `Step 2 of 5: ${qsStatus || 'ALL DOCUMENT REVIEWED'}`;
+                  defaultRemarks = isQsExcluded
+                    ? 'All qualification documents have been evaluated by Division HRMO. Based on the Qualification Standards (QS) evaluation, the evaluation status is EXCLUDED.'
+                    : isQsQualified
+                    ? 'All qualification documents have been evaluated by Division HRMO. You are evaluated as QUALIFIED for reclassification.'
+                    : 'All qualification documents have been evaluated by Division HRMO. Qualification Standards (QS) evaluation has been concluded.';
+                } else {
+                  currentLabel = 'HRMO Review & Evaluation';
+                  stepBadge = 'Step 2 of 5: HRMO Review & Evaluation';
+                  defaultRemarks =
+                    'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
+                }
               } else {
                 currentStep = 1;
                 currentLabel = 'Updating of Documents';
                 stepBadge = 'Step 1 of 5: Updating of Documents';
-                defaultRemarks =
-                  uploadedDocsCount === 0
-                    ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your current plantilla record.'
-                    : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your current plantilla record if no additional documents are submitted.`;
+                defaultRemarks = uploadedDocsCount === 0
+                  ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your current plantilla record.'
+                  : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your current plantilla record if no additional documents are submitted.`;
               }
 
               return (
@@ -1023,20 +1225,79 @@ export default function ApplicantDashboard() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#0369a1]">Current Stage</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#022851] text-[#facc15]">
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            isAllDocReviewed && isQsExcluded
+                              ? 'bg-rose-700 text-white shadow-2xs'
+                              : 'bg-[#022851] text-[#facc15]'
+                          }`}>
                             {stepBadge}
                           </span>
                         </div>
-                        <p className="text-lg md:text-xl font-black text-[#022851] mt-0.5 tracking-tight">
-                          {currentLabel}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                        <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
+                          <p
+                            onClick={() => {
+                              if (isRevision) {
+                                setIsReclassUploadModalOpen(true);
+                              }
+                            }}
+                            className={`text-lg md:text-xl font-black tracking-tight ${
+                              isAllDocReviewed && isQsExcluded
+                                ? 'text-rose-700'
+                                : 'text-[#022851]'
+                            } ${
+                              isRevision ? 'cursor-pointer hover:text-rose-700 transition-colors' : ''
+                            }`}
+                            title={isRevision ? 'Click to open Reclassification Document Submission' : undefined}
+                          >
+                            {currentLabel}
+                          </p>
+
+                          {/* When ALL DOCUMENT REVIEWED: display both ALL DOCUMENT REVIEWED and qs_status (red if excluded) */}
+                          {isAllDocReviewed && currentStep <= 2 && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>ALL DOCUMENT REVIEWED</span>
+                              </span>
+
+                              {qsStatus && (
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border shadow-2xs ${
+                                  isQsExcluded
+                                    ? 'bg-rose-600 text-white border-rose-700 shadow-sm'
+                                    : isQsQualified
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                                }`}>
+                                  {isQsExcluded ? (
+                                    <AlertCircle className="w-3.5 h-3.5 text-white" />
+                                  ) : isQsQualified ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                  )}
+                                  <span>{qsStatus}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                           {reclassData.remarks || defaultRemarks}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 self-start sm:self-center px-3 py-1.5 rounded-xl bg-white/80 border border-sky-200 shadow-sm shrink-0">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isEndorsedToRegional ? 'bg-emerald-500' : 'bg-[#0284c7]'} animate-ping`}></div>
-                        <span className="text-xs font-extrabold text-[#022851]">{currentLabel}</span>
+                        <div className={`w-2.5 h-2.5 rounded-full ${
+                          isAllDocReviewed && isQsExcluded
+                            ? 'bg-rose-500'
+                            : isEndorsedToRegional || isAllDocReviewed
+                            ? 'bg-emerald-500'
+                            : 'bg-[#0284c7]'
+                        } animate-ping`}></div>
+                        <span className={`text-xs font-extrabold ${
+                          isAllDocReviewed && isQsExcluded
+                            ? 'text-rose-700'
+                            : 'text-[#022851]'
+                        }`}>{currentLabel}</span>
                       </div>
                     </div>
 
@@ -1141,27 +1402,52 @@ export default function ApplicantDashboard() {
                               />
                             </div>
                           </div>
+
                         </div>
 
                         <button
                           type="button"
                           onClick={() => setIsReclassUploadModalOpen(true)}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-[#022851] hover:bg-[#033b77] shadow-xs transition-all cursor-pointer"
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white shadow-xs transition-all cursor-pointer bg-[#022851] hover:bg-[#033b77]"
                         >
                           <Upload className="w-3 h-3" />
-                          <span>{hasSubmittedAllDocs ? 'Manage Docs' : `Upload Docs (${uploadedDocsCount}/8)`}</span>
+                          <span>
+                            {hasSubmittedAllDocs
+                              ? 'Manage Docs'
+                              : `Upload Docs (${uploadedDocsCount}/8)`}
+                          </span>
                         </button>
                       </div>
 
                       {/* Step 2: SDO Division HRMO */}
                       <div
+                        onClick={() => {
+                          if (isRevision || hasSubmittedAllDocs) {
+                            setIsReclassUploadModalOpen(true);
+                          }
+                        }}
                         className={`relative rounded-xl p-4.5 transition-all border flex flex-col justify-between ${
                           currentStep === 2
-                            ? 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
+                            ? isAllDocReviewed && isQsExcluded
+                              ? 'bg-white border-rose-400 shadow-md ring-2 ring-rose-200'
+                              : 'bg-white border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/20'
                             : currentStep > 2
                             ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
                             : 'bg-slate-50/70 border-slate-200 text-slate-400'
+                        } ${
+                          isRevision
+                            ? 'cursor-pointer hover:border-rose-400 hover:ring-2 hover:ring-rose-200 shadow-sm'
+                            : hasSubmittedAllDocs
+                            ? 'cursor-pointer hover:border-sky-300 shadow-xs'
+                            : ''
                         }`}
+                        title={
+                          isRevision
+                            ? 'Click to open Reclassification Document Submission'
+                            : hasSubmittedAllDocs
+                            ? 'Click to view submitted documents'
+                            : undefined
+                        }
                       >
                         <div>
                           <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -1170,14 +1456,20 @@ export default function ApplicantDashboard() {
                                 currentStep > 2
                                   ? 'bg-emerald-600 text-white shadow-sm'
                                   : currentStep === 2
-                                  ? 'bg-[#022851] text-[#facc15] shadow-sm'
+                                  ? isAllDocReviewed && isQsExcluded
+                                    ? 'bg-rose-600 text-white shadow-sm'
+                                    : 'bg-[#022851] text-[#facc15] shadow-sm'
                                   : 'bg-slate-100 text-slate-400 border border-slate-200'
                               }`}
                             >
                               {currentStep > 2 ? (
                                 <CheckCircle2 className="w-5 h-5" />
                               ) : currentStep === 2 ? (
-                                <Building2 className="w-4 h-4" />
+                                isAllDocReviewed && isQsExcluded ? (
+                                  <AlertCircle className="w-4 h-4 text-white" />
+                                ) : (
+                                  <Building2 className="w-4 h-4" />
+                                )
                               ) : (
                                 <Lock className="w-4 h-4 text-slate-400" />
                               )}
@@ -1187,24 +1479,58 @@ export default function ApplicantDashboard() {
                                 currentStep > 2
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : currentStep === 2
-                                  ? 'bg-sky-100 text-[#0284c7] animate-pulse'
+                                  ? isAllDocReviewed
+                                    ? isQsExcluded
+                                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-sky-100 text-[#0284c7] animate-pulse'
                                   : 'bg-slate-100 text-slate-400'
                               }`}
                             >
                               {currentStep > 2
                                 ? 'Completed'
                                 : currentStep === 2
-                                ? 'Active Stage'
+                                ? isAllDocReviewed
+                                  ? isQsExcluded
+                                    ? 'Excluded'
+                                    : 'Reviewed'
+                                  : 'Active Stage'
                                 : 'Locked'}
                             </span>
                           </div>
 
-                          <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 2 ? 'text-[#0284c7]' : currentStep > 2 ? 'text-emerald-800' : 'text-gray-400'}`}>
+                          <p className={`text-[11px] font-bold uppercase tracking-wider ${
+                            currentStep === 2
+                              ? isAllDocReviewed && isQsExcluded
+                                ? 'text-rose-700'
+                                : 'text-[#022851]'
+                              : currentStep > 2
+                              ? 'text-emerald-800'
+                              : 'text-gray-400'
+                          }`}>
                             Step 2 • SDO Division HRMO
                           </p>
-                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 2 ? 'text-[#022851]' : currentStep > 2 ? 'text-gray-800' : 'text-gray-500'}`}>
-                            HRMO Review & Evaluation
-                          </h4>
+                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                            <h4
+                              onClick={(e) => {
+                                if (isRevision || hasSubmittedAllDocs) {
+                                  e.stopPropagation();
+                                  setIsReclassUploadModalOpen(true);
+                                }
+                              }}
+                              className={`text-[14px] font-extrabold tracking-tight ${
+                                currentStep === 2 ? 'text-[#022851]' : currentStep > 2 ? 'text-gray-800' : 'text-gray-500'
+                              } ${
+                                isRevision
+                                  ? 'cursor-pointer hover:text-rose-700 transition-colors underline decoration-rose-300 underline-offset-2'
+                                  : hasSubmittedAllDocs
+                                  ? 'cursor-pointer hover:text-sky-700 transition-colors'
+                                  : ''
+                              }`}
+                            >
+                              HRMO Review & Evaluation
+                            </h4>
+                          </div>
                           <p className="text-[11px] text-gray-500 mt-1 leading-snug">
                             {hasSubmittedAllDocs
                               ? 'SDO Division HRMO qualification verification & re-assessment.'
@@ -1212,16 +1538,116 @@ export default function ApplicantDashboard() {
                           </p>
                         </div>
 
-                        {!hasSubmittedAllDocs && (
+                        {/* Status / QS Evaluation Display */}
+                        {isRevision ? (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsReclassUploadModalOpen(true);
+                            }}
+                            className="mt-3 p-2.5 rounded-xl bg-rose-50/90 border border-rose-300 text-rose-950 shadow-2xs cursor-pointer hover:bg-rose-100/90 transition-colors group"
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-800">
+                                HRMO Document Review
+                              </span>
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-600 text-white">
+                                Needs Revision
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-black text-rose-900">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>{revisionDocuments.length > 0 ? `${revisionDocuments.length} DOCUMENT(S) RETURNED` : 'DOCUMENTS FOR REVISION'}</span>
+                            </div>
+                            <p className="text-[10px] text-rose-800/90 mt-1 leading-tight">
+                              Evaluator flagged requirements for revision. Please re-upload updated copies.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsReclassUploadModalOpen(true);
+                              }}
+                              className="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition-all cursor-pointer"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Reclassification Document Submission</span>
+                            </button>
+                          </div>
+                        ) : isAllDocReviewed ? (
+                          <div className={`mt-3 p-3 rounded-xl border shadow-2xs space-y-2.5 ${
+                            isQsExcluded
+                              ? 'bg-rose-50/90 border-rose-300 text-rose-950'
+                              : 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+                          }`}>
+                            {/* 1. Document Review Status Display */}
+                            <div className="flex items-center justify-between gap-1 pb-2 border-b border-gray-200/60">
+                              <div className="flex items-center gap-1.5 text-[11px] font-black text-emerald-800">
+                                <FileCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>ALL DOCUMENT REVIEWED</span>
+                              </div>
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-600 text-white">
+                                Verified
+                              </span>
+                            </div>
+
+                            {/* 2. QS Evaluation Status Display (Red if excluded) */}
+                            <div>
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className={`text-[9px] font-extrabold uppercase tracking-wider ${
+                                  isQsExcluded ? 'text-rose-800' : 'text-emerald-800'
+                                }`}>
+                                  HRMO QS Evaluation Result
+                                </span>
+                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                                  isQsExcluded ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+                                }`}>
+                                  {isQsExcluded ? 'Excluded' : 'Qualified'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {isQsExcluded ? (
+                                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                ) : (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                )}
+                                <span className={`text-[12px] font-black tracking-tight uppercase ${
+                                  isQsExcluded ? 'text-rose-700' : 'text-[#022851]'
+                                }`}>
+                                  {qsStatus || (isQsExcluded ? 'EXCLUDED' : 'QUALIFIED FOR RECLASSIFICATION')}
+                                </span>
+                              </div>
+                              <p className={`text-[10px] mt-1 leading-tight ${
+                                isQsExcluded ? 'text-rose-800/90 font-medium' : 'text-emerald-800/80'
+                              }`}>
+                                {isQsExcluded
+                                  ? 'Evaluation Result: Excluded from reclassification based on Division HRMO Qualification Standards (QS).'
+                                  : 'Qualification Standards verified and evaluated by Division HRMO.'}
+                              </p>
+                            </div>
+                          </div>
+                        ) : isDocsSubmitted ? (
+                          <div className="mt-3 p-2.5 rounded-xl bg-sky-50/80 border border-sky-200 text-sky-950 shadow-2xs">
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#0369a1]">
+                                HRMO Document Review
+                              </span>
+                              <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-sky-200 text-sky-900">
+                                In Progress
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#022851]">
+                              <Clock className="w-3.5 h-3.5 text-[#0284c7] shrink-0" />
+                              <span>DOCUMENTS SUBMITTED</span>
+                            </div>
+                            <p className="text-[10px] text-sky-900/80 mt-1 leading-tight">
+                              Verification of submitted qualification credentials in progress.
+                            </p>
+                          </div>
+                        ) : (
                           <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-slate-400 bg-slate-100/80 px-2 py-1.5 rounded-lg border border-slate-200">
                             <Clock className="w-3 h-3 shrink-0 text-slate-400" />
                             <span>Awaiting submission of requirements</span>
-                          </div>
-                        )}
-                        {currentStep === 2 && hasSubmittedAllDocs && (
-                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold text-[#0369a1] bg-sky-50 px-2 py-1.5 rounded-lg border border-sky-200">
-                            <Clock className="w-3 h-3 shrink-0 text-[#0284c7]" />
-                            <span>In-review by Division HRMO</span>
                           </div>
                         )}
                       </div>
@@ -1444,13 +1870,19 @@ export default function ApplicantDashboard() {
                           </div>
 
                           {/* Plantilla Item / NOSCA serial details if present */}
-                          {(reclassData.new_item_no || reclassData.nosca_serial_no) ? (
-                            <div className="mt-2 text-[9px] font-semibold text-gray-600 flex items-center justify-between">
-                              {reclassData.new_item_no && (
-                                <span>Item: <strong className="font-mono text-[#022851]">{reclassData.new_item_no}</strong></span>
+                          {(hasNewItemNo || reclassData.nosca_serial_no) ? (
+                            <div className="mt-2.5 p-2 rounded-lg bg-emerald-100/70 border border-emerald-300 text-[10px] space-y-1">
+                              {hasNewItemNo && (
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-emerald-950 uppercase tracking-wider text-[9px]">New Item No:</span>
+                                  <strong className="font-mono text-[#022851] bg-white px-2 py-0.5 rounded border border-emerald-300 text-[11px] shadow-2xs font-extrabold">{newItemNo}</strong>
+                                </div>
                               )}
                               {reclassData.nosca_serial_no && (
-                                <span>NOSCA: <strong className="font-mono text-[#022851]">{reclassData.nosca_serial_no}</strong></span>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-emerald-950 uppercase tracking-wider text-[9px]">NOSCA Serial:</span>
+                                  <strong className="font-mono text-[#022851] bg-white px-2 py-0.5 rounded border border-emerald-300 text-[11px] shadow-2xs font-extrabold">{reclassData.nosca_serial_no}</strong>
+                                </div>
                               )}
                             </div>
                           ) : (
@@ -1468,7 +1900,7 @@ export default function ApplicantDashboard() {
                       <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white/80 border border-sky-200 text-xs text-sky-900 shadow-xs">
                         <Clock className="w-4 h-4 text-[#0284c7] shrink-0" />
                         <p>
-                          <strong>Indicative Reclassification Status:</strong> Will be unlocked and available for viewing once Step 2 (SDO Initial Review) is completed and endorsed to the Regional Office (RO).
+                          <strong>Indicative Reclassification Status:</strong> Will be unlocked and available for viewing once Step 2 (HRMO Review & Evaluation) is completed and endorsed to the DepEd Regional Office (RO).
                         </p>
                       </div>
                     )}
@@ -1764,6 +2196,8 @@ export default function ApplicantDashboard() {
           onUploadSuccess={() => {
             refreshReclassData();
           }}
+          revisionDocuments={revisionDocuments}
+          checklistDocuments={checklistDocuments}
         />
       )}
     </div>

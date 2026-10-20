@@ -1,5 +1,102 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-20] Reclassification Status Display: "ALL DOCUMENT REVIEWED" & QS Status (Excluded Red Highlighting)
+
+### 1. Dual Status Rendering for Completed HRMO Review
+- In [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx):
+  - When `reclass_gc.documents_status = "ALL DOCUMENT REVIEWED"`:
+    - **Simultaneous Display**: Both **`ALL DOCUMENT REVIEWED`** and **`reclass_gc.qs_status`** are displayed together.
+    - **Step 2 Card Body**:
+      - **Document Status Section**: Displays `ALL DOCUMENT REVIEWED` in emerald with `<FileCheck />` and a `Verified` badge.
+      - **HRMO QS Evaluation Result Section**: Displays `reclass_gc.qs_status` (e.g., `EXCLUDED` or `QUALIFIED FOR RECLASSIFICATION`) with appropriate icon, status badge, and official description.
+    - **Current Stage Header**:
+      - Displays both `ALL DOCUMENT REVIEWED` badge and `qs_status` badge.
+      - Live pulsing dot and stage title seamlessly adapt to the QS evaluation outcome.
+
+### 2. High-Contrast Red Styling for `qs_status = excluded`
+- When `qs_status` contains `EXCLUDED` (or `DISQUALIFIED` / `NOT QUALIFIED`):
+  - **Color**: Rendered in high-contrast rose/red (`text-rose-700`, `bg-rose-600 text-white`, `border-rose-300`, `bg-rose-50/90`).
+  - **Step 2 Card Styling**:
+    - Outer card ring & border styled with `border-rose-400 ring-2 ring-rose-200`.
+    - Stage icon transformed to rose alert badge (`bg-rose-600 text-white` with `<AlertCircle />`).
+    - Top-right stage pill styled with `bg-rose-100 text-rose-800 border border-rose-300` displaying `Excluded`.
+    - Evaluation result box and text styled in rose/red with clear guidance: *"Evaluation Result: Excluded from reclassification based on Division HRMO Qualification Standards (QS)."*
+  - **Header & Badges**:
+    - Current Stage title in bold red `text-rose-700`.
+    - Stage badge styled in `bg-rose-700 text-white`.
+    - QS status pill rendered in `bg-rose-600 text-white border-rose-700 shadow-sm` with `<AlertCircle />`.
+    - Live indicator dot rendered in pulsating `bg-rose-500`.
+- Complies strictly with Arthur's Senior Designer guidelines for accessibility (WCAG AA/AAA contrast), clear visual hierarchy, and an authoritative portal feel.
+
+## [2026-10-20] Document Checklist Status Display & HRMO Review Click-Through Pipeline
+
+### 1. Document Checklist Status Display (All Statuses Except Null)
+- **Checklist Status Visualization in [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx)**:
+  - Display all non-null statuses from `document_checklist` / `documents_checklist`:
+    - `for_revision`: Prominent `Action Required: For Revision` badge with high-contrast rose ring and specialized `Re-upload` button.
+    - `approved`: Emerald `Approved` badge with `<CheckCircle2 />`.
+    - `verified`: Emerald `Verified` badge.
+    - `under_review` / `for_review` / `pending`: Amber `Under Review` badge with `<Clock />`.
+    - `submitted`: Sky `Submitted` badge with `<FileCheck />`.
+    - Any other evaluator status: Rendered in uppercase pill badge.
+  - When status is `null`, undefined, or not in checklist, cleanly falls back to upload states (`Uploaded`, `Selected (Pending Upload)`, `Pending Selection`, `Optional`).
+  - Evaluator remarks and feedback are displayed with dedicated styled cards for both revision requests and general reviewer feedback.
+
+### 2. "HRMO Review & Evaluation" Step 2 Revision Click-Through
+- **Interactive Portal Step in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - When revisions are required (`isRevision`), clicking **"HRMO Review & Evaluation"** (either the card, the title, or the active stage header) directly opens the **"Reclassification Document Submission"** modal.
+  - Added an explicit action button directly within the Step 2 revision card labeled **`Reclassification Document Submission`** with an upload icon.
+  - Interactive cursor and hover feedback guide the user directly to the re-upload modal.
+
+## [2026-10-20] Applicant Dashboard: Revision Upload Documents Pipeline (`reclass_gc.documents_checklist`)
+
+### 1. Reclassification Revision Documents Display (`documents_checklist` / `document_checklist`)
+- **Backend API Harmonization**:
+  - In [`ApplicantsService.getReclassDetails`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2039), exposed both `document_checklist` (actual database JSONB column) and `documents_checklist` (aliased property) containing evaluator checklist items.
+- **Strict Status Filtering for Re-upload**:
+  - In [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx#L68) and [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx#L87), strictly filters checklist items where `"status": "for_revision"`.
+  - Non-revision, pending, or approved checklist items are no longer counted or flagged for re-upload, ensuring only documents explicitly marked `"for_revision"` trigger revision badges and re-upload highlights.
+- **Streamlined UI & Red Message on "Upload Requirements" Button (Arthur Guidelines)**:
+  - **Removed Bulky Revision Section**: Removed the `Action Required: Documents for Revision / Re-upload` section from the dashboard body to reduce cognitive load and keep the main view clean.
+  - **Header Action Button Red Indicator**:
+    - The **"Upload Requirements"** button now prominently features a red notification badge (`{count} For Revision`), a red focus ring, and a pulsating alert indicator whenever documents are flagged for revision.
+    - Displays a subtle red status line under the button: `Documents need to be re-uploaded`.
+    - Clicking the button directly opens the modal where each flagged requirement is highlighted with specific evaluator remarks and re-upload inputs.
+  - **Cleaned Step 1 ("Updating of Documents") Card**:
+    - Removed the "10 document(s) need revision" pill and the "Re-upload Flagged Docs (10)" button override from the Step 1 Stepper card.
+    - Preserved standard progress, initial assessment, and `Upload Docs` / `Manage Docs` button in Step 1.
+    - Centralized all revision action cues directly onto the primary **"Upload Requirements"** button in the header and within [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx).
+  - **Modal Revision Highlighting**:
+    - [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx) clearly highlights each flagged requirement with a rose ring, `Action Required: For Revision` badge, evaluator remarks quote, and specialized `Re-upload` button.
+
+## [2026-10-20] Applicant Dashboard: Reclassification Stage & Status Mapping Pipeline
+
+### 1. Reclassification Portal Status Rules & Database Mapping
+- Implemented precise stage resolution and status rendering in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx) adhering to executive portal design:
+  1. **Step 2 (SDO Division HRMO): HRMO Review & Evaluation**:
+     - Triggered when `reclass_gc.documents_status = "DOCUMENTS SUBMITTED"` (or `reclass_gc.document_status`).
+     - Displays `Step 2 of 5: HRMO Review & Evaluation` as the active stage, with in-progress review card indicator.
+  2. **HRMO QS Status Display on Review Completion**:
+     - When `reclass_gc.documents_status = "ALL DOCUMENT REVIEWED"` (or `reclass_gc.document_status`), the portal displays `reclass_gc.qs_status` (e.g., `QUALIFIED FOR RECLASSIFICATION` or `PENDING QS EVALUATION`).
+     - Displayed in:
+       - Current Stage header badge and title.
+       - Stepper Card 2 with an authoritative, high-contrast portal badge (`HRMO QS Evaluation: Reviewed` with verification checkmark and qualification status).
+  3. **Step 3 (DepEd Regional Office): Endorsed to RO (Final Eval)**:
+     - Triggered when `reclass_gc.staging_of_reclassification = 'ENDORSED TO RO'` (or `reclass_gc.stage_of_reclassification`).
+     - Displays `Step 3 of 5: Endorsed to RO (Final Eval)` as active stage.
+  4. **Step 4 (DBM Regional Office): Endorsed to DBM RO**:
+     - Triggered when `reclass_gc.staging_of_reclassification = 'ENDORSED TO DBM RO'` (or `reclass_gc.stage_of_reclassification`).
+     - Displays `Step 4 of 5: Endorsed to DBM RO` as active stage.
+  5. **Step 5 (Official Appointment): Appointment / Reclass Proper**:
+     - Triggered when `reclass_gc.new_item_no IS NOT NULL` (and non-empty).
+     - Displays `Step 5 of 5: Appointment / Reclass Proper` as completed/active stage.
+     - Renders an executive plantilla item badge with `New Item No: <new_item_no>` and `NOSCA Serial: <nosca_serial_no>`.
+
+### 2. Backend API Harmonization
+- In [`ApplicantsService.getReclassDetails`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts#L2005):
+  - Preserves exact stage directly from `reclass_gc.stage_of_reclassification` without artificial overwrites.
+  - Returns both standard and aliased properties (`document_status`/`documents_status`, `stage_of_reclassification`/`staging_of_reclassification`, `qs_status`, `new_item_no`) for reliable cross-compatibility.
+
 ## [2026-10-20] Strict Uppercase Input & Database Insertion Standardization for New Reclassification Application (Excluding DepEd Email)
 
 ### 1. Frontend Form Input Uppercase Enforcement

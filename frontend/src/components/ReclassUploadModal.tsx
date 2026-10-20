@@ -84,11 +84,36 @@ export interface UploadedReclassDoc {
   uploaded_at: string;
 }
 
+function matchesRequirementDoc(reqKey: string, doc: any): boolean {
+  if (!doc) return false;
+  const rk = reqKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const dk = String(doc.key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const did = String(doc.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const dt = String(doc.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  if (rk === dk || rk === did) return true;
+  if (rk && dk && (rk.includes(dk) || dk.includes(rk))) return true;
+  if (rk && did && (rk.includes(did) || did.includes(rk))) return true;
+
+  if (rk === 'letterofintent' && (did === 'loi' || dt.includes('intent'))) return true;
+  if (rk === 'pds' && (did === 'pds' || dt.includes('personaldata') || dt.includes('pds'))) return true;
+  if (rk === 'proofofeligibility' && (did === 'eligibility' || dt.includes('eligibility') || dt.includes('prc') || dt.includes('license'))) return true;
+  if (rk === 'academicrecord' && (did === 'tor' || dt.includes('tor') || dt.includes('academic') || dt.includes('transcript') || dt.includes('diploma'))) return true;
+  if (rk === 'servicerecord' && (did === 'employment' || did === 'appointment' || dt.includes('service') || dt.includes('employment') || dt.includes('appointment'))) return true;
+  if (rk === 'trainingcerts' && (did === 'training' || dt.includes('training'))) return true;
+  if (rk === 'omnibusswornstatement' && (did === 'cav' || dt.includes('omnibus') || dt.includes('sworn') || dt.includes('cav'))) return true;
+  if (rk === 'performancerating' && (did === 'performance' || dt.includes('performance') || dt.includes('ipcrf') || dt.includes('rating'))) return true;
+
+  return false;
+}
+
 interface ReclassUploadModalProps {
   isOpen: boolean;
   applicantId: number | string;
   onClose: () => void;
   onUploadSuccess?: () => void;
+  revisionDocuments?: any[];
+  checklistDocuments?: any[];
 }
 
 export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
@@ -96,6 +121,8 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   applicantId,
   onClose,
   onUploadSuccess,
+  revisionDocuments = [],
+  checklistDocuments = [],
 }) => {
   const [documents, setDocuments] = useState<UploadedReclassDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,6 +356,20 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
 
         {/* Scrollable Document Checklist */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {revisionDocuments.length > 0 && (
+            <div className="text-xs text-rose-950 bg-rose-50/90 border-2 border-rose-300 rounded-xl p-3.5 flex items-start gap-2.5 shadow-2xs">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-rose-900 block font-black uppercase text-[11px] mb-0.5">
+                  Action Required: {revisionDocuments.length} Document(s) Flagged for Revision
+                </strong>
+                <span className="leading-relaxed">
+                  The Division HRMO has requested revisions on the highlighted requirements below. Please review the evaluator remarks and re-upload the updated PDF files.
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="text-xs text-gray-600 bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <span>
@@ -346,12 +387,28 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
               {RECLASS_REQUIREMENTS.map((req, index) => {
                 const uploadedDoc = uploadedMap[req.key];
                 const stagedFile = stagedFiles[req.key];
+                const checklistDoc = (checklistDocuments || []).find((cd: any) => matchesRequirementDoc(req.key, cd));
+                const revDoc = (revisionDocuments || []).find((rd: any) => matchesRequirementDoc(req.key, rd));
+
+                const rawStatus = String(
+                  revDoc?.status || checklistDoc?.rawStatus || checklistDoc?.status || ''
+                ).trim().toLowerCase().replace(/[\s-]/g, '_');
+
+                const isForRevision = rawStatus === 'for_revision' || rawStatus.includes('revision');
+                const hasChecklistStatus = Boolean(checklistDoc?.status && String(checklistDoc.status).trim().toLowerCase() !== 'null');
+                const evaluatorRemarks = revDoc?.remarks || checklistDoc?.remarks;
 
                 return (
                   <div
                     key={req.key}
                     className={`border rounded-xl p-4 transition-all ${
-                      stagedFile
+                      isForRevision
+                        ? 'border-rose-400 bg-rose-50/30 shadow-sm ring-2 ring-rose-300/40'
+                        : rawStatus === 'approved' || rawStatus === 'verified'
+                        ? 'bg-emerald-50/30 border-emerald-200/90 shadow-sm'
+                        : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review'
+                        ? 'bg-amber-50/30 border-amber-200 shadow-sm'
+                        : stagedFile
                         ? 'bg-sky-50/60 border-sky-300 shadow-sm'
                         : uploadedDoc
                         ? 'bg-emerald-50/30 border-emerald-200/80 shadow-sm'
@@ -362,14 +419,26 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                       <div className="flex items-start gap-3 min-w-0">
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
-                            stagedFile
+                            isForRevision
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : rawStatus === 'approved' || rawStatus === 'verified'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review'
+                              ? 'bg-amber-100 text-amber-700'
+                              : stagedFile
                               ? 'bg-sky-100 text-sky-700'
                               : uploadedDoc
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-gray-100 text-gray-600'
                           }`}
                         >
-                          {stagedFile ? (
+                          {isForRevision ? (
+                            <AlertCircle className="w-5 h-5 text-white" />
+                          ) : rawStatus === 'approved' || rawStatus === 'verified' ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                          ) : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review' ? (
+                            <Clock className="w-5 h-5 text-amber-600" />
+                          ) : stagedFile ? (
                             <FileCheck className="w-5 h-5 text-sky-600" />
                           ) : uploadedDoc ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -385,26 +454,69 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                 Optional
                               </span>
                             )}
-                            {stagedFile ? (
+                            {hasChecklistStatus ? (
+                              isForRevision ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+                                  <AlertCircle className="w-3 h-3" /> Action Required: For Revision
+                                </span>
+                              ) : rawStatus === 'approved' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Approved
+                                </span>
+                              ) : rawStatus === 'verified' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified
+                                </span>
+                              ) : rawStatus === 'under_review' || rawStatus === 'for_review' || rawStatus === 'pending' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                  <Clock className="w-3 h-3 text-amber-600" /> Under Review
+                                </span>
+                              ) : rawStatus === 'submitted' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                                  <FileCheck className="w-3 h-3 text-sky-600" /> Submitted
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 uppercase">
+                                  {String(checklistDoc?.status).replace(/_/g, ' ')}
+                                </span>
+                              )
+                            ) : stagedFile ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
                                 <FileCheck className="w-3 h-3 text-sky-600" /> Selected (Pending Upload)
                               </span>
                             ) : uploadedDoc ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                 <CheckCircle2 className="w-3 h-3" /> Uploaded
                               </span>
                             ) : req.required ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                 <Clock className="w-3 h-3" /> Pending Selection
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                                 <Clock className="w-3 h-3 text-slate-400" /> Optional
+                              </span>
+                            )}
+
+                            {hasChecklistStatus && stagedFile && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                                <FileCheck className="w-3 h-3 text-sky-600" /> New File Selected
                               </span>
                             )}
                           </div>
                           <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{req.description}</p>
 
+                          {/* HRMO Evaluator Remarks if flagged for revision or general feedback */}
+                          {evaluatorRemarks && (
+                            <div className={`mt-2.5 p-2 rounded-lg text-[11px] ${isForRevision ? 'bg-amber-50/90 border border-amber-300 text-amber-950' : 'bg-slate-50 border border-slate-200 text-slate-800'}`}>
+                              <span className="font-black uppercase text-[9px] block tracking-wider mb-0.5 text-gray-700">
+                                HRMO Remarks / {isForRevision ? 'Required Action' : 'Feedback'}:
+                              </span>
+                              <p className="italic font-medium leading-relaxed">
+                                "{evaluatorRemarks}"
+                              </p>
+                            </div>
+                          )}
                           {/* Staged File Info */}
                           {stagedFile && (
                             <div className="flex items-center gap-3 mt-2 text-[11px] text-sky-800 font-semibold bg-sky-100/70 px-2.5 py-1 rounded-lg border border-sky-200 w-fit max-w-full">
@@ -480,12 +592,18 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
                                 isSubmitting
                                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  : isForRevision
+                                  ? 'bg-rose-600 hover:bg-rose-700 text-white font-black'
                                   : uploadedDoc
                                   ? 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
                                   : 'bg-[#022851] hover:bg-[#033a76] text-white'
                               }`}
                             >
-                              {uploadedDoc ? (
+                              {isForRevision ? (
+                                <>
+                                  <Upload className="w-3.5 h-3.5" /> Re-upload
+                                </>
+                              ) : uploadedDoc ? (
                                 <>
                                   <RefreshCw className="w-3.5 h-3.5 text-gray-500" /> Replace
                                 </>
