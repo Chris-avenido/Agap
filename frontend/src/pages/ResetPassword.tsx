@@ -58,17 +58,17 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-2)] relative" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="h-screen flex bg-[var(--bg-2)] relative overflow-hidden" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Back Button */}
       <button 
         onClick={() => navigate('/login')} 
-        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium cursor-pointer"
       >
         <ArrowLeft className="w-5 h-5" /> Back to Login
       </button>
       
-      <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
+      <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 h-full overflow-y-auto">
+        <div className="mx-auto my-auto w-full max-w-sm lg:w-96">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white border-2 border-[var(--blue)] rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
               <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain" />
@@ -151,7 +151,7 @@ export default function ResetPassword() {
           </div>
         </div>
       </div>
-      <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center">
+      <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center h-full overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--navy-2)] to-[var(--navy)] opacity-90"></div>
         <div className="relative z-10 flex flex-col items-center justify-center text-white p-12 text-center max-w-3xl mt-[-80px]">
           <div className="w-24 h-24 bg-[#0a386c] rounded-[24px] flex items-center justify-center mb-10 shadow-[0_10px_40px_rgba(0,0,0,0.2)]">

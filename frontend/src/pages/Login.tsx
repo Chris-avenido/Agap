@@ -1053,7 +1053,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-2)] relative" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="h-screen flex bg-[var(--bg-2)] relative overflow-hidden" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Back Button */}
       <button
         type="button"
@@ -1063,8 +1063,8 @@ export default function Login() {
         <ArrowLeft className="w-5 h-5" /> Back
       </button>
 
-      <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-        <div className={`mx-auto w-full transition-all duration-300 ${portalType === 'reclass' && reclassView === 'register'
+      <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 h-full overflow-y-auto">
+        <div className={`mx-auto my-auto w-full transition-all duration-300 ${portalType === 'reclass' && reclassView === 'register'
             ? 'max-w-md sm:max-w-xl lg:w-[520px]'
             : 'max-w-sm lg:w-96'
           }`}>
@@ -2468,7 +2468,7 @@ export default function Login() {
       </div>
 
       {/* Right Column Branding Banner */}
-      <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center">
+      <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center h-full overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--navy-2)] to-[var(--navy)] opacity-90"></div>
         <div className="relative z-10 flex flex-col items-center justify-center text-white p-12 text-center max-w-3xl mt-[-80px]">
           <div className="w-24 h-24 bg-[#0a386c] rounded-[24px] flex items-center justify-center mb-10 shadow-[0_10px_40px_rgba(0,0,0,0.2)]">
