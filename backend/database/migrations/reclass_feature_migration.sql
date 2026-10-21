@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS reclass_gc (
   school_name VARCHAR(255),
   qs_status VARCHAR(100),
   stage_of_reclassification VARCHAR(100) DEFAULT 'UPDATING OF DOCUMENTS',
+  target_position VARCHAR(255),
   reclass_position VARCHAR(255),
   new_item_no VARCHAR(150),
   nosca_serial_no VARCHAR(150),
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS reclass_gc (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS target_position VARCHAR(255);
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS stage_of_reclassification VARCHAR(100) DEFAULT 'UPDATING OF DOCUMENTS';
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;

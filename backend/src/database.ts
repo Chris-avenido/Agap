@@ -74,6 +74,7 @@ async function runSchemaMigrations(client: any) {
         school_name VARCHAR(255),
         qs_status VARCHAR(100),
         stage_of_reclassification VARCHAR(100) DEFAULT 'For Review',
+        target_position VARCHAR(255),
         reclass_position VARCHAR(255),
         new_item_no VARCHAR(150),
         nosca_serial_no VARCHAR(150),
@@ -95,6 +96,9 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS years_experience NUMERIC;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS hours_of_training NUMERIC;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS eligibility VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_checklist JSONB;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_status VARCHAR(100);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS target_position VARCHAR(255);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
@@ -149,6 +153,7 @@ async function runSchemaMigrations(client: any) {
             NEW.stage_of_reclassification := 'FOR REVIEW';
           END IF;
         END IF;
+        IF NEW.target_position IS NOT NULL THEN NEW.target_position := UPPER(TRIM(NEW.target_position)); END IF;
         IF NEW.reclass_position IS NOT NULL THEN NEW.reclass_position := UPPER(TRIM(NEW.reclass_position)); END IF;
         IF NEW.new_item_no IS NOT NULL THEN NEW.new_item_no := UPPER(TRIM(NEW.new_item_no)); END IF;
 

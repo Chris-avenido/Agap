@@ -1,14 +1,223 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-21] Reclassification Info Layout: 2-Row Grid (`ApplicantDashboard.tsx`)
+- Updated the **Reclassification Info** card container from a single 6-column row (`xl:grid-cols-6`) to a structured 2-row grid (`md:grid-cols-3`):
+  - **Row 1**: Plantilla Item No. | Position Title | Salary Grade
+  - **Row 2**: Initial Assessment | Target Position (Editable) | Target Reclass
+- Removed `col-span-2` expansion when editing Target Position to ensure the layout remains strictly 2 rows without pushing adjacent cards to extra lines.
+
+## [2026-10-21] Editable "Target Position" Card with Specific Dropdown Options
+
+### 1. Interactive Dropdown Selection (`ApplicantDashboard.tsx`)
+- Made the **"Target Position"** card interactive and editable with an inline Edit button, select dropdown, and Save/Cancel controls.
+- Configured the dropdown list to strictly contain the 4 requested positions:
+  - **`School Counselor Associate I`** (SG-11)
+  - **`School Counselor Associate II`** (SG-12)
+  - **`School Counselor Associate III`** (SG-13)
+  - **`School Counselor Associate IV`** (SG-14)
+- Linked selection to dynamic Salary Grade recalculation and backend synchronization via `PUT /api/applicants/:id/reclass-target-position`.
+- Standardized the subsequent **"Target Reclass"** card as a clean, display-only card rendering `reclassData.reclass_position || '—'`.
+
+## [2026-10-21] Status Normalization: Removed Hyphen ("Re-submit" → "Resubmit")
+
+### 1. UI Label & Badge Normalization
+- Removed the hyphen from the reclassification status across all frontend components:
+  - **Dashboard Stepper Top Badge**: Updated to **`Resubmit`**.
+  - **Dashboard Current Stage Header Badge**: Updated to **`Resubmit`**.
+  - **Dashboard Step 2 HRMO Review Box & Title Badge**: Updated to **`Resubmit`**.
+  - **Reclassification Modal Cards (`ReclassUploadModal.tsx`)**: Updated badge, staged file helper, remarks label, and upload button to **`Resubmit`** (and notification title to **`Document Resubmitted`**).
+
+### 2. Backend & Database Status Value Synchronization
+- Updated `ApplicantsService.uploadReclassDocument` and `getReclassDocuments` to record and normalize status as **`'resubmit'`** (previously `'re-submit'`).
+- Migrated existing checklist rows in PostgreSQL database `reclass_gc.document_checklist` from `'re-submit'` to `'resubmit'`.
+
+## [2026-10-21] Added "Target Position" Card in Reclassification Info (`reclass_gc.target_position`)
+
+### 1. Frontend Layout & Card Pipeline (`ApplicantDashboard.tsx`)
+- Added a dedicated **"Target Position"** card in the **Reclassification Info** section placed directly before the **"Target Reclass"** card.
+- Updated the grid layout to support up to 6 columns seamlessly across responsive viewports (`grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5`).
+- The new card directly renders `reclassData.target_position || reclassData.reclass_position || '—'`.
+- The subsequent **"Target Reclass"** card continues to display `reclassData.reclass_position || reclassData.target_position || '—'` alongside its interactive position edit and save functionality.
+- Updated the **"Initial Assessment"** card to gracefully render `'—'` when empty.
+
+### 2. Backend Data Synchronization (`ApplicantsService.ts`)
+- In `ApplicantsService.getReclassDetails`, `ApplicantsService.login` (reclass flow), and session profile helpers:
+  - Ensured `target_position` explicitly prioritizes `reclass_gc.target_position` (`incumbent?.target_position`), falling back to `reclass_position`.
+  - Added explicit `reclass_position` field in returned data objects to preserve separate access to both database columns.
+
+## [2026-10-21] Fixed Revision Document Count Discrepancy (Dashboard vs Modal)
+
+### 1. Root Cause Identification
+- In `reclass_gc.document_checklist` (JSONB array), duplicate entries existed for the same requirement key (e.g., `eligibility` appeared 3 times with `status: 'for_revision'`).
+- In `ApplicantDashboard.tsx`:
+  - `parseChecklistDocuments` previously mapped raw array entries directly without key deduplication.
+  - As a result, `revisionDocuments = checklistDocuments.filter(d => d.rawStatus === 'for_revision')` returned a length of `3`, displaying `"3 For Revision"` on the dashboard button and `"3 Document(s) Returned"` in Step 2.
+- In `ReclassUploadModal.tsx`:
+  - The modal maps against the 8 unique standard `RECLASS_REQUIREMENTS`.
+  - For each standard requirement (e.g. `proof_of_eligibility`), `(revisionDocuments || []).find(...)` matched only the first item, rendering exactly **1 requirement card** flagged for revision.
+  - This caused the dashboard button to say `"3 For Revision"` while the modal only displayed `1`.
+
+### 2. Resolution & Fixes Applied
+- **Database Cleanup**:
+  - Ran automated deduplication script against `reclass_gc.document_checklist`, collapsing redundant array entries down to unique requirements while strictly preserving `for_revision` status, remarks, and file URLs.
+- **Frontend Deduplication (`ApplicantDashboard.tsx`)**:
+  - Added `normalizeRequirementKey` to canonicalize requirement keys across aliases (`pds`, `loi`, `eligibility`, `tor`, `service`, `training`, `cav`, `performance`).
+  - Updated `parseChecklistDocuments` to deduplicate items by normalized requirement key. If duplicate items exist, priority is given to items with `for_revision` status and existing evaluator remarks/file URLs.
+  - `revisionDocsCount` and `revisionDocuments` now strictly represent unique requirement cards requiring revision, ensuring 1:1 parity with the modal cards.
+- **Backend Persistence Deduplication (`ApplicantsService.uploadReclassDocument`)**:
+  - Added `normalizeReclassChecklistKey` and deduplication in `ApplicantsService.uploadReclassDocument` to prevent any future duplicate checklist entries from being written to `reclass_gc.document_checklist`.
+
+## [2026-10-21] Wording Reduction & Simplification (Step 2 Revision & Step 3 Regional Cards)
+
+### 1. Step 2 Revision Card Copywriting Reduction (`ApplicantDashboard.tsx`)
+- Condensed repetitive wording in the rose revision card:
+  - Header: Reduced from `HRMO Document Review` to **`Document Review`**.
+  - Count text: Changed from uppercase `3 DOCUMENT(S) RETURNED` to clean sentence case **`3 Document(s) Returned`**.
+  - Instruction: Reduced from *"Evaluator flagged requirements for revision. Please re-upload updated copies."* to **`Please re-upload revised copies.`**
+  - Action Button: Shortened from *"Reclassification Document Submission"* to **`Submit Revisions`**.
+
+### 2. Step 3 Regional Office Card Copywriting Reduction (`ApplicantDashboard.tsx`)
+- Condensed redundant phrasing in the Step 3 card:
+  - Subtitle: Reduced from `Step 3 • DepEd Regional Office` to **`Step 3 • Regional Office`**.
+  - Title: Simplified from `Endorsed to RO (Final Eval)` to **`RO Evaluation`**.
+  - Description: Condensed from *"Endorsement to DepEd Regional Office for final evaluation, regional consolidation, and endorsement to DBM."* to **`Final evaluation and endorsement to DBM.`**
+  - Status Tag: Shortened from `Under Regional Office Evaluation` to **`Under RO Evaluation`**.
+
+## [2026-10-21] Database Migration: Added `target_position` Column to `reclass_gc`
+
+### 1. Schema Enhancement (`reclass_gc`)
+- Added new column **`target_position VARCHAR(255)`** to the `reclass_gc` table:
+  - In schema definition (`backend/src/database.ts`), placed before `reclass_position VARCHAR(255)`.
+  - Added startup migration `ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS target_position VARCHAR(255);`.
+  - Added database trigger rule in `trg_uppercase_reclass_gc()` to automatically uppercase and trim `target_position`.
+  - Backfilled existing 45 rows in `reclass_gc` with `target_position = reclass_position`.
+  - Updated backend service queries in [[ApplicantsService](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts)] to synchronize `target_position` alongside `reclass_position`.
+
+## [2026-10-21] Status Transition ("Re-submit") & Approved Document Re-upload Override
+
+### 1. Document Re-upload Override (`ApplicantsService.uploadReclassDocument`)
+- When a document is re-uploaded by the applicant, the checklist item in `reclass_gc.document_checklist` is now updated to **`status: 're-submit'`** and **`rawStatus: 're-submit'`** unconditionally, even if the document was previously marked as **`approved`** or **`verified`**.
+- Sets `submitted: true`, `reupload = true`, and timestamps `resubmitted_at = NOW()`.
+
+### 2. Status Label Transition (`Re-submitted` → `Re-submit`)
+- Replaced the status label from **`"Re-submitted"`** to **`"Re-submit"`** across UI components:
+  - **Dashboard Stepper Top Badge**: Displays **`Re-submit`**.
+  - **Dashboard Header Badge**: Displays **`Re-submit`**.
+  - **Dashboard Step 2 Review Box**: Displays **`Re-submit`**.
+  - **Reclassification Modal Cards (`ReclassUploadModal.tsx`)**: Displays badge **`Re-submit`** and sets button title to **`Re-submit`** when replacing an existing/approved file.
+
+## [2026-10-21] Simplified Step 2 HRMO Review Status Card Text
+
+### 1. Concise Copywriting (`ApplicantDashboard.tsx`)
+- Condensed redundant text inside the Step 2 amber review box:
+  - Header: `Document Review` with `Re-submitted` status pill.
+  - Body: Simplified from *"DOCUMENTS RE-SUBMITTED / Verification of re-submitted qualification credentials in progress."* to a crisp, clear: **`Verification in progress.`**
+  - Action Button: Shortened to **`View Documents`**.
+
+## [2026-10-21] Unified Reclassification Document Fetching (`reclass_documents` + `reclass_gc`)
+
+### 1. Dual-Source Document Retrieval Pipeline (`ApplicantsService.getReclassDocuments`)
+- **Direct Linkage Resolution**:
+  - Resolves applicant linkage across `applicants` (`plantilla_item_number`), `reclass_gc` (`item_no` or `first_name` + `last_name`), and `reclass_applications`.
+- **Query from `reclass_documents`**:
+  - Queries `reclass_documents` matching `reclass_application_id` or `plantilla_item_number`.
+  - Added strict `AND file_url IS NOT NULL AND TRIM(file_url) != ''` to guarantee that only rows with valid, uploaded file URLs are retrieved and counted.
+  - Ordered by `uploaded_at DESC, id DESC` to ensure the newest uploaded version takes precedence and is not overwritten by null/empty rows.
+- **Merge with `reclass_gc.document_checklist` (JSONB)**:
+  - Parses `document_checklist` from `reclass_gc` and merges files into the document map.
+  - Automatically enriches any missing documents or status indicators directly from the evaluator checklist.
+- **Resilient Key Normalization**:
+  - Added robust keyword and fuzzy title matching (`resolveCategoryKey`) ensuring database title variations (e.g., extra whitespace, alternate naming like `"Personal Data Sheet (PDS)"` vs `"pds"`) reliably map to the frontend requirement keys.
+
+## [2026-10-21] Status Replacement ("Re-submitted") & Amber Color Palette Implementation
+
+### 1. Status Label Transition (`submitted` → `re-submitted`)
+- Replaced the status of `"submitted"` with **`"re-submitted"`** across the reclassification pipeline:
+  - **Backend Synchronization (`ApplicantsService.uploadReclassDocument`)**: When a requirement flagged for revision is re-uploaded, its status in `document_checklist` is recorded as `'re-submitted'` with `rawStatus: 're-submitted'`.
+  - **Dashboard Stepper Title Badge**: Next to "HRMO Review & Evaluation", displays the badge with label **`Re-submitted`**.
+  - **Dashboard Stepper Top Status Pill**: Displays **`Re-submitted`**.
+  - **Dashboard Stepper Review Card Body**: Displays **`DOCUMENTS RE-SUBMITTED`** with the **`Re-submitted`** status tag.
+  - **Current Stage Header**: Displays the prominent **`Re-submitted`** badge beside the current stage title.
+  - **Reclassification Modal Cards (`ReclassUploadModal.tsx`)**: Replaced the `"Submitted"` tag with **`"Re-submitted"`**, and updated success dialogs to note documents as `"Re-submitted"`.
+
+### 2. Amber Visual Palette Integration
+- Adopted the exact warm amber aesthetic specified by user:
+  - **Badge Background**: `bg-amber-50/90`
+  - **Badge Border**: `border border-amber-300/80`
+  - **Badge Text Color**: `text-amber-900`
+  - **Badge Icon Color**: `text-amber-600` (`<FileCheck className="w-3 h-3 text-amber-600" />`)
+  - **Status Card Container**: `bg-amber-50/90 border border-amber-300/80 text-amber-950`
+  - **Accessibility**: Exceeds WCAG AAA contrast ratio ($\ge 7.4:1$) for dark amber text against soft amber/cream background.
+
+## [2026-10-21] Un-Uploaded Document Action Button Isolation & HRMO Review Submitted Status Display
+
+### 1. Document Submission Action Button Isolation (`ReclassUploadModal.tsx`)
+- **Un-Uploaded Document Action State**:
+  - When no document is attached / uploaded (`!hasUploadedDoc`):
+    - Removed the **"View"** button.
+    - Removed the **"Replace"** button.
+    - Strictly displays the primary **"Upload"** button (`<Upload className="w-3.5 h-3.5" /> Upload`) styled with high-contrast portal theme (`bg-[#022851] hover:bg-[#033a76] text-white`).
+- **Uploaded Document Action State**:
+  - Only when a document is uploaded (`hasUploadedDoc` is true with valid file URL):
+    - Displays the **"View"** button (`<Eye className="w-3.5 h-3.5 text-blue-600" /> View`).
+    - Displays the **"Replace"** button (`<RefreshCw className="w-3.5 h-3.5 text-gray-500" /> Replace` or `<Upload /> Re-upload` if flagged for revision).
+- **Staged File State**:
+  - Displays `Remove` / `Change` / `Upload` (or `Re-submit`) for immediate single-click submission.
+
+### 2. "HRMO Review & Evaluation" Submitted Status Synchronization (`ApplicantDashboard.tsx`)
+- **Comprehensive Submitted State Detection (`hasSubmittedStatus`)**:
+  - Evaluates true when `reclass_gc.documents_status` is `DOCUMENTS SUBMITTED` or `SUBMITTED`, or when any requirement in `reclass_gc.document_checklist` has `status: 'submitted'` or `submitted: true`.
+- **Display "Submitted" in "HRMO Review & Evaluation"**:
+  - **Step 2 Stepper Card Title**: Renders a dedicated `Submitted` badge directly beside `HRMO Review & Evaluation`:
+    `<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs"><FileCheck className="w-3 h-3 text-sky-600" /> Submitted</span>`.
+  - **Step 2 Top Status Pill**: Displays `Submitted`.
+  - **Step 2 Review Body**: Renders the `DOCUMENTS SUBMITTED` card with `[FileCheck] Submitted` tag and direct document viewing action.
+  - **Current Stage Header**: In Step 2 with submitted status, displays a prominent `[FileCheck] Submitted` badge right beside the stage title `HRMO Review & Evaluation`.
+
+## [2026-10-21] Reclassification Document Submission: "For Revision" Re-Submission Pipeline & Responsive Design
+
+### 1. Document Status Transition on Re-submission (`for_revision` → `submitted`)
+- **Backend API Synchronization (`ApplicantsService.uploadReclassDocument`)**:
+  - When an applicant uploads/re-uploads a document attached to their reclassification profile:
+    - Queries `reclass_gc.document_checklist` matching the document requirement (`categoryKey` / `categoryTitle`).
+    - If the requirement status was `for_revision` (or includes `revision`), automatically updates the item's `status` to `'submitted'`, sets `submitted: true`, updates timestamps and file metadata.
+    - Persists the updated JSON array back to `reclass_gc.document_checklist`.
+    - Triggers PostgreSQL `trg_uppercase_reclass_gc` to recalculate `reclass_gc.document_status`, cleanly transitioning it out of `FOR REVISION` and into `DOCUMENTS SUBMITTED` / `PENDING DOCUMENT REVIEW`.
+    - Ensures `getReclassDetails` returns the updated checklist with `status: "submitted"`.
+
+### 2. Document Requirement Card Visual Presentation (`ReclassUploadModal.tsx`)
+- **Submitted Tag & Icon**:
+  - Cards with `status: 'submitted'` now feature dedicated sky/blue portal styling:
+    - **Tag / Badge**: `<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs"><FileCheck className="w-3 h-3 text-sky-600" /> Submitted</span>`.
+    - **Icon Box**: `<div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs bg-sky-100 text-sky-700 border border-sky-300 shadow-2xs"><FileCheck className="w-5 h-5 text-sky-600" /></div>`.
+    - **Card Container**: High-contrast, clean container `bg-sky-50/40 border-sky-300/80 shadow-xs ring-1 ring-sky-200/50`.
+  - **Staged File State on Revision Documents**:
+    - When a replacement PDF is selected for a revision item, the card displays `[FileCheck] Replacement Selected (Ready to Re-submit)` with a calm sky ring, giving immediate feedback without persistent alarming red rings.
+  - **Immediate Per-Card Re-Submit Action**:
+    - Added a direct `Re-submit` / `Submit` button on each card when a file is staged, providing instant 1-click re-submission alongside the batch footer `Upload & Submit ({count})` button.
+  - **Evaluator Feedback Context**:
+    - For re-submitted documents with previous evaluator remarks, displays `Previous HRMO Remarks (Re-submitted): "..."` in a neutral slate callout.
+
+### 3. Dashboard Stepper Card Synchronization (`ApplicantDashboard.tsx`)
+- In Step 2 ("SDO Division HRMO / HRMO Review & Evaluation"):
+  - When documents are submitted, displays `Submitted` top badge with `<FileCheck />` icon.
+  - Displays `DOCUMENTS SUBMITTED` with `<FileCheck className="w-3.5 h-3.5 text-sky-600" />` status icon and a direct `View Reclassification Documents` action button.
+
+### 4. Senior Designer Accessibility & Responsive Architecture
+- Adheres to Arthur's Master Designer directives (`.agents/senior_designer_agent.md`):
+  - **Responsive Design**: Action buttons and status tags wrap cleanly on mobile screens (`< sm`) without overflow or text truncation. Touch targets meet minimum accessible sizes (>= 36px-40px).
+  - **Contrast & Hierarchy**: Colors adhere to WCAG AA/AAA guidelines with text contrast ratios >= 7:1 for sky badges and status labels.
+
 ## [2026-10-20] Reclassification Status Display: "ALL DOCUMENT REVIEWED" & QS Status (Excluded Red Highlighting)
 
 ### 1. Dual Status Rendering for Completed HRMO Review
 - In [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx):
   - When `reclass_gc.documents_status = "ALL DOCUMENT REVIEWED"`:
     - **Simultaneous Display**: Both **`ALL DOCUMENT REVIEWED`** and **`reclass_gc.qs_status`** are displayed together.
-    - **Step 2 Card Body**:
-      - **Document Status Section**: Displays `ALL DOCUMENT REVIEWED` in emerald with `<FileCheck />` and a `Verified` badge.
-      - **HRMO QS Evaluation Result Section**: Displays `reclass_gc.qs_status` (e.g., `EXCLUDED` or `QUALIFIED FOR RECLASSIFICATION`) with appropriate icon, status badge, and official description.
+    - **Step 2 Card Body (Separated Cards & Adjusted Layout)**:
+      - **Separated Cards**: Split the previous combined container into two dedicated, clean cards (`space-y-2`) with crisp contrast and breathing room.
+      - **Card 1: Document Review Status (Verified)**: Dedicated container displaying `[FileCheck] Document Review` and `Verified` pill on the header line, with `ALL DOCUMENT REVIEWED` on its own unconstrained line to avoid awkward text wrapping.
+      - **Card 2: HRMO QS Evaluation Result (Qualified / Excluded)**: Dedicated container displaying `[Check/Alert] HRMO QS Evaluation` and `Qualified` / `Excluded` pill on the header line, with qualification status and description clearly formatted below.
     - **Current Stage Header**:
       - Displays both `ALL DOCUMENT REVIEWED` badge and `qs_status` badge.
       - Live pulsing dot and stage title seamlessly adapt to the QS evaluation outcome.

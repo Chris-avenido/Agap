@@ -182,7 +182,7 @@ class ApplicantsServiceClass {
         rawText = data.text;
       } else if (
         file.mimetype ===
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
         file.mimetype === 'application/msword'
       ) {
         const result = await mammoth.extractRawText({ buffer: file.buffer });
@@ -427,7 +427,7 @@ class ApplicantsServiceClass {
     if (typeof otherInfo === 'string') {
       try {
         otherInfo = JSON.parse(otherInfo);
-      } catch (e) {}
+      } catch (e) { }
     }
     const letterOfIntent = otherInfo?.documents?.['Letter of Intent'] || null;
     const swornDocument = otherInfo?.documents?.['Sworn Declaration'] || null;
@@ -1058,8 +1058,8 @@ class ApplicantsServiceClass {
         ) {
           const existingObj =
             existingDoc &&
-            typeof existingDoc === 'object' &&
-            !Array.isArray(existingDoc)
+              typeof existingDoc === 'object' &&
+              !Array.isArray(existingDoc)
               ? existingDoc
               : {};
           mergedDocs[docKey] = {
@@ -1193,7 +1193,7 @@ class ApplicantsServiceClass {
       if (typeof otherInfo === 'string') {
         try {
           otherInfo = JSON.parse(otherInfo);
-        } catch {}
+        } catch { }
       }
       if (!otherInfo.documents) otherInfo.documents = {};
 
@@ -1911,7 +1911,14 @@ class ApplicantsServiceClass {
       incumbent?.current_position ||
       'Guidance Counselor';
     const targetPosition =
-      reclassApp?.reclass_position || incumbent?.reclass_position || null;
+      incumbent?.target_position ||
+      reclassApp?.reclass_position ||
+      incumbent?.reclass_position ||
+      null;
+    const reclassPosition =
+      incumbent?.reclass_position ||
+      reclassApp?.reclass_position ||
+      null;
     const indicativePosition =
       incumbent?.indicative_position ||
       reclassApp?.indicative_position ||
@@ -1993,14 +2000,16 @@ class ApplicantsServiceClass {
     if (reclassAppId && plantilla) {
       const cRes = await pool.query(
         `SELECT COUNT(DISTINCT document_title) as cnt FROM reclass_documents 
-         WHERE reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2))`,
+         WHERE (reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)))
+           AND file_url IS NOT NULL AND TRIM(file_url) != ''`,
         [reclassAppId, plantilla],
       );
       docCount = parseInt(cRes.rows[0]?.cnt || '0', 10);
     } else if (plantilla) {
       const cRes = await pool.query(
         `SELECT COUNT(DISTINCT document_title) as cnt FROM reclass_documents 
-         WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))`,
+         WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1))
+           AND file_url IS NOT NULL AND TRIM(file_url) != ''`,
         [plantilla],
       );
       docCount = parseInt(cRes.rows[0]?.cnt || '0', 10);
@@ -2023,6 +2032,7 @@ class ApplicantsServiceClass {
       full_name: fullName,
       plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
       target_position: targetPosition,
+      reclass_position: reclassPosition,
       current_position: currentPosition,
       salary_grade:
         targetSalaryGrade ||
@@ -2075,7 +2085,7 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       await pool.query(
-        `UPDATE reclass_gc SET reclass_position = $1, updated_at = NOW() WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($2))`,
+        `UPDATE reclass_gc SET target_position = $1, reclass_position = $1, updated_at = NOW() WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($2))`,
         [cleanPosition, plantilla],
       );
 
@@ -2370,7 +2380,7 @@ class ApplicantsServiceClass {
        LIMIT 1`,
       [normalizedItemNo],
     );
-    
+
     let existingApplicantId: number | null = null;
     if (existingItem.rows.length > 0) {
       const appRow = existingItem.rows[0];
@@ -2868,8 +2878,13 @@ class ApplicantsServiceClass {
         applicant.current_designation ||
         'Guidance Counselor',
       target_position:
+        incumbent?.target_position ||
         reclassApp?.reclass_position ||
         incumbent?.reclass_position ||
+        null,
+      reclass_position:
+        incumbent?.reclass_position ||
+        reclassApp?.reclass_position ||
         null,
       region: incumbent?.region || applicant.region || null,
       division: incumbent?.division || applicant.division || null,
@@ -3015,8 +3030,10 @@ class ApplicantsServiceClass {
         let pIdx = 1;
 
         if (targetPosition && targetPosition.trim()) {
+          incUpdates.push(`target_position = $${pIdx}`);
           incUpdates.push(`reclass_position = $${pIdx++}`);
           incParams.push(targetPosition.trim());
+          incumbent.target_position = targetPosition.trim();
           incumbent.reclass_position = targetPosition.trim();
         }
         if (region && region.trim()) {
@@ -3248,9 +3265,14 @@ class ApplicantsServiceClass {
           plantilla_item_number:
             normalizedPlantilla || incumbent?.item_no || null,
           target_position:
+            incumbent?.target_position ||
             reclassApp?.reclass_position ||
             incumbent?.reclass_position ||
             targetPosition ||
+            null,
+          reclass_position:
+            incumbent?.reclass_position ||
+            reclassApp?.reclass_position ||
             null,
           current_position:
             reclassApp?.current_position ||
@@ -3309,7 +3331,7 @@ class ApplicantsServiceClass {
       .toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
-      `SELECT region, division, reclass_position as target_position, current_position, first_name, last_name, school_name
+      `SELECT region, division, COALESCE(target_position, reclass_position) as target_position, target_position as gc_target_position, reclass_position, current_position, first_name, last_name, school_name
        FROM reclass_gc
        WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
        LIMIT 1`,
@@ -3324,29 +3346,66 @@ class ApplicantsServiceClass {
   }
 
   async getReclassDocuments(applicantId: number) {
+    // 1. Resolve applicant details and plantilla / incumbent information
     const reclassDetails = await this.getReclassDetails(applicantId);
-    const reclassAppId = reclassDetails?.reclass_application?.id || null;
-    const plantillaItemNumber =
+    let reclassAppId = reclassDetails?.reclass_application?.id || null;
+    let plantillaItemNumber =
       reclassDetails?.plantilla_item_number || reclassDetails?.item_no || null;
 
-    let docsRes: any = { rows: [] };
-    if (reclassAppId && plantillaItemNumber) {
-      docsRes = await pool.query(
-        `SELECT * FROM reclass_documents 
-         WHERE reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)) 
-         ORDER BY id ASC`,
-        [reclassAppId, plantillaItemNumber],
+    // Direct lookup on applicants & reclass_gc to ensure reliable linkage
+    let reclassGcRow: any = null;
+    try {
+      const appRowRes = await pool.query(
+        `SELECT plantilla_item_number, first_name, surname FROM applicants WHERE id = $1`,
+        [applicantId],
       );
-    } else if (reclassAppId) {
-      docsRes = await pool.query(
-        `SELECT * FROM reclass_documents WHERE reclass_application_id = $1 ORDER BY id ASC`,
-        [reclassAppId],
-      );
-    } else if (plantillaItemNumber) {
-      docsRes = await pool.query(
-        `SELECT * FROM reclass_documents WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1)) ORDER BY id ASC`,
-        [plantillaItemNumber],
-      );
+      const appRow = appRowRes.rows[0];
+      const appPlantilla = appRow?.plantilla_item_number;
+      if (!plantillaItemNumber && appPlantilla) {
+        plantillaItemNumber = appPlantilla;
+      }
+
+      // Check reclass_gc by item_no or name
+      if (plantillaItemNumber) {
+        const gcCheck = await pool.query(
+          `SELECT * FROM reclass_gc WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1)) LIMIT 1`,
+          [plantillaItemNumber],
+        );
+        if (gcCheck.rows.length > 0) {
+          reclassGcRow = gcCheck.rows[0];
+        }
+      }
+      if (!reclassGcRow && appRow?.first_name && appRow?.surname) {
+        const gcCheckByName = await pool.query(
+          `SELECT * FROM reclass_gc 
+           WHERE UPPER(TRIM(COALESCE(first_name, ''))) = UPPER(TRIM($1)) 
+             AND UPPER(TRIM(COALESCE(last_name, ''))) = UPPER(TRIM($2)) 
+           LIMIT 1`,
+          [appRow.first_name, appRow.surname],
+        );
+        if (gcCheckByName.rows.length > 0) {
+          reclassGcRow = gcCheckByName.rows[0];
+          if (!plantillaItemNumber && reclassGcRow.item_no) {
+            plantillaItemNumber = reclassGcRow.item_no;
+          }
+        }
+      }
+
+      // Check reclass_applications if reclassAppId is missing
+      if (!reclassAppId && (reclassGcRow?.id || plantillaItemNumber)) {
+        const appCheck = await pool.query(
+          `SELECT id FROM reclass_applications 
+           WHERE (reclass_gc_id IS NOT NULL AND reclass_gc_id = $1)
+              OR (item_no IS NOT NULL AND UPPER(TRIM(item_no)) = UPPER(TRIM($2)))
+           ORDER BY id DESC LIMIT 1`,
+          [reclassGcRow?.id || -1, plantillaItemNumber || ''],
+        );
+        if (appCheck.rows.length > 0) {
+          reclassAppId = appCheck.rows[0].id;
+        }
+      }
+    } catch (lookupErr) {
+      console.warn('Error resolving reclass applicant linkage:', lookupErr);
     }
 
     const keyByTitle: Record<string, string> = {
@@ -3378,14 +3437,59 @@ class ApplicantsServiceClass {
       performance_rating: 'performance_rating',
     };
 
-    if (docsRes.rows.length > 0) {
-      return docsRes.rows.map((row: any) => {
-        const title = row.document_title || '';
-        const lowerTitle = title.trim().toLowerCase();
-        const categoryKey =
-          keyByTitle[lowerTitle] || lowerTitle.replace(/[^a-z0-9_-]/g, '_');
+    const resolveCategoryKey = (titleOrKey?: string): string => {
+      if (!titleOrKey) return 'document';
+      const clean = String(titleOrKey).trim().toLowerCase().replace(/\s+/g, ' ');
+      if (keyByTitle[clean]) return keyByTitle[clean];
 
-        return {
+      // Robust keyword matching against database variations
+      if (clean.includes('pds') || clean.includes('personal data')) return 'pds';
+      if (clean.includes('intent') || clean.includes('rftp')) return 'letter_of_intent';
+      if (clean.includes('eligibility') || clean.includes('prc') || clean.includes('license')) return 'proof_of_eligibility';
+      if (clean.includes('academic') || clean.includes('scholastic') || clean.includes('tor') || clean.includes('transcript') || clean.includes('diploma')) return 'academic_record';
+      if (clean.includes('service record') || clean.includes('service records') || clean.includes('appointment')) return 'service_record';
+      if (clean.includes('training') || clean.includes('certificate/s')) return 'training_certs';
+      if (clean.includes('omnibus') || clean.includes('sworn statement') || clean.includes('cav')) return 'omnibus_sworn_statement';
+      if (clean.includes('performance') || clean.includes('rating') || clean.includes('ipcrf')) return 'performance_rating';
+
+      return clean.replace(/[^a-z0-9_-]/g, '_');
+    };
+
+    const combinedDocsMap = new Map<string, any>();
+
+    // 2. Fetch from reclass_documents table (ordered by uploaded_at DESC, id DESC so latest upload takes precedence)
+    let docsRes: any = { rows: [] };
+    if (reclassAppId && plantillaItemNumber) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents 
+         WHERE (reclass_application_id = $1 OR UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)))
+           AND file_url IS NOT NULL AND TRIM(file_url) != '' 
+         ORDER BY uploaded_at DESC, id DESC`,
+        [reclassAppId, plantillaItemNumber],
+      );
+    } else if (reclassAppId) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents 
+         WHERE reclass_application_id = $1 
+           AND file_url IS NOT NULL AND TRIM(file_url) != '' 
+         ORDER BY uploaded_at DESC, id DESC`,
+        [reclassAppId],
+      );
+    } else if (plantillaItemNumber) {
+      docsRes = await pool.query(
+        `SELECT * FROM reclass_documents 
+         WHERE UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($1)) 
+           AND file_url IS NOT NULL AND TRIM(file_url) != '' 
+         ORDER BY uploaded_at DESC, id DESC`,
+        [plantillaItemNumber],
+      );
+    }
+
+    for (const row of docsRes.rows) {
+      const categoryKey = resolveCategoryKey(row.document_title);
+      // Prefer rows that have a valid file_url
+      if (!combinedDocsMap.has(categoryKey) || (!combinedDocsMap.get(categoryKey)?.file_url && row.file_url)) {
+        combinedDocsMap.set(categoryKey, {
           id: String(row.id),
           category_key: categoryKey,
           category_title: row.document_title || 'Document',
@@ -3394,11 +3498,67 @@ class ApplicantsServiceClass {
           uploaded_at: row.uploaded_at
             ? new Date(row.uploaded_at).toISOString()
             : new Date().toISOString(),
-        };
-      });
+          source: 'reclass_documents',
+        });
+      }
     }
 
-    return [];
+    // 3. Fetch & merge from reclass_gc table (document_checklist JSONB)
+    const rawChecklist =
+      reclassGcRow?.document_checklist ||
+      reclassDetails?.document_checklist ||
+      reclassDetails?.documents_checklist;
+    let checklist: any = null;
+    if (typeof rawChecklist === 'string') {
+      try {
+        checklist = JSON.parse(rawChecklist);
+      } catch {
+        checklist = null;
+      }
+    } else if (rawChecklist && typeof rawChecklist === 'object') {
+      checklist = rawChecklist;
+    }
+
+    if (checklist) {
+      const checklistItems: any[] = Array.isArray(checklist)
+        ? checklist
+        : Object.entries(checklist).map(([k, v]: any) =>
+          typeof v === 'object' && v !== null ? { key: k, ...v } : { key: k, status: v },
+        );
+
+      for (const item of checklistItems) {
+        if (!item || typeof item !== 'object') continue;
+        const itemTitle =
+          item.title || item.label || item.shortTitle || item.name || item.key || '';
+        const itemKey = item.key || item.id || '';
+        const candidateKey = resolveCategoryKey(itemKey);
+        const categoryKey = candidateKey !== 'document' ? candidateKey : resolveCategoryKey(itemTitle);
+        const itemFileUrl = item.file_url || item.url || item.fileUrl;
+        const itemFileName = item.file_name || item.fileName;
+
+        if (itemFileUrl) {
+          const existing = combinedDocsMap.get(categoryKey);
+          if (!existing) {
+            combinedDocsMap.set(categoryKey, {
+              id: String(item.id || item.key || `gc-${categoryKey}`),
+              category_key: categoryKey,
+              category_title: itemTitle || 'Document',
+              file_name: itemFileName || 'document.pdf',
+              file_url: itemFileUrl,
+              uploaded_at: item.resubmitted_at || item.updated_at || new Date().toISOString(),
+              status: item.status || 'resubmit',
+              source: 'reclass_gc',
+            });
+          } else if (!existing.file_url && itemFileUrl) {
+            existing.file_url = itemFileUrl;
+            existing.file_name = itemFileName || existing.file_name;
+            if (item.status) existing.status = item.status;
+          }
+        }
+      }
+    }
+
+    return Array.from(combinedDocsMap.values());
   }
 
   async uploadReclassDocument(
@@ -3544,24 +3704,108 @@ class ApplicantsServiceClass {
       );
     }
 
-    // 4. Update reclass_gc.reupload = true upon document upload
-    if (folderGcId) {
-      await pool.query(
-        `UPDATE reclass_gc
-         SET reupload = true,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [folderGcId],
+    // 4. Update reclass_gc.reupload = true and update document_checklist:
+    // If a document has status 'for_revision', upon re-upload / re-submission, its status changes to 'submitted'
+    try {
+      const gcRows = await pool.query(
+        `SELECT id, document_checklist, item_no FROM reclass_gc 
+         WHERE (id = $1 OR ($2::text IS NOT NULL AND UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($2))))`,
+        [folderGcId || -1, plantillaItemNumber || null],
       );
-    }
-    if (plantillaItemNumber) {
-      await pool.query(
-        `UPDATE reclass_gc
-         SET reupload = true,
-             updated_at = NOW()
-         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
-        [plantillaItemNumber],
-      );
+
+      for (const gcRow of gcRows.rows) {
+        let checklist = gcRow.document_checklist;
+        let isUpdated = false;
+
+        if (typeof checklist === 'string') {
+          try {
+            checklist = JSON.parse(checklist);
+          } catch {
+            checklist = null;
+          }
+        }
+
+        if (Array.isArray(checklist)) {
+          const map = new Map<string, any>();
+          for (const item of checklist) {
+            if (!item || typeof item !== 'object') continue;
+            const matches = matchesReclassDocChecklist(categoryKey, categoryTitle, item);
+            const updated = matches
+              ? {
+                ...item,
+                status: 'resubmit',
+                rawStatus: 'resubmit',
+                submitted: true,
+                file_name: file.originalname,
+                file_url: fileUrl,
+                resubmitted_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }
+              : item;
+
+            if (matches) isUpdated = true;
+
+            const k = normalizeReclassChecklistKey(updated);
+            if (!map.has(k)) {
+              map.set(k, updated);
+            } else {
+              const existing = map.get(k);
+              if (updated.status === 'for_revision' && existing.status !== 'for_revision') {
+                map.set(k, { ...existing, ...updated });
+              } else if (updated.file_url && !existing.file_url) {
+                map.set(k, { ...existing, ...updated });
+              } else if (matches) {
+                map.set(k, { ...existing, ...updated });
+              }
+            }
+          }
+          checklist = Array.from(map.values());
+        } else if (checklist && typeof checklist === 'object') {
+          for (const [k, v] of Object.entries(checklist)) {
+            const item: any = v;
+            if (item && typeof item === 'object') {
+              const matches = matchesReclassDocChecklist(categoryKey, categoryTitle, { key: k, ...item });
+              if (matches) {
+                isUpdated = true;
+                item.status = 'resubmit';
+                item.rawStatus = 'resubmit';
+                item.submitted = true;
+                item.file_name = file.originalname;
+                item.file_url = fileUrl;
+                item.resubmitted_at = new Date().toISOString();
+                item.updated_at = new Date().toISOString();
+              }
+            }
+          }
+        }
+
+        if (isUpdated) {
+          await pool.query(
+            `UPDATE reclass_gc
+             SET document_checklist = $1,
+                 reupload = true,
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [JSON.stringify(checklist), gcRow.id],
+          );
+        } else {
+          await pool.query(
+            `UPDATE reclass_gc
+             SET reupload = true,
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [gcRow.id],
+          );
+        }
+      }
+    } catch (checkErr) {
+      console.error('Error updating document_checklist on re-upload:', checkErr);
+      if (folderGcId) {
+        await pool.query(
+          `UPDATE reclass_gc SET reupload = true, updated_at = NOW() WHERE id = $1`,
+          [folderGcId],
+        );
+      }
     }
 
     // 5. Log audit entry
@@ -3610,6 +3854,144 @@ class ApplicantsServiceClass {
       documents: updatedDocs,
     };
   }
+}
+
+function matchesReclassDocChecklist(
+  reqKey: string,
+  categoryTitle: string,
+  item: any,
+): boolean {
+  if (!item) return false;
+  const rk = String(reqKey || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const ct = String(categoryTitle || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const ik = String(item.key || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const iid = String(item.id || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const it = String(
+    item.title || item.label || item.shortTitle || item.name || '',
+  )
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  if (rk && (rk === ik || rk === iid)) return true;
+  if (ct && (ct === it || (it && ct.includes(it)) || (it && it.includes(ct)))) return true;
+  if (rk && ik && (rk.includes(ik) || ik.includes(rk))) return true;
+  if (rk && iid && (rk.includes(iid) || iid.includes(rk))) return true;
+
+  if (
+    rk === 'letterofintent' &&
+    (iid === 'loi' || it.includes('intent') || ik.includes('intent') || ct.includes('intent'))
+  )
+    return true;
+  if (
+    rk === 'pds' &&
+    (iid === 'pds' || it.includes('personaldata') || it.includes('pds') || ik.includes('pds') || ct.includes('pds'))
+  )
+    return true;
+  if (
+    rk === 'proofofeligibility' &&
+    (iid === 'eligibility' ||
+      it.includes('eligibility') ||
+      it.includes('prc') ||
+      it.includes('license') ||
+      ik.includes('eligibility') ||
+      ct.includes('eligibility'))
+  )
+    return true;
+  if (
+    rk === 'academicrecord' &&
+    (iid === 'tor' ||
+      it.includes('tor') ||
+      it.includes('academic') ||
+      it.includes('transcript') ||
+      it.includes('diploma') ||
+      ik.includes('tor') ||
+      ct.includes('academic'))
+  )
+    return true;
+  if (
+    rk === 'servicerecord' &&
+    (iid === 'employment' ||
+      iid === 'appointment' ||
+      it.includes('service') ||
+      it.includes('employment') ||
+      it.includes('appointment') ||
+      ik.includes('service') ||
+      ct.includes('service'))
+  )
+    return true;
+  if (
+    rk === 'trainingcerts' &&
+    (iid === 'training' || it.includes('training') || ik.includes('training') || ct.includes('training'))
+  )
+    return true;
+  if (
+    rk === 'omnibusswornstatement' &&
+    (iid === 'cav' ||
+      it.includes('omnibus') ||
+      it.includes('sworn') ||
+      it.includes('cav') ||
+      ik.includes('cav') ||
+      ik.includes('sworn') ||
+      ct.includes('omnibus'))
+  )
+    return true;
+  if (
+    rk === 'performancerating' &&
+    (iid === 'performance' ||
+      it.includes('performance') ||
+      it.includes('ipcrf') ||
+      it.includes('rating') ||
+      ik.includes('performance') ||
+      ct.includes('performance'))
+  )
+    return true;
+
+  return false;
+}
+
+function normalizeReclassChecklistKey(item: any): string {
+  const clean = String(item.key || item.id || item.shortTitle || item.title || item.label || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  if (clean === 'pds' || clean.includes('personaldata') || clean.includes('pds')) return 'pds';
+  if (clean === 'loi' || clean.includes('intent') || clean.includes('rftp')) return 'letter_of_intent';
+  if (
+    clean === 'eligibility' ||
+    clean.includes('prc') ||
+    clean.includes('license') ||
+    clean.includes('eligib')
+  ) {
+    if (!clean.includes('performance') && !clean.includes('ipcrf')) {
+      return 'proof_of_eligibility';
+    }
+  }
+  if (
+    clean === 'tor' ||
+    clean.includes('academic') ||
+    clean.includes('scholastic') ||
+    clean.includes('transcript') ||
+    clean.includes('diploma')
+  )
+    return 'academic_record';
+  if (
+    clean === 'service' ||
+    clean.includes('servicerecord') ||
+    clean.includes('employment') ||
+    clean.includes('appointment')
+  )
+    return 'service_record';
+  if (clean === 'training' || clean.includes('certificate')) return 'training_certs';
+  if (clean === 'cav' || clean.includes('omnibus') || clean.includes('sworn')) return 'omnibus_sworn_statement';
+  if (clean === 'performance' || clean.includes('rating') || clean.includes('ipcrf')) return 'performance_rating';
+  return clean || String(item.id || item.key || '');
 }
 
 function cleanNameString(str: string): string {

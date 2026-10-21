@@ -127,6 +127,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   const [documents, setDocuments] = useState<UploadedReclassDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [stagedFiles, setStagedFiles] = useState<Record<string, File>>({});
+  const [recentlySubmittedKeys, setRecentlySubmittedKeys] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({
     current: 0,
@@ -202,6 +203,63 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     });
   };
 
+  const handleUploadSingle = async (key: string) => {
+    const file = stagedFiles[key];
+    if (!file) return;
+
+    setIsSubmitting(true);
+    try {
+      const req = RECLASS_REQUIREMENTS.find((r) => r.key === key);
+      const categoryTitle = req?.title || key;
+      const description = req?.description || '';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category_key', key);
+      formData.append('category_title', categoryTitle);
+      formData.append('description', description);
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRecentlySubmittedKeys((prev) => Array.from(new Set([...prev, key])));
+        setStagedFiles((prev) => {
+          const copy = { ...prev };
+          delete copy[key];
+          return copy;
+        });
+        await fetchDocuments();
+        if (onUploadSuccess) onUploadSuccess();
+        Swal.fire({
+          icon: 'success',
+          title: 'Document Resubmitted',
+          text: `"${categoryTitle}" has been successfully uploaded and marked as Resubmit.`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Upload Failed',
+          text: data.message || `Failed to upload "${categoryTitle}".`,
+        });
+      }
+    } catch (err) {
+      console.error(`Error uploading ${key}:`, err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Error',
+        text: 'An unexpected error occurred while uploading. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDoneOrUpload = async () => {
     const stagedKeys = Object.keys(stagedFiles);
     if (stagedKeys.length === 0) {
@@ -213,6 +271,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     setUploadProgress({ current: 0, total: stagedKeys.length });
 
     let successCount = 0;
+    const uploadedSuccessKeys: string[] = [];
     const failedTitles: string[] = [];
 
     for (let i = 0; i < stagedKeys.length; i++) {
@@ -239,6 +298,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
         const data = await res.json();
         if (res.ok && data.success) {
           successCount++;
+          uploadedSuccessKeys.push(key);
         } else {
           failedTitles.push(categoryTitle);
         }
@@ -250,11 +310,15 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
 
     setIsSubmitting(false);
 
+    if (uploadedSuccessKeys.length > 0) {
+      setRecentlySubmittedKeys((prev) => Array.from(new Set([...prev, ...uploadedSuccessKeys])));
+    }
+
     if (failedTitles.length === 0) {
       Swal.fire({
         icon: 'success',
-        title: 'Documents Uploaded',
-        text: `${successCount} document(s) have been successfully uploaded and attached to your reclassification application.`,
+        title: 'Documents Resubmitted',
+        text: `${successCount} document(s) have been successfully uploaded and marked as Resubmit.`,
         timer: 2500,
         showConfirmButton: false,
       });
@@ -386,6 +450,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
             <div className="space-y-3.5">
               {RECLASS_REQUIREMENTS.map((req, index) => {
                 const uploadedDoc = uploadedMap[req.key];
+                const hasUploadedDoc = Boolean(uploadedDoc && uploadedDoc.file_url);
                 const stagedFile = stagedFiles[req.key];
                 const checklistDoc = (checklistDocuments || []).find((cd: any) => matchesRequirementDoc(req.key, cd));
                 const revDoc = (revisionDocuments || []).find((rd: any) => matchesRequirementDoc(req.key, rd));
@@ -394,7 +459,9 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                   revDoc?.status || checklistDoc?.rawStatus || checklistDoc?.status || ''
                 ).trim().toLowerCase().replace(/[\s-]/g, '_');
 
-                const isForRevision = rawStatus === 'for_revision' || rawStatus.includes('revision');
+                const isRecentlySubmitted = recentlySubmittedKeys.includes(req.key);
+                const isForRevision = !isRecentlySubmitted && (rawStatus === 'for_revision' || rawStatus.includes('revision'));
+                const isSubmitted = (!stagedFile && isRecentlySubmitted) || (hasUploadedDoc && (rawStatus === 'submitted' || rawStatus.includes('submit')));
                 const hasChecklistStatus = Boolean(checklistDoc?.status && String(checklistDoc.status).trim().toLowerCase() !== 'null');
                 const evaluatorRemarks = revDoc?.remarks || checklistDoc?.remarks;
 
@@ -402,45 +469,57 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                   <div
                     key={req.key}
                     className={`border rounded-xl p-4 transition-all ${
-                      isForRevision
+                      isForRevision && stagedFile
+                        ? 'border-sky-300 bg-sky-50/50 shadow-sm ring-2 ring-sky-200'
+                        : isForRevision
                         ? 'border-rose-400 bg-rose-50/30 shadow-sm ring-2 ring-rose-300/40'
+                        : isSubmitted
+                        ? 'bg-amber-50/40 border-amber-300/80 shadow-xs ring-1 ring-amber-200/50'
                         : rawStatus === 'approved' || rawStatus === 'verified'
                         ? 'bg-emerald-50/30 border-emerald-200/90 shadow-sm'
                         : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review'
                         ? 'bg-amber-50/30 border-amber-200 shadow-sm'
                         : stagedFile
                         ? 'bg-sky-50/60 border-sky-300 shadow-sm'
-                        : uploadedDoc
+                        : hasUploadedDoc
                         ? 'bg-emerald-50/30 border-emerald-200/80 shadow-sm'
                         : 'bg-white border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
-                            isForRevision
+                            isForRevision && stagedFile
+                              ? 'bg-sky-100 text-sky-700 border border-sky-300 shadow-2xs'
+                              : isForRevision
                               ? 'bg-rose-600 text-white shadow-xs'
+                              : isSubmitted
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300/80 shadow-2xs'
                               : rawStatus === 'approved' || rawStatus === 'verified'
                               ? 'bg-emerald-100 text-emerald-700'
                               : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review'
                               ? 'bg-amber-100 text-amber-700'
                               : stagedFile
                               ? 'bg-sky-100 text-sky-700'
-                              : uploadedDoc
+                              : hasUploadedDoc
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-gray-100 text-gray-600'
                           }`}
                         >
-                          {isForRevision ? (
+                          {isForRevision && stagedFile ? (
+                            <FileCheck className="w-5 h-5 text-sky-600" />
+                          ) : isForRevision ? (
                             <AlertCircle className="w-5 h-5 text-white" />
+                          ) : isSubmitted ? (
+                            <FileCheck className="w-5 h-5 text-amber-600" />
                           ) : rawStatus === 'approved' || rawStatus === 'verified' ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           ) : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review' ? (
                             <Clock className="w-5 h-5 text-amber-600" />
                           ) : stagedFile ? (
                             <FileCheck className="w-5 h-5 text-sky-600" />
-                          ) : uploadedDoc ? (
+                          ) : hasUploadedDoc ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           ) : (
                             index + 1
@@ -454,12 +533,20 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                 Optional
                               </span>
                             )}
-                            {hasChecklistStatus ? (
-                              isForRevision ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
-                                  <AlertCircle className="w-3 h-3" /> Action Required: For Revision
-                                </span>
-                              ) : rawStatus === 'approved' ? (
+                            {isForRevision && stagedFile ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs animate-pulse">
+                                <FileCheck className="w-3 h-3 text-sky-600" /> Replacement Selected (Ready to Resubmit)
+                              </span>
+                            ) : isForRevision ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+                                <AlertCircle className="w-3 h-3" /> Action Required: For Revision
+                              </span>
+                            ) : isSubmitted ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50/90 text-amber-900 border border-amber-300/80 shadow-2xs">
+                                <FileCheck className="w-3 h-3 text-amber-600" /> Resubmit
+                              </span>
+                            ) : hasChecklistStatus ? (
+                              rawStatus === 'approved' ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                                   <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Approved
                                 </span>
@@ -471,10 +558,6 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                                   <Clock className="w-3 h-3 text-amber-600" /> Under Review
                                 </span>
-                              ) : rawStatus === 'submitted' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
-                                  <FileCheck className="w-3 h-3 text-sky-600" /> Submitted
-                                </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 uppercase">
                                   {String(checklistDoc?.status).replace(/_/g, ' ')}
@@ -484,13 +567,13 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
                                 <FileCheck className="w-3 h-3 text-sky-600" /> Selected (Pending Upload)
                               </span>
-                            ) : uploadedDoc ? (
+                            ) : hasUploadedDoc ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                 <CheckCircle2 className="w-3 h-3" /> Uploaded
                               </span>
                             ) : req.required ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                <Clock className="w-3 h-3" /> Pending Selection
+                                <Clock className="w-3 h-3" /> Pending Upload
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
@@ -498,7 +581,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               </span>
                             )}
 
-                            {hasChecklistStatus && stagedFile && (
+                            {hasChecklistStatus && stagedFile && !isForRevision && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
                                 <FileCheck className="w-3 h-3 text-sky-600" /> New File Selected
                               </span>
@@ -508,9 +591,19 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
 
                           {/* HRMO Evaluator Remarks if flagged for revision or general feedback */}
                           {evaluatorRemarks && (
-                            <div className={`mt-2.5 p-2 rounded-lg text-[11px] ${isForRevision ? 'bg-amber-50/90 border border-amber-300 text-amber-950' : 'bg-slate-50 border border-slate-200 text-slate-800'}`}>
+                            <div className={`mt-2.5 p-2 rounded-lg text-[11px] ${
+                              isForRevision
+                                ? 'bg-amber-50/90 border border-amber-300 text-amber-950'
+                                : isSubmitted
+                                ? 'bg-slate-50 border border-slate-200 text-slate-700'
+                                : 'bg-slate-50 border border-slate-200 text-slate-800'
+                            }`}>
                               <span className="font-black uppercase text-[9px] block tracking-wider mb-0.5 text-gray-700">
-                                HRMO Remarks / {isForRevision ? 'Required Action' : 'Feedback'}:
+                                {isForRevision
+                                  ? 'HRMO Remarks / Required Action:'
+                                  : isSubmitted
+                                  ? 'Previous HRMO Remarks (Resubmit):'
+                                  : 'HRMO Remarks / Feedback:'}
                               </span>
                               <p className="italic font-medium leading-relaxed">
                                 "{evaluatorRemarks}"
@@ -528,7 +621,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                           )}
 
                           {/* Uploaded File Info (if not overridden by staged file) */}
-                          {!stagedFile && uploadedDoc && (
+                          {!stagedFile && hasUploadedDoc && uploadedDoc && (
                             <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500 font-medium">
                               <span className="truncate max-w-[200px] sm:max-w-xs font-semibold text-gray-700 flex items-center gap-1">
                                 <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" /> {uploadedDoc.file_name}
@@ -547,7 +640,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-start mt-2 sm:mt-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-start mt-2 sm:mt-0">
                         {/* Staged File Actions */}
                         {stagedFile ? (
                           <>
@@ -555,7 +648,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               type="button"
                               disabled={isSubmitting}
                               onClick={() => handleRemoveStagedFile(req.key)}
-                              className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
                               title="Cancel selection"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Remove
@@ -574,15 +667,29 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                 onChange={(e) => handleFileSelect(req, e)}
                               />
                             </label>
+                            <button
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={() => handleUploadSingle(req.key)}
+                              className="px-3.5 py-1.5 rounded-lg bg-[#022851] hover:bg-[#033a76] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                              title={isForRevision || hasUploadedDoc ? 'Submit re-uploaded document now' : 'Upload document now'}
+                            >
+                              {isSubmitting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>{isForRevision || hasUploadedDoc ? 'Resubmit' : 'Upload'}</span>
+                            </button>
                           </>
-                        ) : (
+                        ) : hasUploadedDoc && uploadedDoc ? (
                           <>
-                            {uploadedDoc && (
+                            {uploadedDoc.file_url && (
                               <button
                                 type="button"
                                 disabled={isSubmitting}
                                 onClick={() => handleViewFile(uploadedDoc.file_url)}
-                                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                               >
                                 <Eye className="w-3.5 h-3.5 text-blue-600" /> View
                               </button>
@@ -594,22 +701,16 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                   : isForRevision
                                   ? 'bg-rose-600 hover:bg-rose-700 text-white font-black'
-                                  : uploadedDoc
-                                  ? 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
-                                  : 'bg-[#022851] hover:bg-[#033a76] text-white'
+                                  : 'border border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
                               }`}
                             >
                               {isForRevision ? (
                                 <>
                                   <Upload className="w-3.5 h-3.5" /> Re-upload
                                 </>
-                              ) : uploadedDoc ? (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5 text-gray-500" /> Replace
-                                </>
                               ) : (
                                 <>
-                                  <Upload className="w-3.5 h-3.5" /> Select File
+                                  <RefreshCw className="w-3.5 h-3.5 text-gray-500" /> Replace
                                 </>
                               )}
                               <input
@@ -621,6 +722,24 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               />
                             </label>
                           </>
+                        ) : (
+                          <label
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
+                              isSubmitting
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : 'bg-[#022851] hover:bg-[#033a76] text-white active:scale-95'
+                            }`}
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload</span>
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              disabled={isSubmitting}
+                              className="hidden"
+                              onChange={(e) => handleFileSelect(req, e)}
+                            />
+                          </label>
                         )}
                       </div>
                     </div>
@@ -632,8 +751,8 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between shrink-0">
-          <span className="text-xs text-gray-500 font-medium">
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+          <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
             {stagedCount > 0
               ? `📄 ${stagedCount} file(s) selected and ready to upload.`
               : uploadedMandatoryCount === totalMandatory
@@ -644,12 +763,17 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
             type="button"
             disabled={isSubmitting}
             onClick={handleDoneOrUpload}
-            className="px-5 py-2.5 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-xs transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Uploading ({uploadProgress.current}/{uploadProgress.total})...</span>
+              </>
+            ) : stagedCount > 0 ? (
+              <>
+                <Upload className="w-4 h-4" />
+                <span>Upload & Submit ({stagedCount})</span>
               </>
             ) : (
               'Done / Close'
