@@ -1,5 +1,17 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-21] Read-Only Target Position Card & Automatic Selection Modal (`ApplicantDashboard.tsx`)
+- Changed the **"Target Position"** card to be strictly read-only on the dashboard (removed the inline Edit button and form).
+- Added an automatic **Target Position Selection Modal** that triggers if `reclass_gc.target_position` is null or empty upon dashboard load or after plantilla verification.
+- Configured the modal to allow selection of **`School Counselor II`** (`SG-18`).
+- Persists the confirmed selection to the backend via `PUT /api/applicants/:id/reclass-target-position` and dynamically refreshes the dashboard state.
+
+## [2026-10-21] Dedicated "Register Tutorial" for New Reclassification Application (`Login.tsx`)
+- Added dedicated `RECLASS_NEW_APP_TOUR_STEPS` for **New Reclassification Application** candidates.
+- Configured `getActiveTourSteps()` to detect `reclassRegType === 'new'` and display the step-by-step tutorial matching the New Application form (Plantilla Verification, Applicant Personal Details, Official Contact Info, Position & Station, Qualifications, and Security Credentials).
+- Added corresponding element IDs (`#tour-newapp-*`) across the New Application registration form.
+- Dynamically customized the onboarding Welcome Modal copy and highlights when viewing New Reclassification Application.
+
 ## [2026-10-21] Reclassification Info Layout: 2-Row Grid (`ApplicantDashboard.tsx`)
 - Updated the **Reclassification Info** card container from a single 6-column row (`xl:grid-cols-6`) to a structured 2-row grid (`md:grid-cols-3`):
   - **Row 1**: Plantilla Item No. | Position Title | Salary Grade

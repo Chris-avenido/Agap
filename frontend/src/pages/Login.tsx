@@ -67,6 +67,45 @@ const RECLASS_REG_TOUR_STEPS = [
   },
 ];
 
+const RECLASS_NEW_APP_TOUR_STEPS = [
+  {
+    sel: '#tour-newapp-plantilla',
+    label: 'Step 1 of 6: Plantilla Verification',
+    title: 'Plantilla Item Number',
+    body: 'Enter your 28-character Plantilla Item Number and click "Verify" to validate available reclassification slots.',
+  },
+  {
+    sel: '#tour-newapp-name',
+    label: 'Step 2 of 6: Personal Details',
+    title: 'Applicant Full Name',
+    body: 'Enter your legal First Name, Middle Name, and Last Name as registered in official records.',
+  },
+  {
+    sel: '#tour-newapp-contact',
+    label: 'Step 3 of 6: Contact Information',
+    title: 'Official DepEd Email & Mobile',
+    body: 'Provide your official DepEd email (deped.gov.ph) for status updates and an 11-digit mobile number for SMS notifications.',
+  },
+  {
+    sel: '#tour-newapp-station',
+    label: 'Step 4 of 6: Current Position & Station',
+    title: 'Designation, Region & Division',
+    body: 'Specify your current position title, Region, Division, and School/Station name.',
+  },
+  {
+    sel: '#tour-newapp-qualifications',
+    label: 'Step 5 of 6: Qualifications & Experience',
+    title: 'Degree, Eligibility, Experience & Training',
+    body: 'Provide your educational degree, professional eligibility / license, years of experience, and hours of relevant training.',
+  },
+  {
+    sel: '#tour-newapp-security',
+    label: 'Step 6 of 6: Security & Submission',
+    title: 'Password, Passcode & Submit',
+    body: 'Set a secure password and 6-digit quick PIN passcode, then click "Register New Application" to complete registration.',
+  },
+];
+
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -85,7 +124,8 @@ export default function Login() {
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const getActiveTourSteps = () => {
-    return tourMode === 'register' ? RECLASS_REG_TOUR_STEPS : RECLASS_LOGIN_TOUR_STEPS;
+    if (tourMode === 'login') return RECLASS_LOGIN_TOUR_STEPS;
+    return reclassRegType === 'new' ? RECLASS_NEW_APP_TOUR_STEPS : RECLASS_REG_TOUR_STEPS;
   };
 
   // Jobseeker Login state
@@ -1174,7 +1214,7 @@ export default function Login() {
                       )}
 
                       {/* Plantilla Item Number Verification */}
-                      <div>
+                      <div id="tour-newapp-plantilla">
                         <label className="block text-xs font-bold text-gray-700 mb-1">
                           Plantilla Item Number <span className="text-red-500">*</span>
                         </label>
@@ -1229,7 +1269,7 @@ export default function Login() {
                       </div>
 
                       {/* Name Fields */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div id="tour-newapp-name" className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         <div className="sm:col-span-1">
                           <label className="block text-xs font-bold text-gray-700 mb-1">
                             First Name <span className="text-red-500">*</span>
@@ -1271,7 +1311,7 @@ export default function Login() {
                       </div>
 
                       {/* Official DepEd Email & Mobile */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div id="tour-newapp-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">
                             Official DepEd Email <span className="text-red-500">*</span>
@@ -1308,92 +1348,96 @@ export default function Login() {
                         </div>
                       </div>
 
-                      {/* Current Position */}
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                          Current Position <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={newAppDesignation}
-                          onChange={e => setNewAppDesignation(e.target.value.toUpperCase())}
-                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                          placeholder="E.G. GUIDANCE SERVICES SPECIALIST II"
-                        />
-                      </div>
-
-                      {/* Region & Division */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Current Position & Station Section */}
+                      <div id="tour-newapp-station" className="space-y-2.5">
+                        {/* Current Position */}
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Region <span className="text-red-500">*</span>
+                            Current Position <span className="text-red-500">*</span>
                           </label>
-                          {incumbentLocations.regions?.length > 0 ? (
-                            <select
-                              value={newAppRegion}
-                              onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                            >
-                              <option value="">Select Region</option>
-                              {incumbentLocations.regions.map(r => (
-                                <option key={r} value={r.toUpperCase()}>{r.toUpperCase()}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              value={newAppRegion}
-                              onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                              placeholder="E.G. REGION IV-A"
-                            />
-                          )}
+                          <input
+                            type="text"
+                            required
+                            value={newAppDesignation}
+                            onChange={e => setNewAppDesignation(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                            placeholder="E.G. GUIDANCE SERVICES SPECIALIST II"
+                          />
                         </div>
+
+                        {/* Region & Division */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">
+                              Region <span className="text-red-500">*</span>
+                            </label>
+                            {incumbentLocations.regions?.length > 0 ? (
+                              <select
+                                value={newAppRegion}
+                                onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                              >
+                                <option value="">Select Region</option>
+                                {incumbentLocations.regions.map(r => (
+                                  <option key={r} value={r.toUpperCase()}>{r.toUpperCase()}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                value={newAppRegion}
+                                onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                placeholder="E.G. REGION IV-A"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">
+                              Division <span className="text-red-500">*</span>
+                            </label>
+                            {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
+                              <select
+                                value={newAppDivision}
+                                onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                              >
+                                <option value="">Select Division</option>
+                                {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
+                                  <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                value={newAppDivision}
+                                onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                placeholder="E.G. QUEZON"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* School Name */}
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Division <span className="text-red-500">*</span>
+                            School / Station Name <span className="text-gray-400 font-normal">(Optional)</span>
                           </label>
-                          {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
-                            <select
-                              value={newAppDivision}
-                              onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                            >
-                              <option value="">Select Division</option>
-                              {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
-                                <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              value={newAppDivision}
-                              onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                              placeholder="E.G. QUEZON"
-                            />
-                          )}
+                          <input
+                            type="text"
+                            value={newAppSchoolName}
+                            onChange={e => setNewAppSchoolName(e.target.value.toUpperCase())}
+                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                            placeholder="E.G. QUEZON NATIONAL HIGH SCHOOL"
+                          />
                         </div>
                       </div>
 
-                      {/* School Name */}
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                          School / Station Name <span className="text-gray-400 font-normal">(Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newAppSchoolName}
-                          onChange={e => setNewAppSchoolName(e.target.value.toUpperCase())}
-                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                          placeholder="E.G. QUEZON NATIONAL HIGH SCHOOL"
-                        />
-                      </div>
-
-                      {/* Qualification Details: Education & Eligibility */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div>
+                      {/* Qualification Details */}
+                      <div id="tour-newapp-qualifications" className="space-y-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">
                             Education / Degree
                           </label>
@@ -1450,9 +1494,12 @@ export default function Login() {
                           />
                         </div>
                       </div>
+                      </div>
 
-                      {/* Password & Confirm Password */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Security Credentials & Submission */}
+                      <div id="tour-newapp-security" className="space-y-2.5">
+                        {/* Password & Confirm Password */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div>
                           <label className="block text-xs font-bold text-gray-700 mb-1">
                             Password <span className="text-red-500">*</span>
@@ -1521,7 +1568,7 @@ export default function Login() {
                       </div>
 
                       {/* Submit Button */}
-                      <div className="pt-2">
+                      <div id="tour-newapp-submit" className="pt-2">
                         <button
                           type="submit"
                           disabled={newAppRegistering || !newAppVerified}
@@ -1530,6 +1577,7 @@ export default function Login() {
                           <ShieldCheck className="w-4 h-4" />
                           {newAppRegistering ? 'Registering New Application...' : !newAppVerified ? 'Verify Plantilla Item First' : 'Register New Application'}
                         </button>
+                      </div>
                       </div>
 
                       <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
@@ -2263,34 +2311,53 @@ export default function Login() {
         {showWelcomeModal && (
           <div className="welcome-box">
             <div className="welcome-badge">
-              {reclassView === 'register' ? 'New Registration' : 'AGAP Portal'}
+              {reclassView === 'register' ? (reclassRegType === 'new' ? 'New Application' : 'Incumbent Registration') : 'AGAP Portal'}
             </div>
             <h2>
               {reclassView === 'register'
-                ? 'Incumbent Registration'
+                ? (reclassRegType === 'new' ? 'New Reclassification Application' : 'Incumbent Registration')
                 : 'Welcome to the AGAP Portal'}
             </h2>
             <p>
               {reclassView === 'register'
-                ? 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.'
+                ? (reclassRegType === 'new'
+                    ? 'Register your candidate profile, station, qualifications, and credentials to file a new reclassification application.'
+                    : 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.')
                 : 'Seamlessly access your portal, submit documentary requirements, and track your evaluation progress from verification through to appointment.'}
             </p>
             <div className="welcome-highlights">
               {reclassView === 'register' ? (
-                <>
-                  <div className="welcome-hi">
-                    <b>Verify Plantilla</b>
-                    <span>Connect to GMIS central records to auto-verify position.</span>
-                  </div>
-                  <div className="welcome-hi">
-                    <b>Contact Info</b>
-                    <span>Official DepEd email &amp; mobile for status alerts.</span>
-                  </div>
-                  <div className="welcome-hi">
-                    <b>Credentials</b>
-                    <span>Secure password &amp; 6-digit quick PIN passcode.</span>
-                  </div>
-                </>
+                reclassRegType === 'new' ? (
+                  <>
+                    <div className="welcome-hi">
+                      <b>Plantilla Item</b>
+                      <span>Verify available reclassification slot item number.</span>
+                    </div>
+                    <div className="welcome-hi">
+                      <b>Profile &amp; Station</b>
+                      <span>Candidate details, station, region, and division.</span>
+                    </div>
+                    <div className="welcome-hi">
+                      <b>Qualifications</b>
+                      <span>Education, eligibility, experience, and training hours.</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="welcome-hi">
+                      <b>Verify Plantilla</b>
+                      <span>Connect to GMIS central records to auto-verify position.</span>
+                    </div>
+                    <div className="welcome-hi">
+                      <b>Contact Info</b>
+                      <span>Official DepEd email &amp; mobile for status alerts.</span>
+                    </div>
+                    <div className="welcome-hi">
+                      <b>Credentials</b>
+                      <span>Secure password &amp; 6-digit quick PIN passcode.</span>
+                    </div>
+                  </>
+                )
               ) : (
                 <>
                   <div className="welcome-hi">
