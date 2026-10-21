@@ -2144,10 +2144,16 @@ class ApplicantsServiceClass {
             (row.first_name && row.first_name.trim()) ||
             (row.last_name && row.last_name.trim()),
           );
-          if (hasEmail || hasName) {
+          if (hasEmail) {
             return {
               status: 'already_registered',
               message: 'This Plantilla Item Number is already registered. Please sign in.',
+            };
+          }
+          if (hasName) {
+            return {
+              status: 'incumbent_record',
+              message: 'This Plantilla Item Number belongs to an existing GMIS incumbent record. Please proceed to Incumbent Plantilla Registration.',
             };
           }
         }
@@ -2229,25 +2235,34 @@ class ApplicantsServiceClass {
       };
     }
 
-    // 2. Check if already registered in applicants table with real credentials
-    const appRes = await pool.query(
-      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
-       WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
-       LIMIT 1`,
-      [normalized],
-    );
+    // 2. Check if already registered with real credentials in reclass_gc and applicants
+    const hasReclassEmail = Boolean(inc.email && inc.email.trim());
+    if (hasReclassEmail) {
+      const appRes = await pool.query(
+        `SELECT id, password_hash, passcode_hash, email_address, email, registrant_type FROM applicants 
+         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+         LIMIT 1`,
+        [normalized],
+      );
 
-    if (appRes.rows.length > 0) {
-      const appRow = appRes.rows[0];
-      const hasRealEmail =
-        (appRow.email && appRow.email.trim()) ||
-        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
-      const hasPassword =
-        appRow.password_hash ||
-        appRow.passcode_hash ||
-        (inc && (inc.password_hash || inc.passcode_hash));
+      if (appRes.rows.length > 0) {
+        const appRow = appRes.rows[0];
+        const hasRealEmail =
+          (appRow.email && appRow.email.trim()) ||
+          (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+        const hasPassword =
+          appRow.password_hash ||
+          appRow.passcode_hash ||
+          inc.password_hash ||
+          inc.passcode_hash;
 
-      if (hasRealEmail && hasPassword) {
+        if (hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
+          return {
+            status: 'already_registered',
+            message: 'This Plantilla Item Number is already registered. Please sign in.',
+          };
+        }
+      } else if (inc.password_hash || inc.passcode_hash) {
         return {
           status: 'already_registered',
           message: 'This Plantilla Item Number is already registered. Please sign in.',
@@ -2392,7 +2407,8 @@ class ApplicantsServiceClass {
         appRow.passcode_hash ||
         (inc && (inc.password_hash || inc.passcode_hash));
 
-      if (hasRealEmail && hasPassword) {
+      const hasReclassEmail = Boolean(inc && inc.email && inc.email.trim());
+      if (hasReclassEmail && hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
         const err: any = new Error(
           'This Plantilla Item Number is already registered. Please sign in.',
         );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText, Check } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
@@ -210,10 +210,12 @@ export default function Login() {
   const [newAppVerifying, setNewAppVerifying] = useState(false);
   const [newAppVerified, setNewAppVerified] = useState(false);
   const [newAppIsAlreadyRegistered, setNewAppIsAlreadyRegistered] = useState(false);
+  const [newAppIsIncumbentRecord, setNewAppIsIncumbentRecord] = useState(false);
   const [newAppEducation, setNewAppEducation] = useState('');
   const [newAppYearsExperience, setNewAppYearsExperience] = useState('');
   const [newAppHoursTraining, setNewAppHoursTraining] = useState('');
   const [newAppEligibility, setNewAppEligibility] = useState('');
+  const [newAppStep, setNewAppStep] = useState<number>(1);
 
   // Incumbent locations
   const [incumbentLocations, setIncumbentLocations] = useState<{
@@ -300,6 +302,7 @@ export default function Login() {
     setTourMode(targetMode);
     if (targetMode === 'register') {
       setReclassView('register');
+      setNewAppStep(1);
     } else {
       setReclassView('login');
     }
@@ -327,6 +330,19 @@ export default function Login() {
     setTourIndex(prev => prev - 1);
   };
 
+  // Synchronize guided tour steps with New Reclassification Application wizard pages
+  useEffect(() => {
+    if (tourActive && portalType === 'reclass' && reclassView === 'register' && reclassRegType === 'new') {
+      if (tourIndex <= 2) {
+        setNewAppStep(1);
+      } else if (tourIndex <= 4) {
+        setNewAppStep(2);
+      } else {
+        setNewAppStep(3);
+      }
+    }
+  }, [tourActive, tourIndex, portalType, reclassView, reclassRegType]);
+
   useEffect(() => {
     if (tourActive) {
       placeTour(tourIndex);
@@ -339,7 +355,7 @@ export default function Login() {
         window.removeEventListener('scroll', handleResize, true);
       };
     }
-  }, [tourActive, tourIndex, tourMode, reclassView]);
+  }, [tourActive, tourIndex, tourMode, reclassView, newAppStep]);
 
   useEffect(() => {
     if (typeParam === 'reclass') {
@@ -531,6 +547,7 @@ export default function Login() {
     setNewAppVerifying(true);
     setNewAppError(null);
     setNewAppIsAlreadyRegistered(false);
+    setNewAppIsIncumbentRecord(false);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/applicants/reclass-verify-item`, {
@@ -557,6 +574,10 @@ export default function Login() {
         }
         if (resData.data.eligibility) setNewAppEligibility(String(resData.data.eligibility).toUpperCase());
         setNewAppError(null);
+      } else if (resData.status === 'incumbent_record') {
+        setNewAppIsIncumbentRecord(true);
+        setNewAppVerified(false);
+        setNewAppError(resData.message || 'This Plantilla Item Number belongs to an existing GMIS incumbent record. Please proceed to Incumbent Plantilla Registration.');
       } else if (resData.status === 'already_registered' || response.status === 409) {
         setNewAppIsAlreadyRegistered(true);
         setNewAppVerified(false);
@@ -667,6 +688,78 @@ export default function Login() {
       setStepBError('Unable to connect to the server. Please try again.');
     } finally {
       setStepBRegistering(false);
+    }
+  };
+
+  // Step navigation & validation for New Reclassification Application
+  const handleNextStep1 = () => {
+    setNewAppError(null);
+    const cleanPlantilla = newAppPlantilla.trim().toUpperCase();
+    if (!cleanPlantilla) {
+      setNewAppError('Please enter your Plantilla Item Number.');
+      return false;
+    }
+
+    if (!newAppVerified) {
+      setNewAppError('Please verify your Plantilla Item Number before proceeding.');
+      return false;
+    }
+
+    const cleanFirstName = newAppFirstName.trim().toUpperCase();
+    const cleanLastName = newAppLastName.trim().toUpperCase();
+    if (!cleanFirstName || !cleanLastName) {
+      setNewAppError('First Name and Last Name are required.');
+      return false;
+    }
+
+    const rawEmail = newAppEmail.trim();
+    const checkEmail = rawEmail.toLowerCase();
+    if (!checkEmail.endsWith('@deped.gov.ph') || !/^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(checkEmail)) {
+      setNewAppError('Only official @deped.gov.ph email addresses are allowed (e.g. juan.delacruz@deped.gov.ph).');
+      return false;
+    }
+
+    const cleanMobile = newAppMobile.trim();
+    if (!/^09\d{9}$/.test(cleanMobile)) {
+      setNewAppError('Mobile number must be an 11-digit Philippine mobile number starting with 09 (09XXXXXXXXX).');
+      return false;
+    }
+
+    setNewAppError(null);
+    setNewAppStep(2);
+    return true;
+  };
+
+  const handleNextStep2 = () => {
+    setNewAppError(null);
+    if (!newAppDesignation.trim()) {
+      setNewAppError('Current Position is required.');
+      return false;
+    }
+
+    if (!newAppRegion.trim()) {
+      setNewAppError('Please select or enter your Region.');
+      return false;
+    }
+
+    if (!newAppDivision.trim()) {
+      setNewAppError('Please select or enter your Division.');
+      return false;
+    }
+
+    setNewAppError(null);
+    setNewAppStep(3);
+    return true;
+  };
+
+  const handleNewAppFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newAppStep === 1) {
+      handleNextStep1();
+    } else if (newAppStep === 2) {
+      handleNextStep2();
+    } else if (newAppStep === 3) {
+      handleNewApplicationRegister(e);
     }
   };
 
@@ -1001,7 +1094,11 @@ export default function Login() {
               : portalType === 'reclass'
                 ? (reclassView === 'register'
                   ? (reclassRegType === 'new'
-                    ? 'Enter your professional profile, station details, and security credentials to register'
+                    ? (newAppStep === 1
+                        ? 'Step 1 of 3: Enter Plantilla Item Number, applicant name, and contact details'
+                        : newAppStep === 2
+                          ? 'Step 2 of 3: Provide your current station assignment and professional qualifications'
+                          : 'Step 3 of 3: Set up your account password and 6-digit security passcode')
                     : 'Enter your Plantilla Item Number, DepEd email, and password to set up your account')
                   : 'Sign in using your Plantilla Item Number or DepEd email')
                 : 'Sign in to access your account'}
@@ -1189,7 +1286,155 @@ export default function Login() {
                 <div className="space-y-4">
                   {reclassRegType === 'new' ? (
                     /* FORM: NEW APPLICATION REGISTRATION */
-                    <form onSubmit={handleNewApplicationRegister} className="space-y-3.5">
+                    <form onSubmit={handleNewAppFormSubmit} className="space-y-3.5">
+                      {/* Step Progress Wizard */}
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          {/* Step 1 Indicator */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newAppStep > 1) {
+                                setNewAppError(null);
+                                setNewAppStep(1);
+                              }
+                            }}
+                            disabled={newAppStep === 1}
+                            className={`flex items-center gap-2 text-left transition-all ${
+                              newAppStep === 1
+                                ? 'cursor-default'
+                                : newAppStep > 1
+                                ? 'cursor-pointer group'
+                                : 'cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
+                                newAppStep === 1
+                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                  : newAppStep > 1
+                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                  : 'bg-slate-200 text-slate-500'
+                              }`}
+                            >
+                              {newAppStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
+                            </div>
+                            <div className="hidden sm:block">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 1</p>
+                              <p
+                                className={`text-xs font-bold leading-tight ${
+                                  newAppStep === 1
+                                    ? 'text-indigo-950'
+                                    : newAppStep > 1
+                                    ? 'text-slate-700 group-hover:text-indigo-600'
+                                    : 'text-slate-400'
+                                }`}
+                              >
+                                Plantilla & Identity
+                              </p>
+                            </div>
+                          </button>
+
+                          {/* Connector Line 1-2 */}
+                          <div
+                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${
+                              newAppStep > 1 ? 'bg-emerald-500' : 'bg-slate-200'
+                            }`}
+                          />
+
+                          {/* Step 2 Indicator */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newAppStep > 2) {
+                                setNewAppError(null);
+                                setNewAppStep(2);
+                              }
+                            }}
+                            disabled={newAppStep <= 2}
+                            className={`flex items-center gap-2 text-left transition-all ${
+                              newAppStep === 2
+                                ? 'cursor-default'
+                                : newAppStep > 2
+                                ? 'cursor-pointer group'
+                                : 'cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
+                                newAppStep === 2
+                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                  : newAppStep > 2
+                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                  : 'bg-slate-200 text-slate-500'
+                              }`}
+                            >
+                              {newAppStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
+                            </div>
+                            <div className="hidden sm:block">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 2</p>
+                              <p
+                                className={`text-xs font-bold leading-tight ${
+                                  newAppStep === 2
+                                    ? 'text-indigo-950'
+                                    : newAppStep > 2
+                                    ? 'text-slate-700 group-hover:text-indigo-600'
+                                    : 'text-slate-400'
+                                }`}
+                              >
+                                Station & Qualifications
+                              </p>
+                            </div>
+                          </button>
+
+                          {/* Connector Line 2-3 */}
+                          <div
+                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${
+                              newAppStep > 2 ? 'bg-emerald-500' : 'bg-slate-200'
+                            }`}
+                          />
+
+                          {/* Step 3 Indicator */}
+                          <div
+                            className={`flex items-center gap-2 text-left ${
+                              newAppStep === 3 ? 'cursor-default' : 'cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
+                                newAppStep === 3
+                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                  : 'bg-slate-200 text-slate-500'
+                              }`}
+                            >
+                              3
+                            </div>
+                            <div className="hidden sm:block">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 3</p>
+                              <p
+                                className={`text-xs font-bold leading-tight ${
+                                  newAppStep === 3 ? 'text-indigo-950' : 'text-slate-400'
+                                }`}
+                              >
+                                Security & Submit
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Mobile Step Description */}
+                        <div className="sm:hidden mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-700">
+                            {newAppStep === 1 && 'Step 1: Plantilla & Identity'}
+                            {newAppStep === 2 && 'Step 2: Station & Qualifications'}
+                            {newAppStep === 3 && 'Step 3: Security & Submission'}
+                          </span>
+                          <span className="text-[11px] font-semibold text-indigo-600">
+                            Page {newAppStep} of 3
+                          </span>
+                        </div>
+                      </div>
+
                       {/* Error Alert */}
                       {newAppError && (
                         <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">
@@ -1197,6 +1442,22 @@ export default function Login() {
                             <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                             <span className="font-medium">{newAppError}</span>
                           </div>
+                          {newAppIsIncumbentRecord && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const plantilla = newAppPlantilla;
+                                setStepAPlantilla(plantilla);
+                                setReclassRegType('existing');
+                                setNewAppError(null);
+                                setNewAppIsIncumbentRecord(false);
+                                handleVerifyPlantillaInline(plantilla);
+                              }}
+                              className="self-start text-xs font-bold text-[#0369a1] hover:text-[#02527e] hover:underline cursor-pointer ml-6 flex items-center gap-1.5"
+                            >
+                              <span>Proceed to Incumbent Plantilla Registration &rarr;</span>
+                            </button>
+                          )}
                           {newAppIsAlreadyRegistered && (
                             <button
                               type="button"
@@ -1204,6 +1465,7 @@ export default function Login() {
                                 setReclassView('login');
                                 setNewAppError(null);
                                 setNewAppIsAlreadyRegistered(false);
+                                setNewAppIsIncumbentRecord(false);
                               }}
                               className="self-start text-xs font-bold text-indigo-700 hover:underline cursor-pointer ml-6"
                             >
@@ -1213,372 +1475,434 @@ export default function Login() {
                         </div>
                       )}
 
-                      {/* Plantilla Item Number Verification */}
-                      <div id="tour-newapp-plantilla">
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                          Plantilla Item Number <span className="text-red-500">*</span>
-                        </label>
-                        <div className="flex gap-2">
-                          <div className="relative rounded-lg shadow-2xs flex-1">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Award className="h-4 w-4 text-indigo-600" />
+                      {/* STEP 1: PLANTILLA & IDENTITY */}
+                      {newAppStep === 1 && (
+                        <>
+                          {/* Plantilla Item Number Verification */}
+                          <div id="tour-newapp-plantilla">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">
+                              Plantilla Item Number <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex gap-2">
+                              <div className="relative rounded-lg shadow-2xs flex-1">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                  <Award className="h-4 w-4 text-indigo-600" />
+                                </div>
+                                <input
+                                  type="text"
+                                  required
+                                  value={newAppPlantilla}
+                                  onChange={e => {
+                                    setNewAppPlantilla(e.target.value.toUpperCase());
+                                    setNewAppVerified(false);
+                                    setNewAppError(null);
+                                    setNewAppIsAlreadyRegistered(false);
+                                    setNewAppIsIncumbentRecord(false);
+                                  }}
+                                  className="block w-full pl-9 pr-3 text-xs border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
+                                  placeholder="e.g. OSEC-DECSB-GSS2-14-2015"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleVerifyNewAppPlantilla}
+                                disabled={newAppVerifying || !newAppPlantilla.trim()}
+                                className="px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+                              >
+                                {newAppVerifying ? (
+                                  <span>Checking...</span>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Verify</span>
+                                  </>
+                                )}
+                              </button>
                             </div>
-                            <input
-                              type="text"
-                              required
-                              value={newAppPlantilla}
-                              onChange={e => {
-                                setNewAppPlantilla(e.target.value.toUpperCase());
-                                setNewAppVerified(false);
-                                setNewAppError(null);
-                                setNewAppIsAlreadyRegistered(false);
-                              }}
-                              className="block w-full pl-9 pr-3 text-xs border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
-                              placeholder="e.g. OSEC-DECSB-GSS2-14-2015"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleVerifyNewAppPlantilla}
-                            disabled={newAppVerifying || !newAppPlantilla.trim()}
-                            className="px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
-                          >
-                            {newAppVerifying ? (
-                              <span>Checking...</span>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Verify</span>
-                              </>
+                            {newAppVerified && (
+                              <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>
+                                  <strong>Plantilla Record Verified:</strong> {newAppDesignation} {newAppFirstName ? `• ${newAppFirstName} ${newAppLastName}` : ''} ({newAppDivision || newAppRegion || 'DepEd'})
+                                </span>
+                              </div>
                             )}
-                          </button>
-                        </div>
-                        {newAppVerified && (
-                          <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>
-                              <strong>Plantilla Record Verified:</strong> {newAppDesignation} {newAppFirstName ? `• ${newAppFirstName} ${newAppLastName}` : ''} ({newAppDivision || newAppRegion || 'DepEd'})
-                            </span>
+                            {!newAppVerified && (
+                              <p className="text-[11px] text-gray-400 mt-1">
+                                Must be an active plantilla item in reclassification records with unassigned personnel and email.
+                              </p>
+                            )}
                           </div>
-                        )}
-                        {!newAppVerified && (
-                          <p className="text-[11px] text-gray-400 mt-1">
-                            Must be an active plantilla item in reclassification records with unassigned personnel and email.
-                          </p>
-                        )}
-                      </div>
 
-                      {/* Name Fields */}
-                      <div id="tour-newapp-name" className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        <div className="sm:col-span-1">
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            First Name <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={newAppFirstName}
-                            onChange={e => setNewAppFirstName(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="JUAN"
-                          />
-                        </div>
-                        <div className="sm:col-span-1">
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Middle Name
-                          </label>
-                          <input
-                            type="text"
-                            value={newAppMiddleName}
-                            onChange={e => setNewAppMiddleName(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="SANTOS"
-                          />
-                        </div>
-                        <div className="sm:col-span-1">
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Last Name <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={newAppLastName}
-                            onChange={e => setNewAppLastName(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="DELA CRUZ"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Official DepEd Email & Mobile */}
-                      <div id="tour-newapp-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Official DepEd Email <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative rounded-lg shadow-2xs">
-                            <input
-                              type="email"
-                              required
-                              value={newAppEmail}
-                              onChange={e => {
-                                setNewAppEmail(e.target.value);
-                                setNewAppError(null);
-                              }}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                              placeholder="name@deped.gov.ph"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Mobile Number <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative rounded-lg shadow-2xs">
-                            <input
-                              type="tel"
-                              maxLength={11}
-                              required
-                              value={newAppMobile}
-                              onChange={e => setNewAppMobile(e.target.value.replace(/\D/g, ''))}
-                              className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
-                              placeholder="09XXXXXXXXX"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Current Position & Station Section */}
-                      <div id="tour-newapp-station" className="space-y-2.5">
-                        {/* Current Position */}
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Current Position <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={newAppDesignation}
-                            onChange={e => setNewAppDesignation(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                            placeholder="E.G. GUIDANCE SERVICES SPECIALIST II"
-                          />
-                        </div>
-
-                        {/* Region & Division */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">
-                              Region <span className="text-red-500">*</span>
-                            </label>
-                            {incumbentLocations.regions?.length > 0 ? (
-                              <select
-                                value={newAppRegion}
-                                onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
-                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                              >
-                                <option value="">Select Region</option>
-                                {incumbentLocations.regions.map(r => (
-                                  <option key={r} value={r.toUpperCase()}>{r.toUpperCase()}</option>
-                                ))}
-                              </select>
-                            ) : (
+                          {/* Name Fields */}
+                          <div id="tour-newapp-name" className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div className="sm:col-span-1">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                First Name <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
-                                value={newAppRegion}
-                                onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                                required
+                                value={newAppFirstName}
+                                onChange={e => setNewAppFirstName(e.target.value.toUpperCase())}
                                 className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                                placeholder="E.G. REGION IV-A"
+                                placeholder="JUAN"
                               />
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">
-                              Division <span className="text-red-500">*</span>
-                            </label>
-                            {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
-                              <select
-                                value={newAppDivision}
-                                onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
-                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
-                              >
-                                <option value="">Select Division</option>
-                                {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
-                                  <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>
-                                ))}
-                              </select>
-                            ) : (
+                            </div>
+                            <div className="sm:col-span-1">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                Middle Name
+                              </label>
                               <input
                                 type="text"
-                                value={newAppDivision}
-                                onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                                value={newAppMiddleName}
+                                onChange={e => setNewAppMiddleName(e.target.value.toUpperCase())}
                                 className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                                placeholder="E.G. QUEZON"
+                                placeholder="SANTOS"
                               />
-                            )}
+                            </div>
+                            <div className="sm:col-span-1">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                Last Name <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={newAppLastName}
+                                onChange={e => setNewAppLastName(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                placeholder="DELA CRUZ"
+                              />
+                            </div>
                           </div>
-                        </div>
 
-                        {/* School Name */}
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            School / Station Name <span className="text-gray-400 font-normal">(Optional)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={newAppSchoolName}
-                            onChange={e => setNewAppSchoolName(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="E.G. QUEZON NATIONAL HIGH SCHOOL"
-                          />
-                        </div>
-                      </div>
+                          {/* Official DepEd Email & Mobile */}
+                          <div id="tour-newapp-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                Official DepEd Email <span className="text-red-500">*</span>
+                              </label>
+                              <div className="relative rounded-lg shadow-2xs">
+                                <input
+                                  type="email"
+                                  required
+                                  value={newAppEmail}
+                                  onChange={e => {
+                                    setNewAppEmail(e.target.value);
+                                    setNewAppError(null);
+                                  }}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                                  placeholder="name@deped.gov.ph"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                Mobile Number <span className="text-red-500">*</span>
+                              </label>
+                              <div className="relative rounded-lg shadow-2xs">
+                                <input
+                                  type="tel"
+                                  maxLength={11}
+                                  required
+                                  value={newAppMobile}
+                                  onChange={e => setNewAppMobile(e.target.value.replace(/\D/g, ''))}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                                  placeholder="09XXXXXXXXX"
+                                />
+                              </div>
+                            </div>
+                          </div>
 
-                      {/* Qualification Details */}
-                      <div id="tour-newapp-qualifications" className="space-y-2.5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Education / Degree
-                          </label>
-                          <input
-                            type="text"
-                            value={newAppEducation}
-                            onChange={e => setNewAppEducation(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="E.G. BACHELOR / MASTER IN GUIDANCE & COUNSELING"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Eligibility / Professional License
-                          </label>
-                          <input
-                            type="text"
-                            value={newAppEligibility}
-                            onChange={e => setNewAppEligibility(e.target.value.toUpperCase())}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
-                            placeholder="E.G. RA 1080 (REGISTERED GUIDANCE COUNSELOR)"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Qualification Details: Experience & Training Hours */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Years of Experience
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={newAppYearsExperience}
-                            onChange={e => setNewAppYearsExperience(e.target.value)}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
-                            placeholder="e.g. 5"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Hours of Relevant Training
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={newAppHoursTraining}
-                            onChange={e => setNewAppHoursTraining(e.target.value)}
-                            className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
-                            placeholder="e.g. 40"
-                          />
-                        </div>
-                      </div>
-                      </div>
-
-                      {/* Security Credentials & Submission */}
-                      <div id="tour-newapp-security" className="space-y-2.5">
-                        {/* Password & Confirm Password */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Password <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative rounded-lg shadow-2xs">
-                            <input
-                              type={showNewAppPassword ? 'text' : 'password'}
-                              required
-                              value={newAppPassword}
-                              onChange={e => setNewAppPassword(e.target.value)}
-                              className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                              placeholder="••••••••"
-                            />
+                          {/* Step 1 Action Button: Next */}
+                          <div className="pt-2">
                             <button
                               type="button"
-                              onClick={() => setShowNewAppPassword(!showNewAppPassword)}
-                              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                              onClick={handleNextStep1}
+                              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-colors cursor-pointer"
                             >
-                              {showNewAppPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              <span>Next: Station & Qualifications</span>
+                              <ArrowRight className="w-4 h-4" />
                             </button>
                           </div>
-                        </div>
+                        </>
+                      )}
 
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Confirm Password <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative rounded-lg shadow-2xs">
-                            <input
-                              type={showNewAppConfirmPassword ? 'text' : 'password'}
-                              required
-                              value={newAppConfirmPassword}
-                              onChange={e => setNewAppConfirmPassword(e.target.value)}
-                              className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
-                              placeholder="••••••••"
-                            />
+                      {/* STEP 2: STATION & QUALIFICATIONS */}
+                      {newAppStep === 2 && (
+                        <>
+                          {/* Current Position & Station Section */}
+                          <div id="tour-newapp-station" className="space-y-2.5">
+                            {/* Current Position */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                Current Position <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={newAppDesignation}
+                                onChange={e => setNewAppDesignation(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                                placeholder="E.G. GUIDANCE SERVICES SPECIALIST II"
+                              />
+                            </div>
+
+                            {/* Region & Division */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Region <span className="text-red-500">*</span>
+                                </label>
+                                {incumbentLocations.regions?.length > 0 ? (
+                                  <select
+                                    value={newAppRegion}
+                                    onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                                  >
+                                    <option value="">Select Region</option>
+                                    {incumbentLocations.regions.map(r => (
+                                      <option key={r} value={r.toUpperCase()}>{r.toUpperCase()}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={newAppRegion}
+                                    onChange={e => setNewAppRegion(e.target.value.toUpperCase())}
+                                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                    placeholder="E.G. REGION IV-A"
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Division <span className="text-red-500">*</span>
+                                </label>
+                                {incumbentLocations.divisionsByRegion[newAppRegion]?.length > 0 ? (
+                                  <select
+                                    value={newAppDivision}
+                                    onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none bg-white font-medium uppercase"
+                                  >
+                                    <option value="">Select Division</option>
+                                    {incumbentLocations.divisionsByRegion[newAppRegion].map(d => (
+                                      <option key={d} value={d.toUpperCase()}>{d.toUpperCase()}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={newAppDivision}
+                                    onChange={e => setNewAppDivision(e.target.value.toUpperCase())}
+                                    className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                    placeholder="E.G. QUEZON"
+                                  />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* School Name */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 mb-1">
+                                School / Station Name <span className="text-gray-400 font-normal">(Optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={newAppSchoolName}
+                                onChange={e => setNewAppSchoolName(e.target.value.toUpperCase())}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                placeholder="E.G. QUEZON NATIONAL HIGH SCHOOL"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Qualification Details */}
+                          <div id="tour-newapp-qualifications" className="space-y-2.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Education / Degree
+                                </label>
+                                <input
+                                  type="text"
+                                  value={newAppEducation}
+                                  onChange={e => setNewAppEducation(e.target.value.toUpperCase())}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                  placeholder="E.G. BACHELOR / MASTER IN GUIDANCE & COUNSELING"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Eligibility / Professional License
+                                </label>
+                                <input
+                                  type="text"
+                                  value={newAppEligibility}
+                                  onChange={e => setNewAppEligibility(e.target.value.toUpperCase())}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none uppercase"
+                                  placeholder="E.G. RA 1080 (REGISTERED GUIDANCE COUNSELOR)"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Qualification Details: Experience & Training Hours */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Years of Experience
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={newAppYearsExperience}
+                                  onChange={e => setNewAppYearsExperience(e.target.value)}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                                  placeholder="e.g. 5"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Hours of Relevant Training
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={newAppHoursTraining}
+                                  onChange={e => setNewAppHoursTraining(e.target.value)}
+                                  className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none font-mono"
+                                  placeholder="e.g. 40"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Step 2 Action Buttons: Back & Next */}
+                          <div className="pt-2 flex items-center gap-2.5">
                             <button
                               type="button"
-                              onClick={() => setShowNewAppConfirmPassword(!showNewAppConfirmPassword)}
-                              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                              onClick={() => {
+                                setNewAppError(null);
+                                setNewAppStep(1);
+                              }}
+                              className="w-1/3 flex justify-center items-center gap-1.5 py-3 px-3 border border-gray-300 rounded-lg shadow-2xs text-xs sm:text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors cursor-pointer"
                             >
-                              {showNewAppConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              <ArrowLeft className="w-4 h-4" />
+                              <span>Back</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleNextStep2}
+                              className="flex-1 flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-colors cursor-pointer"
+                            >
+                              <span>Next: Security Credentials</span>
+                              <ArrowRight className="w-4 h-4" />
                             </button>
                           </div>
-                        </div>
-                      </div>
+                        </>
+                      )}
 
-                      {/* 6-Digit Passcode */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="block text-xs font-bold text-gray-700">
-                            6-Digit Passcode <span className="text-red-500">*</span>
-                          </label>
-                          <span className="text-[10px] text-gray-400">Used for quick passcode sign-in</span>
-                        </div>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={6}
-                          required
-                          value={newAppPasscode}
-                          onChange={e => setNewAppPasscode(e.target.value.replace(/\D/g, ''))}
-                          className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none tracking-widest font-mono text-center font-bold"
-                          placeholder="••••••"
-                        />
-                      </div>
+                      {/* STEP 3: SECURITY CREDENTIALS & SUBMIT */}
+                      {newAppStep === 3 && (
+                        <>
+                          {/* Security Credentials */}
+                          <div id="tour-newapp-security" className="space-y-2.5">
+                            {/* Password & Confirm Password */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Password <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative rounded-lg shadow-2xs">
+                                  <input
+                                    type={showNewAppPassword ? 'text' : 'password'}
+                                    required
+                                    value={newAppPassword}
+                                    onChange={e => setNewAppPassword(e.target.value)}
+                                    className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                                    placeholder="••••••••"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowNewAppPassword(!showNewAppPassword)}
+                                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                                  >
+                                    {showNewAppPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
 
-                      {/* Submit Button */}
-                      <div id="tour-newapp-submit" className="pt-2">
-                        <button
-                          type="submit"
-                          disabled={newAppRegistering || !newAppVerified}
-                          className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-colors disabled:opacity-60 cursor-pointer"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          {newAppRegistering ? 'Registering New Application...' : !newAppVerified ? 'Verify Plantilla Item First' : 'Register New Application'}
-                        </button>
-                      </div>
-                      </div>
+                              <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">
+                                  Confirm Password <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative rounded-lg shadow-2xs">
+                                  <input
+                                    type={showNewAppConfirmPassword ? 'text' : 'password'}
+                                    required
+                                    value={newAppConfirmPassword}
+                                    onChange={e => setNewAppConfirmPassword(e.target.value)}
+                                    className="block w-full pr-8 text-xs border-gray-300 rounded-lg border py-2 px-2.5 focus:ring-indigo-600 focus:border-indigo-600 outline-none"
+                                    placeholder="••••••••"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowNewAppConfirmPassword(!showNewAppConfirmPassword)}
+                                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                                  >
+                                    {showNewAppConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 6-Digit Passcode */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-bold text-gray-700">
+                                  6-Digit Passcode <span className="text-red-500">*</span>
+                                </label>
+                                <span className="text-[10px] text-gray-400">Used for quick passcode sign-in</span>
+                              </div>
+                              <input
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={6}
+                                required
+                                value={newAppPasscode}
+                                onChange={e => setNewAppPasscode(e.target.value.replace(/\D/g, ''))}
+                                className="block w-full text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-indigo-600 focus:border-indigo-600 outline-none tracking-widest font-mono text-center font-bold"
+                                placeholder="••••••"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Step 3 Action Buttons: Back & Submit */}
+                          <div id="tour-newapp-submit" className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewAppError(null);
+                                setNewAppStep(2);
+                              }}
+                              className="w-1/3 flex justify-center items-center gap-1.5 py-3 px-3 border border-gray-300 rounded-lg shadow-2xs text-xs sm:text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors cursor-pointer"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              <span>Back</span>
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={newAppRegistering || !newAppVerified}
+                              className="flex-1 flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-colors disabled:opacity-60 cursor-pointer"
+                            >
+                              <ShieldCheck className="w-4 h-4 shrink-0" />
+                              <span>{newAppRegistering ? 'Registering...' : !newAppVerified ? 'Verify Plantilla First' : 'Register New Application'}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
 
                       <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
                         <div>

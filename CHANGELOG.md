@@ -1,5 +1,26 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-21] Incumbent GMIS Plantilla Redirection & Reclassification Verification Fix (`applicants.service.ts`, `Login.tsx`)
+- **Incumbent GMIS Plantilla Item Redirection**:
+  - When verifying a Plantilla Item Number in the **New Reclassification Application** form (`category === 'new'`), if the item number exists in GMIS / `reclass_gc` with an assigned incumbent personnel name (`hasName === true`) but has not yet registered a reclassification email (`hasEmail === false`), the API now returns `status: 'incumbent_record'`.
+  - The UI presents a specialized banner: *"This Plantilla Item Number belongs to an existing GMIS incumbent record. Please proceed to Incumbent Plantilla Registration."* along with a direct action button: **`Proceed to Incumbent Plantilla Registration →`**.
+  - Clicking this button automatically switches to the Incumbent Registration view (`category: 'existing'`), carries over the entered Plantilla Item Number, and executes verification seamlessly without re-typing.
+- **Accurate Incumbent Registration Verification & Jobseeker Decoupling**:
+  - In `ApplicantsService.verifyReclassItemNumber` and `registerReclassAccount`:
+    - Resolved a conflict where incumbent personnel with existing legacy jobseeker applicant accounts (e.g. `OSEC-DECSB-GUIDC2-570110-2016` / Cristy Ross Pacatang) were falsely flagged as `already_registered` because of their jobseeker credentials.
+    - An incumbent in `reclass_gc` is now only treated as already registered if `reclass_gc.email` is non-empty AND an applicant record exists with `registrant_type === 'reclass'`.
+    - If `reclass_gc.email` is empty, verification returns `status: 'valid'` and pre-populates their incumbent GMIS data, and registration re-purposes the applicant account cleanly into `reclass`.
+
+## [2026-10-21] Paginated Multi-Step Wizard for New Reclassification Application (`Login.tsx`)
+- **Display Optimization**: Paginated the lengthy 14-field New Reclassification Application registration form into a clean, 3-step wizard with "Next" and "Back" navigation buttons, maximizing the display space and eliminating excessive vertical scrolling.
+  - **Step 1: Plantilla & Identity**: Plantilla Item Number Verification, First/Middle/Last Name, and Official DepEd Email & Mobile Number with "Next: Station & Qualifications &rarr;".
+  - **Step 2: Station & Qualifications**: Current Position, Region & Division dropdowns, School/Station Name, Education/Degree, Eligibility, and Experience & Training hours with "&larr; Back" and "Next: Security Credentials &rarr;".
+  - **Step 3: Security & Submission**: Password, Confirm Password, and 6-Digit Passcode with "&larr; Back" and "Register New Application".
+- **Step Wizard Progress Bar**: Added an interactive progress bar at the top of the form indicating current step completion (with step jumping for visited steps and mobile-optimized step indicators).
+- **Interactive Validation**: Integrated per-step validation to guide users before advancing (verifying plantilla slots, required names, valid DepEd email format, mobile format, and station details).
+- **Guided Tour Synchronization**: Automatically synchronizes the "Register Tutorial" steps with the form wizard so navigating through the tutorial seamlessly switches between Step 1, Step 2, and Step 3 views.
+- **Dynamic Subtitle**: Updated header subtitle to dynamically reflect the active step instructions.
+
 ## [2026-10-21] Read-Only Target Position Card & Automatic Selection Modal (`ApplicantDashboard.tsx`)
 - Changed the **"Target Position"** card to be strictly read-only on the dashboard (removed the inline Edit button and form).
 - Added an automatic **Target Position Selection Modal** that triggers if `reclass_gc.target_position` is null or empty upon dashboard load or after plantilla verification.
