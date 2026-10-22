@@ -2254,7 +2254,7 @@ class ApplicantsServiceClass {
           appRow.password_hash ||
           appRow.passcode_hash ||
           inc.password_hash ||
-          inc.passcode_hash;
+          inc.passcode;
 
         if (hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
           return {
@@ -2262,7 +2262,7 @@ class ApplicantsServiceClass {
             message: 'This Plantilla Item Number is already registered. Please sign in.',
           };
         }
-      } else if (inc.password_hash || inc.passcode_hash) {
+      } else if (inc.password_hash || inc.passcode) {
         return {
           status: 'already_registered',
           message: 'This Plantilla Item Number is already registered. Please sign in.',
@@ -2405,7 +2405,7 @@ class ApplicantsServiceClass {
       const hasPassword =
         appRow.password_hash ||
         appRow.passcode_hash ||
-        (inc && (inc.password_hash || inc.passcode_hash));
+        (inc && (inc.password_hash || inc.passcode));
 
       const hasReclassEmail = Boolean(inc && inc.email && inc.email.trim());
       if (hasReclassEmail && hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
@@ -2589,33 +2589,29 @@ class ApplicantsServiceClass {
       await client.query(
         `UPDATE reclass_gc SET 
           email = $1, 
-          password = $2, 
-          password_hash = $3, 
-          passcode = $4, 
-          passcode_hash = $5, 
-          mobile_number = $6, 
-          first_name = $7,
-          last_name = $8,
-          new_application = CASE WHEN $9 = TRUE THEN TRUE ELSE new_application END,
-          education = COALESCE($10, education),
-          years_experience = COALESCE($11, years_experience),
-          hours_of_training = COALESCE($12, hours_of_training),
-          eligibility = COALESCE($13, eligibility),
-          region = COALESCE($14, region),
-          division = COALESCE($15, division),
-          school_name = COALESCE($16, school_name),
-          current_position = COALESCE($17, current_position),
+          password_hash = $2, 
+          passcode = $3, 
+          mobile_number = $4, 
+          first_name = $5,
+          last_name = $6,
+          new_application = CASE WHEN $7 = TRUE THEN TRUE ELSE new_application END,
+          education = COALESCE($8, education),
+          years_experience = COALESCE($9, years_experience),
+          hours_of_training = COALESCE($10, hours_of_training),
+          eligibility = COALESCE($11, eligibility),
+          region = COALESCE($12, region),
+          division = COALESCE($13, division),
+          school_name = COALESCE($14, school_name),
+          current_position = COALESCE($15, current_position),
           stage_of_reclassification = COALESCE(stage_of_reclassification, 'UPDATING OF DOCUMENTS'),
           updated_at = NOW() 
-        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($18)) 
-           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($18))
-           OR id = $19`,
+        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($16)) 
+           OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($16))
+           OR id = $17`,
         [
           cleanEmail,
-          password,
           password_hash,
           passcode,
-          passcode_hash,
           cleanMobile,
           finalFirstName,
           finalLastName,
@@ -2762,16 +2758,16 @@ class ApplicantsServiceClass {
         const gc = gcRes.rows[0];
         let isGcMatch = false;
         if (method === 'passcode') {
-          if (gc.passcode_hash) {
-            isGcMatch = await bcrypt.compare(credential, gc.passcode_hash);
-          } else if (gc.passcode) {
-            isGcMatch = gc.passcode === credential;
+          if (gc.passcode) {
+            if (gc.passcode.startsWith('$2')) {
+              isGcMatch = await bcrypt.compare(credential, gc.passcode);
+            } else {
+              isGcMatch = gc.passcode === credential;
+            }
           }
         } else {
           if (gc.password_hash) {
             isGcMatch = await bcrypt.compare(credential, gc.password_hash);
-          } else if (gc.password) {
-            isGcMatch = gc.password === credential;
           }
         }
 
@@ -2799,7 +2795,11 @@ class ApplicantsServiceClass {
                 gc.first_name || '',
                 gc.email || `${cleanIdentifier.toLowerCase()}@deped.gov.ph`,
                 gc.password_hash,
-                gc.passcode_hash,
+                gc.passcode
+                  ? (gc.passcode.startsWith('$2')
+                      ? gc.passcode
+                      : await bcrypt.hash(gc.passcode, 10))
+                  : null,
                 gc.passcode,
                 gc.mobile_number,
                 gc.item_no,

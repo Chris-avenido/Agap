@@ -63,10 +63,8 @@ async function runSchemaMigrations(client: any) {
         first_name VARCHAR(150),
         last_name VARCHAR(150),
         email VARCHAR(255),
-        password VARCHAR(255),
         password_hash VARCHAR(255),
         passcode VARCHAR(255),
-        passcode_hash VARCHAR(255),
         mobile_number VARCHAR(50),
         region VARCHAR(255),
         division VARCHAR(255),
@@ -85,11 +83,11 @@ async function runSchemaMigrations(client: any) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS email VARCHAR(255);
-      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS password VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS passcode VARCHAR(255);
-      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS passcode_hash VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
+      ALTER TABLE reclass_gc DROP COLUMN IF EXISTS password;
+      ALTER TABLE reclass_gc DROP COLUMN IF EXISTS passcode_hash;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS education VARCHAR(255);
