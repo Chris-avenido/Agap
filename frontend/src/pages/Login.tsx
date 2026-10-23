@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText, Check } from 'lucide-react';
+import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText, Check, Landmark } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
@@ -1053,33 +1053,33 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen flex bg-[var(--bg-2)] relative overflow-hidden" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="h-screen flex bg-[#F4F9FC] relative overflow-hidden" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Back Button */}
       <button
         type="button"
         onClick={handleBack}
-        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors font-medium cursor-pointer"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-[#0A6FA6] hover:text-[#065078] transition-colors font-bold text-sm cursor-pointer"
       >
-        <ArrowLeft className="w-5 h-5" /> Back
+        <ArrowLeft className="w-4 h-4 stroke-[2.5]" /> <span>Back</span>
       </button>
 
       <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 h-full overflow-y-auto">
         <div className={`mx-auto my-auto w-full transition-all duration-300 ${portalType === 'reclass' && reclassView === 'register'
             ? 'max-w-md sm:max-w-xl lg:w-[520px]'
-            : 'max-w-sm lg:w-96'
+            : 'max-w-sm lg:w-[410px]'
           }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white border-2 border-[var(--blue)] rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
+          <div className="flex items-center gap-3.5">
+            <div className="w-13 h-13 bg-white border-2 border-[#0A6FA6] rounded-xl flex items-center justify-center shadow-xs overflow-hidden p-1.5 shrink-0">
               <img src={modernLogo} alt="AGAP Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex items-center">
               <div className="flex flex-col">
-                <span className="text-[var(--ink)] font-bold text-lg leading-tight tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>AGAP Portal</span>
-                <span className="text-[var(--ink)]/70 text-[10px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Appointments and Placements</span>
+                <span className="text-[#082B4C] font-extrabold text-xl leading-tight tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>AGAP Portal</span>
+                <span className="text-[#667A91] text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold mt-0.5">Agile Gateway for Appointments and Placements</span>
               </div>
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-[var(--ink)] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+          <h2 className="mt-6 text-3xl font-extrabold text-[#082B4C] tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
             {isRegistering
               ? 'Create an Account'
               : portalType === 'reclass'
@@ -1088,7 +1088,7 @@ export default function Login() {
                     : 'Reclassification Login')
                 : 'Welcome back!'}
           </h2>
-          <p className="mt-2 text-[15px] font-medium text-[var(--muted)]">
+          <p className="mt-2 text-[15px] font-medium text-[#667A91]">
             {isRegistering
               ? 'Join AGAP Portal to start your application'
               : portalType === 'reclass'
@@ -1103,8 +1103,8 @@ export default function Login() {
                   : 'Sign in using your Plantilla Item Number or DepEd email')
                 : 'Sign in to access your account'}
           </p>
-          <p className="mt-1.5 text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-600 shrink-0"></span>
+          <p className="mt-1.5 text-xs font-semibold text-[#667A91] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0A6FA6] shrink-0 inline-block"></span>
             Government HR Management Information System &bull; DepEd
           </p>
 
@@ -1155,11 +1155,9 @@ export default function Login() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#f8fafc] border border-gray-200 rounded-xl p-3 text-xs text-[#022851] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 shrink-0 text-[#022851]" />
-                      <span>Logging in to <strong>General Jobseeker &amp; Vacancies</strong></span>
-                    </div>
+                  <div className="bg-[#EAF6FB] border border-[#BFDDF0] rounded-xl py-2.5 px-4 flex items-center justify-center gap-2.5 shadow-2xs">
+                    <Landmark className="w-4 h-4 text-[#082B4C] stroke-[2.2] shrink-0" />
+                    <span className="text-sm font-bold text-[#082B4C] tracking-tight">General Jobseeker &amp; Vacancies</span>
                   </div>
                 )}
               </div>
@@ -1170,30 +1168,30 @@ export default function Login() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-[var(--ink)]">First Name</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-[var(--muted)]" />
+                    <label className="block text-sm font-bold text-[#082B4C] mb-1">First Name</label>
+                    <div className="relative rounded-lg shadow-2xs">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <User className="h-4 w-4 text-[#94A3B8]" />
                       </div>
                       <input
                         type="text"
                         required
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
-                        className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                        className="block w-full pl-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
                         placeholder="Juan"
                       />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-[var(--ink)]">Last Name</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
+                    <label className="block text-sm font-bold text-[#082B4C] mb-1">Last Name</label>
+                    <div className="relative rounded-lg shadow-2xs">
                       <input
                         type="text"
                         required
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
-                        className="block w-full px-3 sm:text-sm border-gray-300 rounded-md border py-2 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                        className="block w-full px-3 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
                         placeholder="Dela Cruz"
                       />
                     </div>
@@ -1201,59 +1199,59 @@ export default function Login() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Email Address</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-[var(--muted)]" />
+                  <label className="block text-sm font-bold text-[#082B4C] mb-1">Email Address</label>
+                  <div className="relative rounded-lg shadow-2xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <User className="h-4 w-4 text-[#94A3B8]" />
                     </div>
                     <input
                       type="email"
                       required
                       value={regEmail}
                       onChange={e => setRegEmail(e.target.value)}
-                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      className="block w-full pl-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
                       placeholder="name@example.com"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Password</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-[var(--muted)]" />
+                  <label className="block text-sm font-bold text-[#082B4C] mb-1">Password</label>
+                  <div className="relative rounded-lg shadow-2xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock className="h-4 w-4 text-[#94A3B8]" />
                     </div>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={regPassword}
                       onChange={e => setRegPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                      placeholder="••••••••"
+                      className="block w-full pl-10 pr-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
+                      placeholder="Enter your password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#082B4C] transition-colors cursor-pointer"
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Confirm Password</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-[var(--muted)]" />
+                  <label className="block text-sm font-bold text-[#082B4C] mb-1">Confirm Password</label>
+                  <div className="relative rounded-lg shadow-2xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock className="h-4 w-4 text-[#94A3B8]" />
                     </div>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                      placeholder="••••••••"
+                      className="block w-full pl-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
+                      placeholder="Confirm your password"
                     />
                   </div>
                 </div>
@@ -1262,19 +1260,19 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors disabled:opacity-60 cursor-pointer"
+                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold text-white bg-[#062c54] hover:bg-[#041d38] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#062c54] transition-all disabled:opacity-60 cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4 shrink-0" />
                     {loading ? 'Creating Account...' : 'Create Account'}
                   </button>
                 </div>
 
-                <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                <div className="mt-4 text-center text-sm text-[#667A91]">
                   Already have an account?{' '}
                   <button
                     type="button"
                     onClick={() => { setIsRegistering(false); setShowPassword(false); }}
-                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none cursor-pointer"
+                    className="font-semibold text-[#0A6FA6] hover:text-[#065078] hover:underline transition-colors focus:outline-none cursor-pointer"
                   >
                     Sign in here
                   </button>
@@ -2251,7 +2249,7 @@ export default function Login() {
 
                   <div id="tour-login-credentials" className="space-y-4">
                     {/* Tabs for Password vs 6-Digit Passcode */}
-                    <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+                    <div className="flex bg-[#EAF2F9] p-1 rounded-xl border border-[#D0E0EF]">
                       <button
                         type="button"
                         onClick={() => {
@@ -2259,8 +2257,8 @@ export default function Login() {
                           setReclassLoginError(null);
                         }}
                         className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${reclassLoginMethod === 'password'
-                            ? 'bg-white text-[#0369a1] shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
+                            ? 'bg-[#062c54] text-white shadow-xs'
+                            : 'text-[#082B4C] hover:text-[#062c54]'
                           }`}
                       >
                         Password
@@ -2272,8 +2270,8 @@ export default function Login() {
                           setReclassLoginError(null);
                         }}
                         className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${reclassLoginMethod === 'passcode'
-                            ? 'bg-white text-[#0369a1] shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
+                            ? 'bg-[#062c54] text-white shadow-xs'
+                            : 'text-[#082B4C] hover:text-[#062c54]'
                           }`}
                       >
                         6-Digit Passcode
@@ -2281,12 +2279,12 @@ export default function Login() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-[var(--ink)]">
+                      <label className="block text-sm font-bold text-[#082B4C] mb-1.5">
                         {reclassLoginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
                       </label>
-                      <div className="mt-1 relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-[var(--muted)]" />
+                      <div className="relative rounded-lg shadow-2xs">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                          <Lock className="h-4 w-4 text-[#94A3B8]" />
                         </div>
                         {reclassLoginMethod === 'password' ? (
                           <>
@@ -2298,15 +2296,15 @@ export default function Login() {
                                 setReclassPassword(e.target.value);
                                 setReclassLoginError(null);
                               }}
-                              className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors"
-                              placeholder="••••••••"
+                              className="block w-full pl-10 pr-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
+                              placeholder="Enter your password"
                             />
                             <button
                               type="button"
                               onClick={() => setShowReclassPassword(!showReclassPassword)}
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#082B4C] transition-colors cursor-pointer"
                             >
-                              {showReclassPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              {showReclassPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </>
                         ) : (
@@ -2321,7 +2319,7 @@ export default function Login() {
                               setReclassPasscode(val);
                               setReclassLoginError(null);
                             }}
-                            className="block w-full pl-10 pr-4 sm:text-sm border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors tracking-widest font-mono text-center font-bold"
+                            className="block w-full pl-10 pr-4 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all tracking-widest font-mono text-center font-bold"
                             placeholder="••••••"
                           />
                         )}
@@ -2333,21 +2331,21 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
+                      className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold text-white bg-[#062c54] hover:bg-[#041d38] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#062c54] transition-all disabled:opacity-60 cursor-pointer"
                     >
-                      <LogIn className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                       {loading ? 'Signing in...' : 'Sign in'}
                     </button>
                   </div>
 
-                  <div id="tour-login-register" className="mt-4 text-center text-sm text-[var(--muted)]">
+                  <div id="tour-login-register" className="mt-4 text-center text-sm text-[#667A91]">
                     Don't have an account?{' '}
                     <button
                       type="button"
                       onClick={() => {
                         setShowCategoryModal(true);
                       }}
-                      className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                      className="font-semibold text-[#0A6FA6] hover:text-[#065078] hover:underline transition-colors focus:outline-none cursor-pointer"
                     >
                       Register
                     </button>
@@ -2356,49 +2354,57 @@ export default function Login() {
               )
             ) : (
               /* FORM 3: Jobseeker Login Form */
-              <form onSubmit={handleJobseekerLogin} className="space-y-6">
+              <form onSubmit={handleJobseekerLogin} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)]">Username</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-[var(--muted)]" />
+                  <label className="block text-sm font-bold text-[#082B4C] mb-1.5">Username</label>
+                  <div className="relative rounded-lg shadow-2xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <User className="h-4 w-4 text-[#94A3B8]" />
                     </div>
                     <input
                       type="text"
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
+                      className="block w-full pl-10 pr-3 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
                       placeholder="Enter your username or email"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <div className="flex bg-[#EAF2F9] p-1 rounded-lg border border-[#D0E0EF]">
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('password'); setPassword(''); }}
-                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors cursor-pointer ${loginMethod === 'password' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${
+                        loginMethod === 'password'
+                          ? 'bg-[#062c54] text-white shadow-xs'
+                          : 'text-[#082B4C] hover:text-[#062c54]'
+                      }`}
                     >
                       Password
                     </button>
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
-                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-colors cursor-pointer ${loginMethod === 'passcode' ? 'bg-white text-[#022851] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${
+                        loginMethod === 'passcode'
+                          ? 'bg-[#062c54] text-white shadow-xs'
+                          : 'text-[#082B4C] hover:text-[#062c54]'
+                      }`}
                     >
                       6-Digit Passcode
                     </button>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[var(--ink)]">
+                    <label className="block text-sm font-bold text-[#082B4C] mb-1.5">
                       {loginMethod === 'password' ? 'Password' : '6-Digit Passcode'}
                     </label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-[var(--muted)]" />
+                    <div className="relative rounded-lg shadow-2xs">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock className="h-4 w-4 text-[#94A3B8]" />
                       </div>
                       <input
                         type={loginMethod === 'password' ? (showPassword ? 'text' : 'password') : 'text'}
@@ -2406,57 +2412,57 @@ export default function Login() {
                         maxLength={loginMethod === 'passcode' ? 6 : undefined}
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md border py-2 px-3 focus:ring-[var(--blue)] focus:border-[var(--blue)] outline-none transition-colors"
-                        placeholder={loginMethod === 'password' ? '••••••••' : 'Enter 6-digit passcode'}
+                        className="block w-full pl-10 pr-10 sm:text-sm bg-white border border-[#D1DFEC] rounded-lg py-2.5 px-3 text-[#082B4C] placeholder:text-slate-400 focus:ring-2 focus:ring-[#0A6FA6]/20 focus:border-[#0A6FA6] outline-none transition-all"
+                        placeholder={loginMethod === 'password' ? 'Enter your password' : 'Enter 6-digit passcode'}
                       />
                       {loginMethod === 'password' && (
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[var(--ink)] transition-colors cursor-pointer"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#082B4C] transition-colors cursor-pointer"
                         >
-                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-0.5">
                   <div className="flex items-center">
                     <input
                       id="remember-me"
                       type="checkbox"
-                      className="h-4 w-4 text-[var(--blue)] focus:ring-[var(--blue)] border-gray-300 rounded cursor-pointer"
+                      className="h-4 w-4 text-[#062c54] focus:ring-[#062c54] border-[#BFD0E0] rounded cursor-pointer"
                     />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-[var(--ink)] cursor-pointer">
+                    <label htmlFor="remember-me" className="ml-2 block text-sm font-medium text-[#4B5E76] cursor-pointer">
                       Remember me
                     </label>
                   </div>
                   <div className="text-sm">
-                    <a href="#" onClick={handleForgotPassword} className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors">
+                    <a href="#" onClick={handleForgotPassword} className="font-semibold text-[#0A6FA6] hover:text-[#065078] hover:underline transition-colors">
                       Forgot your password?
                     </a>
                   </div>
                 </div>
 
-                <div>
+                <div className="pt-1">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#022851] hover:bg-[#021f3f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#022851] transition-colors disabled:opacity-60 cursor-pointer"
+                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold text-white bg-[#062c54] hover:bg-[#041d38] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#062c54] transition-all disabled:opacity-60 cursor-pointer"
                   >
-                    <LogIn className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                     {loading ? 'Verifying...' : 'Sign in'}
                   </button>
                 </div>
 
-                <div className="mt-4 text-center text-sm text-[var(--muted)]">
+                <div className="mt-5 text-center text-sm text-[#667A91]">
                   Don't have an account?{' '}
                   <button
                     type="button"
                     onClick={() => { setIsRegistering(true); setShowPassword(false); }}
-                    className="font-medium text-[var(--blue)] hover:text-[var(--blue-deep)] transition-colors focus:outline-none cursor-pointer"
+                    className="font-semibold text-[#0A6FA6] hover:text-[#065078] hover:underline transition-colors focus:outline-none cursor-pointer"
                   >
                     Register here
                   </button>
