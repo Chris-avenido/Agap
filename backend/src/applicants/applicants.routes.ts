@@ -1282,6 +1282,22 @@ router.post('/:id/verify-plantilla', async (req, res, next) => {
   }
 });
 
+// GET /api/applicants/reclass-positions-qs
+router.get('/reclass-positions-qs', async (req, res) => {
+  try {
+    const positions = await ApplicantsService.getReclassPositionsQS();
+    res.json({
+      success: true,
+      data: positions,
+    });
+  } catch (error: any) {
+    console.error('Error fetching reclass QS positions:', error);
+    res.status(500).json({
+      message: error.message || 'Error fetching reclassification qualification standards.',
+    });
+  }
+});
+
 // GET /api/applicants/:id/reclass-details
 router.get('/:id/reclass-details', async (req, res, next) => {
   try {
@@ -1306,13 +1322,14 @@ router.put('/:id/reclass-target-position', async (req, res) => {
     if (isNaN(id)) {
       return res.status(400).json({ message: 'Invalid applicant ID.' });
     }
-    const { target_position } = req.body;
+    const { target_position, update_application, is_registered } = req.body;
     if (!target_position || !String(target_position).trim()) {
       return res.status(400).json({ message: 'Target position is required.' });
     }
     const updated = await ApplicantsService.updateTargetPosition(
       id,
       String(target_position).trim(),
+      { update_application, is_registered },
     );
     res.json({
       success: true,
@@ -1323,6 +1340,34 @@ router.put('/:id/reclass-target-position', async (req, res) => {
     console.error('Error updating target position:', error);
     res.status(500).json({
       message: error.message || 'Error updating target reclassification position.',
+    });
+  }
+});
+
+// PUT /api/applicants/:id/reclass-update-preference
+router.put('/:id/reclass-update-preference', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const { update_application, is_registered, target_position } = req.body;
+    if (update_application === undefined || update_application === null) {
+      return res.status(400).json({ message: 'update_application answer is required.' });
+    }
+    const updated = await ApplicantsService.updateReclassApplicationPreference(
+      id,
+      { update_application, is_registered, target_position },
+    );
+    res.json({
+      success: true,
+      message: 'Reclassification application preference saved successfully.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error updating application preference:', error);
+    res.status(500).json({
+      message: error.message || 'Error updating reclassification application preference.',
     });
   }
 });

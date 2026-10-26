@@ -97,11 +97,17 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_checklist JSONB;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_status VARCHAR(100);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS target_position VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application BOOLEAN DEFAULT FALSE;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
+      ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application);
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc(is_registered);
+      DROP INDEX IF EXISTS idx_reclass_gc_registered_or_not;
 
       CREATE OR REPLACE FUNCTION public.trg_uppercase_reclass_gc()
       RETURNS trigger
@@ -263,33 +269,11 @@ async function runSchemaMigrations(client: any) {
       CREATE INDEX IF NOT EXISTS idx_agap_invited_job_cluster_id ON agap_invited(job_cluster_id);
     `);
 
-    // Ensure reclass_applications table exists matching production columns
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS reclass_applications (
-        id SERIAL PRIMARY KEY,
-        reclass_gc_id INTEGER,
-        item_no VARCHAR(255),
-        current_position VARCHAR(255),
-        region VARCHAR(255),
-        division VARCHAR(255),
-        school_id VARCHAR(255),
-        school_name VARCHAR(255),
-        reclass_position VARCHAR(255),
-        new_item_no VARCHAR(255),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_reclass_applications_gc_id ON reclass_applications(reclass_gc_id);
-      CREATE INDEX IF NOT EXISTS idx_reclass_applications_item_no ON reclass_applications(item_no);
-      CREATE INDEX IF NOT EXISTS idx_reclass_applications_division ON reclass_applications(division);
-      CREATE INDEX IF NOT EXISTS idx_reclass_applications_school_id ON reclass_applications(school_id);
-    `);
-
     // Ensure reclass_documents table exists and has clean columns
     await client.query(`
       CREATE TABLE IF NOT EXISTS reclass_documents (
         id SERIAL PRIMARY KEY,
-        reclass_application_id INTEGER REFERENCES reclass_applications(id) ON DELETE SET NULL,
+        reclass_application_id INTEGER,
         plantilla_item_number VARCHAR(150),
         document_title VARCHAR(255),
         file_name VARCHAR(255) NOT NULL,
@@ -300,7 +284,7 @@ async function runSchemaMigrations(client: any) {
         is_test BOOLEAN DEFAULT FALSE
       );
 
-      ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS reclass_application_id INTEGER REFERENCES reclass_applications(id) ON DELETE SET NULL;
+      ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS reclass_application_id INTEGER;
       ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS plantilla_item_number VARCHAR(150);
       ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS document_title VARCHAR(255);
       ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS file_name VARCHAR(255);

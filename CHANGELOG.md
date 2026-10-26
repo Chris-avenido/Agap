@@ -1,5 +1,89 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-27] [Reclass] Enable Qualification Standards (QS) Visibility for Applicants
+- **Qualification Standards (QS) Integration in [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx)**:
+  - Enabled dynamic Qualification Standards (QS) visibility when choosing a desired reclassification role in Step 2.
+  - Displays DepEd & CSC benchmark qualification criteria for every role:
+    - **Education**: Degree & coursework prerequisites (e.g. Master's in Guidance and Counseling / Psychology or Bachelor's with 18 units & 200 hours practicum).
+    - **Experience**: Relevant professional experience description and duration.
+    - **Training**: Relevant specialized training hours description and duration.
+    - **Eligibility**: License requirements (RA 1080 PRC Guidance Counselor license or Career Service Professional).
+    - **Compensation**: Live Salary Grade and monthly compensation (`₱xx,xxx.00 / month`).
+  - **Strict Guideline Compliance (`.agents/agents.md`)**:
+    - When `years_experience` is `0`, prominently renders badge & text as **`None Required`** (`bg-emerald-100 text-emerald-800 border-emerald-300`).
+    - When `hours_of_training` is `0`, prominently renders badge & text as **`None Required`** (`bg-emerald-100 text-emerald-800 border-emerald-300`).
+  - Added interactive quick-selection chips beneath the position dropdown for rapid position browsing and instant QS comparison.
+- **Backend API Endpoint in [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts) & [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts)**:
+  - Added `GET /api/applicants/reclass-positions-qs` to query the `reclass_sg` table.
+  - Retrieves all 9 benchmark positions ordered by `salary_grade ASC`.
+  - Normalizes numeric `years_experience`, `hours_of_training`, `monthly_salary`, and `salary_grade`.
+- **Applicant Dashboard Integration in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - Added **"View QS"** quick action button on the "Desired Position" card, enabling incumbents to open the modal directly into Step 2 with full Qualification Standards visible.
+
+## [2026-10-26] Removed Dependency on Dropped `reclass_applications` Table (Unified to `reclass_gc`)
+- **Investigation & Root Cause**:
+  - A database schema change removed table `reclass_applications`.
+  - Backend queries in `getReclassDetails`, `getReclassDocuments`, `updateTargetPosition`, `updateReclassApplicationPreference`, and auth routes threw Postgres errors: `relation "reclass_applications" does not exist (code: 42P01)`.
+- **Backend Code Adaptation in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts)**:
+  - Unified all reclassification applicant queries, updates, and preference saves directly to `reclass_gc` as the authoritative single source of truth.
+  - In `getReclassDetails`: Removed read queries against `reclass_applications`, obtaining applicant status directly from `reclass_gc`. Kept `reclass_application` property mapped to the incumbent record for full backward compatibility with frontend consumers.
+  - In `getReclassDocuments`: Removed fallback check on `reclass_applications`; documents are queried and filtered directly by `plantilla_item_number` in `reclass_documents`.
+  - In `updateTargetPosition` and `updateReclassApplicationPreference`: Removed `UPDATE reclass_applications` queries; preferences (`update_application`, `is_registered`, `target_position`, `reclass_position`) are persisted to `reclass_gc`.
+  - In `loginWithPlantilla` & `verifyPasscodeLogin`: Removed queries to `reclass_applications`.
+  - In `uploadReclassDocument`: Updated `reclass_gc` directly instead of `reclass_applications`.
+- **Database Migrations & Schema**:
+  - Removed table creation and FK reference from [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts).
+  - Removed `reclass_applications` model and FK relation from [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma).
+
+## [2026-10-26] Reclassification Guided 2-Step Workflow (Registration Question Before Desired Position)
+- **Sequential Multi-Step Progression in [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx)**:
+  - Ensured that when an applicant wants to update or apply for reclassification, they are **asked first whether they are already a Registered Guidance Counselor (RA 1080) or not before asking for their Desired Position**.
+  - **Step 1: Registration Status Check**:
+    - Displays visual 2-step wizard progress indicator (`1. Registration Status` active, `2. Desired Position` pending).
+    - Prominently prompts: *"Are you already a Registered Guidance Counselor?"*
+    - Two clear selection cards:
+      1. **Yes, Registered Guidance Counselor (RA 1080)** (Counselor Track: SG 16–22 • School Counselor I to IV).
+      2. **No, Not Registered** (Associate Track: SG 11–15 • School Counselor Associate I to V).
+    - Hides the Desired Position dropdown completely during Step 1.
+    - Includes a **"Next: Select Desired Position →"** button to advance once the user chooses their status.
+  - **Step 2: Desired Position Selection**:
+    - Displays a confirmation summary banner with an editable **"← Change Status"** button returning to Step 1.
+    - Prompts: *"Select your Desired Position"*.
+    - Renders the dropdown options filtered strictly to their chosen track:
+      - If Registered: `School Counselor I (SG-16)`, `School Counselor II (SG-18)`, `School Counselor III (SG-20)`, `School Counselor IV (SG-22)`.
+      - If Not Registered: `School Counselor Associate I (SG-11)`, `School Counselor Associate II (SG-12)`, `School Counselor Associate III (SG-13)`, `School Counselor Associate IV (SG-14)`, `School Counselor Associate V (SG-15)`.
+    - Live Salary Grade pill badge with full application summary (Track, Position, SG).
+    - Navigation footer with **"← Back"** button to return to Step 1, and **"Save & Confirm"** to submit preference.
+- **First-Time Reclassification Incumbent Trigger in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - In `PlantillaGateModal` verification callback (`onVerified`), immediately checks if `update_application` is `null`/`undefined`, launching the initial prompt (*"Would you like to update your application? Yes or No"*). Clicking "Yes" directly initiates Step 1 of the guided 2-step modal.
+
+## [2026-10-26] Reclassification "Would you like to update your application" & Register Preference (Boolean Schema)
+- **Database Migration & Schema Update**:
+  - Created and executed standalone idempotent migration script [`update_application_columns_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/update_application_columns_migration.sql).
+  - Configured strictly **2 BOOLEAN columns** on both `public.reclass_gc` and `public.reclass_applications`:
+    - `update_application BOOLEAN DEFAULT FALSE`: Stores `true` (Yes) or `false` (No) to *"Would you like to update your application"*.
+    - `is_registered BOOLEAN DEFAULT FALSE`: Stores `true` (Registered RA 1080 Guidance Counselor track) or `false` (Not Registered Associate track).
+  - Dropped obsolete `registered_or_not` column and its index from both tables.
+  - Added indexes `idx_reclass_gc_update_app` & `idx_reclass_gc_is_registered` on `reclass_gc`, and `idx_reclass_app_update_app` & `idx_reclass_app_is_registered` on `reclass_applications`.
+  - Added idempotent column & index verification in `runSchemaMigrations` within [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts).
+  - Updated Prisma models `reclass_gc` and `reclass_applications` in [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma) with `update_application Boolean?` and `is_registered Boolean?`.
+- **Backend API & Service Methods**:
+  - Updated `ApplicantsService.updateReclassApplicationPreference` in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) to accept boolean `update_application` and `is_registered`.
+  - Updated `ApplicantsService.updateTargetPosition` to accept boolean `update_application` and `is_registered`.
+  - Updated `ApplicantsService.getReclassDetails` to return boolean `update_application` and `is_registered`.
+  - Updated `PUT /api/applicants/:id/reclass-update-preference` and `PUT /api/applicants/:id/reclass-target-position` in [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts).
+- **Frontend Interactive UI & Workflow**:
+  - **Renamed Target Position to Desired Position**:
+    - Renamed all user-facing labels from **"Target Position"** to **"Desired Position"** across [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx), [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx), and [`LoginConfirmationModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/LoginConfirmationModal.tsx).
+  - **Added School Counselor I to IV with SGs**:
+    - `School Counselor I` (SG-16)
+    - `School Counselor II` (SG-18)
+    - `School Counselor III` (SG-20)
+    - `School Counselor IV` (SG-22)
+    - Along with `School Counselor Associate I to V` (SG 11 to 15) for the non-registered track.
+  - Updated [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx) to manage boolean `isRegistered` state and save `{ update_application: true, is_registered: isRegistered, target_position }`.
+  - Updated [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx) to evaluate boolean `update_application` (`true`, `false`, or `null/undefined`) and `is_registered` (`true` vs `false`), removing `registered_or_not`.
+
 ## [2026-10-26] Reclassification Salary Grade & Qualification Standards Table (`reclass_sg`)
 - **Table Creation & Migration**:
   - Created standalone idempotent SQL migration script [`reclass_sg_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/reclass_sg_migration.sql).

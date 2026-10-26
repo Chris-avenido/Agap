@@ -130,7 +130,7 @@ export const LoginConfirmationModal: React.FC<LoginConfirmationModalProps> = ({
                   </div>
                   <div>
                     <span className="text-[11px] font-bold text-[#0284c7] uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-                      <Award className="w-3.5 h-3.5 text-[#0284c7]" /> Target Reclass Position
+                      <Award className="w-3.5 h-3.5 text-[#0284c7]" /> Desired Reclass Position
                     </span>
                     <span className="font-bold text-[#022851] text-[13px]">
                       {data.target_position || 'School Counselor'}

@@ -82,6 +82,7 @@ export interface UploadedReclassDoc {
   file_url: string;
   file_size?: number;
   uploaded_at: string;
+  updated_at?: string;
 }
 
 function matchesRequirementDoc(reqKey: string, doc: any): boolean {

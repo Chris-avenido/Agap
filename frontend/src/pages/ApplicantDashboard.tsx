@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark, HelpCircle, BookOpen, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
@@ -7,15 +7,35 @@ import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 import PlantillaGateModal from '../components/PlantillaGateModal';
 import ReclassUploadModal from '../components/ReclassUploadModal';
+import ReclassUpdateModal from '../components/ReclassUpdateModal';
+
+const NOT_REGISTERED_TARGET_OPTIONS = [
+  { value: 'SCHOOL COUNSELOR ASSOCIATE I', label: 'School Counselor Associate I', sg: 'SG-11' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE II', label: 'School Counselor Associate II', sg: 'SG-12' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE III', label: 'School Counselor Associate III', sg: 'SG-13' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE IV', label: 'School Counselor Associate IV', sg: 'SG-14' },
+  { value: 'SCHOOL COUNSELOR ASSOCIATE V', label: 'School Counselor Associate V', sg: 'SG-15' },
+];
+
+const REGISTERED_TARGET_OPTIONS = [
+  { value: 'SCHOOL COUNSELOR I', label: 'School Counselor I', sg: 'SG-16' },
+  { value: 'SCHOOL COUNSELOR II', label: 'School Counselor II', sg: 'SG-18' },
+  { value: 'SCHOOL COUNSELOR III', label: 'School Counselor III', sg: 'SG-20' },
+  { value: 'SCHOOL COUNSELOR IV', label: 'School Counselor IV', sg: 'SG-22' },
+];
 
 const TARGET_POSITION_OPTIONS = [
-  { value: 'SCHOOL COUNSELOR ASSOCIATE I', label: 'School Counselor Associate I' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE II', label: 'School Counselor Associate II' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE III', label: 'School Counselor Associate III' },
-  { value: 'SCHOOL COUNSELOR ASSOCIATE IV', label: 'School Counselor Associate IV' },
+  ...NOT_REGISTERED_TARGET_OPTIONS,
+  ...REGISTERED_TARGET_OPTIONS,
 ];
 
 const RECLASS_TARGET_OPTIONS = TARGET_POSITION_OPTIONS;
+
+function isRegisteredPosition(pos?: string | null): boolean {
+  if (!pos) return false;
+  const clean = pos.toUpperCase();
+  return !clean.includes('ASSOCIATE') && (clean.includes('COUNSELOR') || clean.includes('SPECIALIST'));
+}
 
 function getPositionSalaryGrade(posName?: string | null): string {
   if (!posName) return '—';
@@ -261,6 +281,10 @@ export default function ApplicantDashboard() {
   const revisionDocsCount = revisionDocuments.length;
   const [showGateModal, setShowGateModal] = useState(false);
   const [isReclassUploadModalOpen, setIsReclassUploadModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateModalInitialStep, setUpdateModalInitialStep] = useState<1 | 2>(1);
+  const [showInitialPrompt, setShowInitialPrompt] = useState(false);
+  const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [isEditingTargetPosition, setIsEditingTargetPosition] = useState(false);
   const [editTargetPositionValue, setEditTargetPositionValue] = useState('SCHOOL COUNSELOR ASSOCIATE I');
   const [isSavingTargetPosition, setIsSavingTargetPosition] = useState(false);
@@ -284,6 +308,9 @@ export default function ApplicantDashboard() {
       ]);
       if (reclassRes && reclassRes.success && reclassRes.data) {
         setReclassData(reclassRes.data);
+        if (reclassRes.data.target_position || reclassRes.data.reclass_position) {
+          setEditTargetPositionValue(reclassRes.data.target_position || reclassRes.data.reclass_position);
+        }
       }
       if (docsRes && docsRes.success && Array.isArray(docsRes.data)) {
         setReclassDocs(docsRes.data);
@@ -299,13 +326,20 @@ export default function ApplicantDashboard() {
     const session = JSON.parse(sessionStr);
 
     setIsSavingTargetPosition(true);
+    const isReg = isRegisteredPosition(editTargetPositionValue);
+    const regTrack = isReg ? 'registered' : 'not_registered';
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-target-position`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ target_position: editTargetPositionValue }),
+          body: JSON.stringify({
+            target_position: editTargetPositionValue,
+            update_application: true,
+            is_registered: isReg,
+          }),
         }
       );
       const data = await response.json();
@@ -318,14 +352,16 @@ export default function ApplicantDashboard() {
           salary_grade: newSG,
           indicative_position: data.data?.indicative_position || editTargetPositionValue,
           indicative_salary_grade: data.data?.indicative_salary_grade || newSG,
+          update_application: true,
+          is_registered: isReg,
         }));
         setIsEditingTargetPosition(false);
         const selectedOpt = TARGET_POSITION_OPTIONS.find((opt) => opt.value === editTargetPositionValue);
         const positionLabel = selectedOpt ? selectedOpt.label : editTargetPositionValue;
         Swal.fire({
           icon: 'success',
-          title: 'Target Position Updated',
-          text: `Your target position is now ${positionLabel} (${getPositionSalaryGrade(editTargetPositionValue)}).`,
+          title: 'Desired Position Updated',
+          text: `Your desired position is now ${positionLabel} (${getPositionSalaryGrade(editTargetPositionValue)}).`,
           timer: 2500,
           showConfirmButton: false,
           toast: true,
@@ -335,18 +371,72 @@ export default function ApplicantDashboard() {
         Swal.fire({
           icon: 'error',
           title: 'Update Failed',
-          text: data.message || 'Unable to update target position.',
+          text: data.message || 'Unable to update desired position.',
         });
       }
     } catch (err: any) {
       Swal.fire({
         icon: 'error',
         title: 'Network Error',
-        text: 'Unable to connect to the server to update target position.',
+        text: 'Unable to connect to the server to update desired position.',
       });
     } finally {
       setIsSavingTargetPosition(false);
     }
+  };
+
+  const handleUpdateApplicationAnswer = async (answer: 'yes' | 'no') => {
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) return;
+    const session = JSON.parse(sessionStr);
+
+    if (answer === 'yes') {
+      setShowInitialPrompt(false);
+      setIsUpdateModalOpen(true);
+    } else {
+      setShowInitialPrompt(false);
+      setIsSavingPreference(true);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ update_application: false }),
+          }
+        );
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setReclassData((prev: any) => ({
+            ...prev,
+            update_application: false,
+          }));
+          Swal.fire({
+            icon: 'info',
+            title: 'Preference Saved',
+            text: 'Your application will proceed under your current plantilla record.',
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end',
+          });
+        }
+      } catch (err) {
+        console.error('Error saving update preference:', err);
+      } finally {
+        setIsSavingPreference(false);
+      }
+    }
+  };
+
+  const handleUpdateModalSuccess = (updatedData: any) => {
+    if (updatedData) {
+      setReclassData(updatedData);
+      if (updatedData.target_position || updatedData.reclass_position) {
+        setEditTargetPositionValue(updatedData.target_position || updatedData.reclass_position);
+      }
+    }
+    refreshReclassData();
   };
 
   const handleFilterChange = (filter: 'active' | 'history' | 'saved') => {
@@ -456,6 +546,9 @@ export default function ApplicantDashboard() {
                 setReclassData(reclassRes.data);
                 if (reclassRes.data.target_position || reclassRes.data.reclass_position) {
                   setEditTargetPositionValue(reclassRes.data.target_position || reclassRes.data.reclass_position);
+                }
+                if (reclassRes.data.update_application === null || reclassRes.data.update_application === undefined) {
+                  setShowInitialPrompt(true);
                 }
               }
             }
@@ -1150,6 +1243,123 @@ export default function ApplicantDashboard() {
 
               return (
                 <div className="p-6 space-y-6">
+                  {/* Would You Like to Update Your Application Status Card / Banner */}
+                  <div className={`rounded-2xl p-5 border shadow-xs transition-all ${
+                    reclassData?.update_application === true
+                      ? 'bg-gradient-to-r from-sky-50/90 to-blue-50/70 border-sky-300 ring-1 ring-sky-200'
+                      : reclassData?.update_application === false
+                        ? 'bg-slate-50 border-slate-300'
+                        : 'bg-gradient-to-r from-amber-50 to-orange-50/60 border-amber-300 ring-1 ring-amber-200'
+                  }`}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <HelpCircle className={`w-4 h-4 ${
+                            reclassData?.update_application === true
+                              ? 'text-[#0284c7]'
+                              : reclassData?.update_application === false
+                                ? 'text-slate-600'
+                                : 'text-amber-600'
+                          }`} />
+                          <h3 className="text-xs font-black tracking-wider uppercase text-[#022851]">
+                            Application Update Preference
+                          </h3>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                            reclassData?.update_application === true
+                              ? 'bg-emerald-600 text-white shadow-2xs'
+                              : reclassData?.update_application === false
+                                ? 'bg-slate-600 text-white shadow-2xs'
+                                : 'bg-amber-500 text-white shadow-2xs animate-pulse'
+                          }`}>
+                            {reclassData?.update_application === true
+                              ? '✓ YES (Updating Application)'
+                              : reclassData?.update_application === false
+                                ? 'NO (Keep Existing)'
+                                : 'Pending Response'}
+                          </span>
+                        </div>
+
+                        <p className="text-sm font-bold text-[#022851]">
+                          Would you like to update your application?
+                        </p>
+
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          {reclassData?.update_application === true ? (
+                            <>
+                              You have chosen to update your application.
+                              <span className="ml-1 font-semibold text-[#0284c7]">
+                                Track: {reclassData?.is_registered ? 'Registered (RA 1080 Guidance Counselor)' : 'Not Registered (Associate Track)'}
+                              </span>
+                              {(reclassData?.target_position || reclassData?.reclass_position) && (
+                                <span className="ml-1 font-semibold text-[#0284c7]">
+                                  • Desired Position: {reclassData.target_position || reclassData.reclass_position} ({getPositionSalaryGrade(reclassData.target_position || reclassData.reclass_position)})
+                                </span>
+                              )}
+                            </>
+                          ) : reclassData?.update_application === false ? (
+                            'You have chosen not to update. Your application will proceed under your current plantilla record and initial assessment without changes.'
+                          ) : (
+                            'Please indicate whether you want to update your application by selecting your qualification track (Registered or Not Registered) and desired position, or keep your existing plantilla record.'
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start md:self-center shrink-0 flex-wrap">
+                        {reclassData?.update_application === true ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setIsUpdateModalOpen(true)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Change Track / Desired Position</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateApplicationAnswer('no')}
+                              disabled={isSavingPreference}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <span>Switch to "No"</span>
+                            </button>
+                          </>
+                        ) : reclassData?.update_application === false ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateApplicationAnswer('yes')}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Switch to "Yes" (Update Application)</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateApplicationAnswer('yes')}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-md transition-all cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Yes</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateApplicationAnswer('no')}
+                              disabled={isSavingPreference}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>No</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 1. Location Details Card */}
                   <div className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 shadow-xs">
                     <div className="flex items-center gap-2 mb-4 pb-2.5 border-b border-slate-200">
@@ -1252,46 +1462,103 @@ export default function ApplicantDashboard() {
                         </div>
                       </div>
 
-                      {/* Target Position (Editable with Dropdown) */}
+                      {/* Desired Position (Editable with Dropdown and Register Track) */}
                       <div className={`border rounded-xl p-3.5 shadow-xs transition-all ${isEditingTargetPosition ? 'bg-sky-50/70 border-[#0284c7] ring-2 ring-[#0284c7]/20' : 'bg-white border-slate-200/90'}`}>
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Target Position</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Desired Position</p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              (reclassData?.is_registered === true || isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position))
+                                ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                : 'bg-sky-100 text-sky-800 border border-sky-200'
+                            }`}>
+                              {(reclassData?.is_registered === true || isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position))
+                                ? 'Registered'
+                                : 'Not Registered'}
+                            </span>
+                          </div>
                           {!isEditingTargetPosition && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const current = (reclassData?.target_position || reclassData?.reclass_position || '').toUpperCase().trim();
-                                const matched = TARGET_POSITION_OPTIONS.find(
-                                  (opt) => opt.value === current || opt.label.toUpperCase() === current
-                                );
-                                setEditTargetPositionValue(matched ? matched.value : TARGET_POSITION_OPTIONS[0].value);
-                                setIsEditingTargetPosition(true);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-[#0284c7] hover:text-[#0369a1] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors cursor-pointer"
-                              title="Update target position"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUpdateModalInitialStep(2);
+                                  setIsUpdateModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-[#0284c7] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors cursor-pointer shadow-2xs"
+                                title="View Qualification Standards (QS) for this role"
+                              >
+                                <GraduationCap className="w-3 h-3" />
+                                <span>View QS</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUpdateModalInitialStep(1);
+                                  setIsUpdateModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs"
+                                title="Update registration track and desired position"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>Change</span>
+                              </button>
+                            </div>
                           )}
                         </div>
 
                         {isEditingTargetPosition ? (
                           <div className="mt-2 space-y-2.5">
-                            <label className="block text-[11px] font-semibold text-gray-700">
-                              Select target position:
-                            </label>
-                            <select
-                              value={editTargetPositionValue}
-                              onChange={(e) => setEditTargetPositionValue(e.target.value)}
-                              className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-[#0284c7] rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/30 shadow-xs cursor-pointer"
-                            >
-                              {TARGET_POSITION_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                Track (Register or Not):
+                              </label>
+                              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditTargetPositionValue(NOT_REGISTERED_TARGET_OPTIONS[0].value);
+                                  }}
+                                  className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
+                                    !isRegisteredPosition(editTargetPositionValue)
+                                      ? 'bg-white text-[#022851] shadow-xs'
+                                      : 'text-gray-500 hover:text-gray-900'
+                                  }`}
+                                >
+                                  Not Registered
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditTargetPositionValue(REGISTERED_TARGET_OPTIONS[0].value);
+                                  }}
+                                  className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
+                                    isRegisteredPosition(editTargetPositionValue)
+                                      ? 'bg-white text-[#022851] shadow-xs'
+                                      : 'text-gray-500 hover:text-gray-900'
+                                  }`}
+                                >
+                                  Registered (RA 1080)
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                Select desired position:
+                              </label>
+                              <select
+                                value={editTargetPositionValue}
+                                onChange={(e) => setEditTargetPositionValue(e.target.value)}
+                                className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-[#0284c7] rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/30 shadow-xs cursor-pointer"
+                              >
+                                {(isRegisteredPosition(editTargetPositionValue) ? REGISTERED_TARGET_OPTIONS : NOT_REGISTERED_TARGET_OPTIONS).map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label} ({opt.sg})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
                             <div className="flex items-center gap-2 pt-1">
                               <button
@@ -2296,6 +2563,9 @@ export default function ApplicantDashboard() {
           onVerified={(incumbentRecord) => {
             setShowGateModal(false);
             setReclassData(incumbentRecord);
+            if (incumbentRecord?.update_application === null || incumbentRecord?.update_application === undefined) {
+              setShowInitialPrompt(true);
+            }
           }}
         />
       )}
@@ -2313,6 +2583,127 @@ export default function ApplicantDashboard() {
           }}
           revisionDocuments={revisionDocuments}
           checklistDocuments={checklistDocuments}
+        />
+      )}
+
+      {/* "Would you like to update your application?" Initial Prompt Modal */}
+      {showInitialPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-[#022851] to-[#034078] text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-sky-300">
+                  <HelpCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight">Application Reclassification</h3>
+                  <p className="text-xs text-sky-200 font-medium">DepEd Order No. 004, s. 2026 Process</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInitialPrompt(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-sky-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Decide later"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              <div className="text-center space-y-2">
+                <h4 className="text-lg font-black text-[#022851]">
+                  Would you like to update your application?
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed max-w-md mx-auto">
+                  Please choose whether you would like to update your application by selecting your qualification track (<strong>Registered</strong> or <strong>Not Registered</strong>) and choosing your desired position, or keep your application as-is.
+                </p>
+              </div>
+
+              {/* Two Option Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                {/* YES Option */}
+                <button
+                  type="button"
+                  onClick={() => handleUpdateApplicationAnswer('yes')}
+                  className="group relative p-4 rounded-xl border-2 border-[#0284c7] bg-sky-50/50 hover:bg-sky-50 hover:border-[#0284c7] hover:shadow-md transition-all text-left flex flex-col justify-between cursor-pointer"
+                >
+                  <div className="space-y-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#0284c7] text-white flex items-center justify-center shadow-xs">
+                      <Check className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <span className="block text-sm font-extrabold text-[#022851] group-hover:text-[#0284c7] transition-colors">
+                      Yes, Update Application
+                    </span>
+                    <p className="text-[11px] text-gray-600 leading-normal">
+                      Select Registered (RA 1080) or Not Registered track and choose your desired position.
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-center justify-between text-xs font-bold text-[#0284c7]">
+                    <span>Select options</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+
+                {/* NO Option */}
+                <button
+                  type="button"
+                  onClick={() => handleUpdateApplicationAnswer('no')}
+                  disabled={isSavingPreference}
+                  className="group relative p-4 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all text-left flex flex-col justify-between cursor-pointer"
+                >
+                  <div className="space-y-2">
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                      <X className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <span className="block text-sm font-extrabold text-[#022851] group-hover:text-slate-700 transition-colors">
+                      No, Keep Existing
+                    </span>
+                    <p className="text-[11px] text-gray-600 leading-normal">
+                      Proceed with your current plantilla position and initial assessment without changes.
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-gray-500">
+                    <span>Keep current record</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] leading-relaxed">
+                  You can change your response at any time from your dashboard reclassification section.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInitialPrompt(false)}
+                className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                Decide Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reclass Update Modal (Register or Not, Target Position & QS) */}
+      {isUpdateModalOpen && (
+        <ReclassUpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
+          initialIsRegistered={reclassData?.is_registered !== undefined ? !!reclassData.is_registered : isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position)}
+          initialTargetPosition={reclassData?.target_position || reclassData?.reclass_position || editTargetPositionValue}
+          initialStep={updateModalInitialStep}
+          onSuccess={handleUpdateModalSuccess}
         />
       )}
     </div>
