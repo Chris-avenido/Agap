@@ -4206,4 +4206,21 @@ model reclass_documents {
   @@index([document_title])
 }
 
+model reclass_sg {
+  id                Int       @id @default(autoincrement())
+  position_title    String    @unique @db.VarChar(255)
+  salary_grade      Int
+  monthly_salary    Decimal   @db.Decimal(12, 2)
+  education         String?   @db.Text
+  experience        String?   @db.Text
+  training          String?   @db.Text
+  eligibility       String?   @db.Text
+  years_experience  Decimal?  @default(0) @db.Decimal
+  hours_of_training Decimal?  @default(0) @db.Decimal
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([salary_grade])
+}
+
 

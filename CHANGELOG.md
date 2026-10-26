@@ -1,5 +1,49 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-26] Reclassification Salary Grade & Qualification Standards Table (`reclass_sg`)
+- **Table Creation & Migration**:
+  - Created standalone idempotent SQL migration script [`reclass_sg_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/reclass_sg_migration.sql).
+  - Created table `public.reclass_sg` with columns:
+    - `id` (SERIAL PRIMARY KEY)
+    - `position_title` (VARCHAR(255) NOT NULL UNIQUE)
+    - `salary_grade` (INTEGER NOT NULL)
+    - `monthly_salary` (NUMERIC(12, 2) NOT NULL)
+    - `education` (TEXT)
+    - `experience` (TEXT)
+    - `training` (TEXT)
+    - `eligibility` (TEXT)
+    - `years_experience` (NUMERIC DEFAULT 0)
+    - `hours_of_training` (NUMERIC DEFAULT 0)
+    - `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT NOW())
+    - `updated_at` (TIMESTAMP WITH TIME ZONE DEFAULT NOW())
+  - Created unique index `idx_reclass_sg_position_title_upper` on `UPPER(TRIM(position_title))` and index `idx_reclass_sg_salary_grade` on `salary_grade`.
+- **Data Ingestion**:
+  - Populated all 9 benchmark positions and qualification standards from `"Inventory of Application for GC Reclass(New Positions-QS SG)"`:
+    1. `School Counselor Associate I` (SG-11, ₱31,705.00)
+    2. `School Counselor Associate II` (SG-12, ₱33,947.00)
+    3. `School Counselor Associate III` (SG-13, ₱36,125.00)
+    4. `School Counselor Associate IV` (SG-14, ₱38,764.00)
+    5. `School Counselor Associate V` (SG-15, ₱42,178.00)
+    6. `School Counselor I` (SG-16, ₱45,694.00)
+    7. `School Counselor II` (SG-18, ₱53,818.00)
+    8. `School Counselor III` (SG-20, ₱66,052.00)
+    9. `School Counselor IV` (SG-22, ₱81,796.00)
+  - Populated all 8 incumbent Guidance Counselor positions from `"Inventory of Application for GC Reclass(GC - SG)"` with null in other columns:
+    10. `Guidance Counselor I` (SG-11, ₱31,705.00)
+    11. `Guidance Counselor II` (SG-12, ₱33,947.00)
+    12. `Guidance Counselor III` (SG-13, ₱36,125.00)
+    13. `Guidance Coordinator I` (SG-14, ₱38,764.00)
+    14. `Guidance Coordinator II` (SG-15, ₱42,178.00)
+    15. `Guidance Coordinator III` (SG-16, ₱45,694.00)
+    16. `Guidance Services Specialist I` (SG-16, ₱45,694.00)
+    17. `Guidance Services Specialist II` (SG-18, ₱53,818.00)
+- **Application & Schema Synchronization**:
+  - Integrated idempotent table verification in `runSchemaMigrations` within [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts).
+  - Increased PostgreSQL pool `connectionTimeoutMillis` to `25000` to prevent cold connection timeouts on Azure PostgreSQL.
+  - Added Prisma model `reclass_sg` in [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma).
+  - Updated [`reclass_sg_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/reclass_sg_migration.sql) with both dataset batches.
+
+
 ## [2026-10-21] Incumbent GMIS Plantilla Redirection & Reclassification Verification Fix (`applicants.service.ts`, `Login.tsx`)
 - **Incumbent GMIS Plantilla Item Redirection**:
   - When verifying a Plantilla Item Number in the **New Reclassification Application** form (`category === 'new'`), if the item number exists in GMIS / `reclass_gc` with an assigned incumbent personnel name (`hasName === true`) but has not yet registered a reclassification email (`hasEmail === false`), the API now returns `status: 'incumbent_record'`.

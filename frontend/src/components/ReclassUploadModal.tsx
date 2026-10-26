@@ -24,9 +24,9 @@ export interface ReclassDocumentRequirement {
 
 export const RECLASS_REQUIREMENTS: ReclassDocumentRequirement[] = [
   {
-    key: 'letter_of_intent',
-    title: 'Letter of Intent',
-    description: 'Letter of intent addressed to the Schools Division Superintendent (SDS).',
+    key: 'letter_of_updating_records',
+    title: 'Letter of Updating Records',
+    description: 'Letter of updating records addressed to the Schools Division Superintendent (SDS).',
     required: true,
   },
   {
@@ -95,7 +95,18 @@ function matchesRequirementDoc(reqKey: string, doc: any): boolean {
   if (rk && dk && (rk.includes(dk) || dk.includes(rk))) return true;
   if (rk && did && (rk.includes(did) || did.includes(rk))) return true;
 
-  if (rk === 'letterofintent' && (did === 'loi' || dt.includes('intent'))) return true;
+  if (
+    (rk === 'letterofupdatingrecords' || rk === 'letterofintent') &&
+    (did === 'loi' ||
+      did === 'updatingrecords' ||
+      did === 'letterofupdatingrecords' ||
+      dt.includes('updating') ||
+      dt.includes('intent') ||
+      dt.includes('records') ||
+      dk.includes('updating') ||
+      dk.includes('intent'))
+  )
+    return true;
   if (rk === 'pds' && (did === 'pds' || dt.includes('personaldata') || dt.includes('pds'))) return true;
   if (rk === 'proofofeligibility' && (did === 'eligibility' || dt.includes('eligibility') || dt.includes('prc') || dt.includes('license'))) return true;
   if (rk === 'academicrecord' && (did === 'tor' || dt.includes('tor') || dt.includes('academic') || dt.includes('transcript') || dt.includes('diploma'))) return true;
@@ -162,6 +173,12 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   const uploadedMap: Record<string, UploadedReclassDoc> = {};
   documents.forEach((doc) => {
     uploadedMap[doc.category_key] = doc;
+    if (doc.category_key === 'letter_of_intent') {
+      uploadedMap['letter_of_updating_records'] = doc;
+    }
+    if (doc.category_key === 'letter_of_updating_records') {
+      uploadedMap['letter_of_intent'] = doc;
+    }
   });
 
   const mandatoryRequirements = RECLASS_REQUIREMENTS.filter((req) => req.required);
@@ -511,16 +528,14 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                             <FileCheck className="w-5 h-5 text-sky-600" />
                           ) : isForRevision ? (
                             <AlertCircle className="w-5 h-5 text-white" />
-                          ) : isSubmitted ? (
-                            <FileCheck className="w-5 h-5 text-amber-600" />
+                          ) : isSubmitted || hasUploadedDoc ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           ) : rawStatus === 'approved' || rawStatus === 'verified' ? (
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           ) : rawStatus === 'under_review' || rawStatus === 'pending' || rawStatus === 'for_review' ? (
                             <Clock className="w-5 h-5 text-amber-600" />
                           ) : stagedFile ? (
                             <FileCheck className="w-5 h-5 text-sky-600" />
-                          ) : hasUploadedDoc ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           ) : (
                             index + 1
                           )}
@@ -541,13 +556,19 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
                                 <AlertCircle className="w-3 h-3" /> Action Required: For Revision
                               </span>
-                            ) : isSubmitted ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50/90 text-amber-900 border border-amber-300/80 shadow-2xs">
-                                <FileCheck className="w-3 h-3 text-amber-600" /> Resubmit
+                            ) : null}
+
+                            {/* "Updated" Tag for uploaded / submitted documents */}
+                            {(hasUploadedDoc || isSubmitted) && !isForRevision && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Updated
                               </span>
-                            ) : hasChecklistStatus ? (
+                            )}
+
+                            {/* Evaluator Review Status Tag if evaluated by HRMO */}
+                            {hasChecklistStatus && !isForRevision && !isRecentlySubmitted && (
                               rawStatus === 'approved' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
                                   <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Approved
                                 </span>
                               ) : rawStatus === 'verified' ? (
@@ -558,32 +579,26 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                                   <Clock className="w-3 h-3 text-amber-600" /> Under Review
                                 </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 uppercase">
-                                  {String(checklistDoc?.status).replace(/_/g, ' ')}
-                                </span>
-                              )
-                            ) : stagedFile ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
-                                <FileCheck className="w-3 h-3 text-sky-600" /> Selected (Pending Upload)
-                              </span>
-                            ) : hasUploadedDoc ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <CheckCircle2 className="w-3 h-3" /> Uploaded
-                              </span>
-                            ) : req.required ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                <Clock className="w-3 h-3" /> Pending Upload
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                <Clock className="w-3 h-3 text-slate-400" /> Optional
-                              </span>
+                              ) : null
                             )}
 
-                            {hasChecklistStatus && stagedFile && !isForRevision && (
+                            {/* Pending upload / optional if no file attached yet */}
+                            {!hasUploadedDoc && !isSubmitted && !stagedFile && !isForRevision && (
+                              req.required ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                  <Clock className="w-3 h-3" /> Pending Upload
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                  <Clock className="w-3 h-3 text-slate-400" /> Optional
+                                </span>
+                              )
+                            )}
+
+                            {/* Staged file badge */}
+                            {stagedFile && !isForRevision && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
-                                <FileCheck className="w-3 h-3 text-sky-600" /> New File Selected
+                                <FileCheck className="w-3 h-3 text-sky-600" /> {hasUploadedDoc ? 'New File Selected' : 'Selected (Pending Upload)'}
                               </span>
                             )}
                           </div>
@@ -629,9 +644,9 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                               {uploadedDoc.file_size && (
                                 <span>&bull; {formatFileSize(uploadedDoc.file_size)}</span>
                               )}
-                              {uploadedDoc.uploaded_at && (
+                              {(uploadedDoc.updated_at || uploadedDoc.uploaded_at) && (
                                 <span className="hidden sm:inline">
-                                  &bull; {new Date(uploadedDoc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                                  &bull; Updated {new Date(uploadedDoc.updated_at || uploadedDoc.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
                                 </span>
                               )}
                             </div>

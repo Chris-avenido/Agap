@@ -3425,7 +3425,10 @@ class ApplicantsServiceClass {
     }
 
     const keyByTitle: Record<string, string> = {
-      'letter of intent': 'letter_of_intent',
+      'letter of updating records': 'letter_of_updating_records',
+      'letter of updating record': 'letter_of_updating_records',
+      'letter of update records': 'letter_of_updating_records',
+      'letter of intent': 'letter_of_updating_records',
       'personal data sheet (pds)': 'pds',
       'personal data sheet': 'pds',
       'proof of eligibility': 'proof_of_eligibility',
@@ -3442,8 +3445,9 @@ class ApplicantsServiceClass {
       'administrative supporting documents': 'omnibus_sworn_statement',
       'performance rating': 'performance_rating',
       'performance ratings': 'performance_rating',
-      'reclassification form / rftp': 'letter_of_intent',
-      letter_of_intent: 'letter_of_intent',
+      'reclassification form / rftp': 'letter_of_updating_records',
+      letter_of_intent: 'letter_of_updating_records',
+      letter_of_updating_records: 'letter_of_updating_records',
       pds: 'pds',
       proof_of_eligibility: 'proof_of_eligibility',
       academic_record: 'academic_record',
@@ -3460,7 +3464,7 @@ class ApplicantsServiceClass {
 
       // Robust keyword matching against database variations
       if (clean.includes('pds') || clean.includes('personal data')) return 'pds';
-      if (clean.includes('intent') || clean.includes('rftp')) return 'letter_of_intent';
+      if (clean.includes('updating') || clean.includes('intent') || clean.includes('rftp')) return 'letter_of_updating_records';
       if (clean.includes('eligibility') || clean.includes('prc') || clean.includes('license')) return 'proof_of_eligibility';
       if (clean.includes('academic') || clean.includes('scholastic') || clean.includes('tor') || clean.includes('transcript') || clean.includes('diploma')) return 'academic_record';
       if (clean.includes('service record') || clean.includes('service records') || clean.includes('appointment')) return 'service_record';
@@ -3505,15 +3509,22 @@ class ApplicantsServiceClass {
       const categoryKey = resolveCategoryKey(row.document_title);
       // Prefer rows that have a valid file_url
       if (!combinedDocsMap.has(categoryKey) || (!combinedDocsMap.get(categoryKey)?.file_url && row.file_url)) {
+        const displayDocTitle =
+          row.document_title === 'Letter of Intent' || categoryKey === 'letter_of_updating_records'
+            ? 'Letter of Updating Records'
+            : row.document_title || 'Document';
         combinedDocsMap.set(categoryKey, {
           id: String(row.id),
           category_key: categoryKey,
-          category_title: row.document_title || 'Document',
+          category_title: displayDocTitle,
           file_name: row.file_name,
           file_url: row.file_url,
           uploaded_at: row.uploaded_at
             ? new Date(row.uploaded_at).toISOString()
             : new Date().toISOString(),
+          updated_at: row.updated_at
+            ? new Date(row.updated_at).toISOString()
+            : (row.uploaded_at ? new Date(row.uploaded_at).toISOString() : new Date().toISOString()),
           source: 'reclass_documents',
         });
       }
@@ -3551,6 +3562,10 @@ class ApplicantsServiceClass {
         const categoryKey = candidateKey !== 'document' ? candidateKey : resolveCategoryKey(itemTitle);
         const itemFileUrl = item.file_url || item.url || item.fileUrl;
         const itemFileName = item.file_name || item.fileName;
+        const displayItemTitle =
+          itemTitle === 'Letter of Intent' || categoryKey === 'letter_of_updating_records'
+            ? 'Letter of Updating Records'
+            : itemTitle || 'Document';
 
         if (itemFileUrl) {
           const existing = combinedDocsMap.get(categoryKey);
@@ -3558,10 +3573,11 @@ class ApplicantsServiceClass {
             combinedDocsMap.set(categoryKey, {
               id: String(item.id || item.key || `gc-${categoryKey}`),
               category_key: categoryKey,
-              category_title: itemTitle || 'Document',
+              category_title: displayItemTitle,
               file_name: itemFileName || 'document.pdf',
               file_url: itemFileUrl,
               uploaded_at: item.resubmitted_at || item.updated_at || new Date().toISOString(),
+              updated_at: item.updated_at || item.resubmitted_at || new Date().toISOString(),
               status: item.status || 'resubmit',
               source: 'reclass_gc',
             });
@@ -3659,14 +3675,23 @@ class ApplicantsServiceClass {
     }
 
     // 2. Save or update record in reclass_documents table (without dropped columns)
+    const isUpdatingRecords =
+      categoryKey === 'letter_of_updating_records' ||
+      categoryKey === 'letter_of_intent' ||
+      categoryTitle === 'Letter of Updating Records' ||
+      categoryTitle === 'Letter of Intent';
+
     const existingDoc = await pool.query(
       `SELECT id FROM reclass_documents 
        WHERE (
          (reclass_application_id IS NOT NULL AND reclass_application_id = $1)
          OR (plantilla_item_number IS NOT NULL AND UPPER(TRIM(plantilla_item_number)) = UPPER(TRIM($2)))
-       ) AND UPPER(TRIM(document_title)) = UPPER(TRIM($3)) 
+       ) AND (
+         UPPER(TRIM(document_title)) = UPPER(TRIM($3))
+         OR ($4::boolean AND UPPER(TRIM(document_title)) IN ('LETTER OF INTENT', 'LETTER OF UPDATING RECORDS'))
+       )
        LIMIT 1`,
-      [reclassApp?.id || null, plantillaItemNumber || '', categoryTitle],
+      [reclassApp?.id || null, plantillaItemNumber || '', categoryTitle, isUpdatingRecords],
     );
 
     let savedDocRow: any;
@@ -3902,8 +3927,15 @@ function matchesReclassDocChecklist(
   if (rk && iid && (rk.includes(iid) || iid.includes(rk))) return true;
 
   if (
-    rk === 'letterofintent' &&
-    (iid === 'loi' || it.includes('intent') || ik.includes('intent') || ct.includes('intent'))
+    (rk === 'letterofupdatingrecords' || rk === 'letterofintent') &&
+    (iid === 'loi' ||
+      it.includes('intent') ||
+      ik.includes('intent') ||
+      ct.includes('intent') ||
+      it.includes('updating') ||
+      ik.includes('updating') ||
+      ct.includes('updating') ||
+      iid === 'letterofupdatingrecords')
   )
     return true;
   if (
@@ -3978,7 +4010,15 @@ function normalizeReclassChecklistKey(item: any): string {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
   if (clean === 'pds' || clean.includes('personaldata') || clean.includes('pds')) return 'pds';
-  if (clean === 'loi' || clean.includes('intent') || clean.includes('rftp')) return 'letter_of_intent';
+  if (
+    clean === 'loi' ||
+    clean.includes('intent') ||
+    clean.includes('rftp') ||
+    clean.includes('updatingrecord') ||
+    clean.includes('letterofupdating') ||
+    clean.includes('updating')
+  )
+    return 'letter_of_updating_records';
   if (
     clean === 'eligibility' ||
     clean.includes('prc') ||

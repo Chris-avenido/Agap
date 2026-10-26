@@ -188,7 +188,7 @@ async function runSchemaMigrations(client: any) {
 
               IF is_item_approved THEN
                 has_approved := TRUE;
-                IF e_id = 'loi' OR e_key = 'letter_of_intent' THEN has_loi := TRUE; END IF;
+                IF e_id = 'loi' OR e_key = 'letter_of_intent' OR e_id = 'letter_of_updating_records' OR e_key = 'letter_of_updating_records' OR e_key = 'updating_records' THEN has_loi := TRUE; END IF;
                 IF e_id = 'pds' OR e_key = 'pds' THEN has_pds := TRUE; END IF;
                 IF e_id = 'eligibility' OR e_key = 'eligibility' THEN has_elig := TRUE; END IF;
                 IF e_id = 'tor' OR e_key = 'tor' THEN has_tor := TRUE; END IF;
@@ -331,6 +331,28 @@ async function runSchemaMigrations(client: any) {
       CREATE INDEX IF NOT EXISTS idx_reclass_docs_title ON reclass_documents(document_title);
 
       DROP TABLE IF EXISTS reclass_document_history CASCADE;
+
+      -- Ensure reclass_sg table exists for Reclass Qualification Standards and Salary Grades
+      CREATE TABLE IF NOT EXISTS reclass_sg (
+        id SERIAL PRIMARY KEY,
+        position_title VARCHAR(255) NOT NULL UNIQUE,
+        salary_grade INTEGER NOT NULL,
+        monthly_salary NUMERIC(12, 2) NOT NULL,
+        education TEXT,
+        experience TEXT,
+        training TEXT,
+        eligibility TEXT,
+        years_experience NUMERIC DEFAULT 0,
+        hours_of_training NUMERIC DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_reclass_sg_position_title 
+      ON reclass_sg (UPPER(TRIM(position_title)));
+
+      CREATE INDEX IF NOT EXISTS idx_reclass_sg_salary_grade 
+      ON reclass_sg (salary_grade);
     `);
 
     console.log('✅ Schema check: columns and tables verified.');
@@ -349,7 +371,7 @@ const pgPool = new Pool({
     : undefined,
   max: parseInt(process.env.PG_POOL_MAX || '20', 10),
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 25000,
   keepAlive: true,
 });
 

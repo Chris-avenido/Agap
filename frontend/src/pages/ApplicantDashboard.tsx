@@ -69,7 +69,18 @@ function normalizeRequirementKey(item: any): string {
   const title = String(item.shortTitle || item.label || item.title || item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
   if (rawKey === 'pds' || rawKey.includes('personaldata') || title.includes('personaldata') || title.includes('pds')) return 'pds';
-  if (rawKey === 'loi' || rawKey.includes('intent') || title.includes('intent')) return 'letter_of_intent';
+  if (
+    rawKey === 'loi' ||
+    rawKey === 'letter_of_updating_records' ||
+    rawKey === 'letter_of_intent' ||
+    rawKey.includes('intent') ||
+    rawKey.includes('updatingrecord') ||
+    rawKey.includes('updating') ||
+    title.includes('intent') ||
+    title.includes('updating') ||
+    title.includes('records')
+  )
+    return 'letter_of_updating_records';
   if (
     rawKey === 'eligibility' ||
     rawKey.includes('prc') ||
