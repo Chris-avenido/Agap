@@ -99,6 +99,7 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS target_position;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS desire_position;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS reclass_position VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
@@ -110,6 +111,7 @@ async function runSchemaMigrations(client: any) {
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc(is_registered);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_desired_position ON reclass_gc(desired_position);
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_reclass_position ON reclass_gc(reclass_position);
       DROP INDEX IF EXISTS idx_reclass_gc_registered_or_not;
 
       CREATE OR REPLACE FUNCTION public.trg_uppercase_reclass_gc()

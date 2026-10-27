@@ -1,6 +1,13 @@
 # AGAP Portal — Changelog & Architecture Notes
 
-## [2026-10-27] [Reclass] Added `desired_position` Column to `public.reclass_gc` & Cleaned Up Schema
+## [2026-10-27] [Reclass] Retained `reclass_position` Column in `public.reclass_gc` & Ensured Live Database Schema Synchronization
+- **Root Cause & Resolution**:
+  - The PostgreSQL trigger `trg_uppercase_reclass_gc()` on `reclass_gc` references `NEW.reclass_position`. Because the live database table was previously missing the column, row updates threw `record "new" has no field "reclass_position"`.
+  - In accordance with instructions, **`reclass_position` is explicitly retained** in `reclass_gc`.
+  - Added `ALTER TABLE public.reclass_gc ADD COLUMN IF NOT EXISTS reclass_position VARCHAR(255);` to [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts) and [`add_desire_position_migration.sql`](file:///e:/christop/AGAP%20Portal/backend/database/migrations/add_desire_position_migration.sql).
+  - Retained `reclass_position` in [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma) and uppercase trigger handling in `trg_uppercase_reclass_gc()`.
+  - Ensured both `reclass_position` and `desired_position` coexist cleanly with zero schema collisions or trigger exceptions.
+
 - **Database Migration (`backend/database/migrations/add_desire_position_migration.sql`)**:
   - Added `ALTER TABLE public.reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);`.
   - Dropped obsolete `target_position` and `desire_position` columns if present.

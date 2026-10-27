@@ -22,6 +22,7 @@ export interface ReclassRegisterDto {
   school_id?: string;
   school_name?: string;
   current_position?: string;
+  desired_position?: string;
   reclass_position?: string;
   education?: string;
   years_experience?: number | string;
@@ -1739,12 +1740,10 @@ class ApplicantsServiceClass {
       let paramIdx = 1;
 
       if (targetPosition && (incumbent.desired_position !== targetPosition || incumbent.desire_position !== targetPosition)) {
-        updates.push(`reclass_position = $${paramIdx++}`);
-        params.push(targetPosition);
         updates.push(`desired_position = $${paramIdx++}`);
         params.push(targetPosition);
-        incumbent.reclass_position = targetPosition;
         incumbent.desired_position = targetPosition;
+        incumbent.reclass_position = targetPosition;
       }
       const upperDivision = division ? division.trim().toUpperCase() : undefined;
       if (upperDivision && incumbent.division !== upperDivision) {
@@ -2041,11 +2040,11 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT reclass_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT initial_assessment, desired_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
-      const initialPos = inc?.reclass_position;
+      const initialPos = inc?.initial_assessment || inc?.desired_position;
       if (this.isAssessedSCIV(initialPos)) {
         throw new Error(
           'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
@@ -2065,7 +2064,6 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const updatesGc: string[] = [
-        'reclass_position = $1',
         'desired_position = $1',
         'updated_at = NOW()',
       ];
@@ -2131,11 +2129,11 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT reclass_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT initial_assessment, desired_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
-      const initialPos = inc?.reclass_position;
+      const initialPos = inc?.initial_assessment || inc?.desired_position;
       if (this.isAssessedSCIV(initialPos)) {
         throw new Error(
           'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
@@ -2155,8 +2153,6 @@ class ApplicantsServiceClass {
         paramsGc.push(boolReg);
       }
       if (cleanPos) {
-        updatesGc.push(`reclass_position = $${pIdx++}`);
-        paramsGc.push(cleanPos);
         updatesGc.push(`desired_position = $${pIdx++}`);
         paramsGc.push(cleanPos);
       }
@@ -3118,11 +3114,10 @@ class ApplicantsServiceClass {
         let pIdx = 1;
 
         if (targetPosition && targetPosition.trim()) {
-          incUpdates.push(`reclass_position = $${pIdx}`);
           incUpdates.push(`desired_position = $${pIdx++}`);
           incParams.push(targetPosition.trim());
-          incumbent.reclass_position = targetPosition.trim();
           incumbent.desired_position = targetPosition.trim();
+          incumbent.reclass_position = targetPosition.trim();
         }
         if (region && region.trim()) {
           const upperRegion = region.trim().toUpperCase();
@@ -3216,10 +3211,10 @@ class ApplicantsServiceClass {
         const insertGcRes = await client.query(
           `INSERT INTO reclass_gc (
             item_no, first_name, last_name, region, division,
-            school_id, school_name, current_position, reclass_position,
+            school_id, school_name, current_position,
             desired_position,
             stage_of_reclassification, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, 'For Review', false, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'For Review', false, NOW(), NOW())
           RETURNING *`,
           [
             normalizedPlantilla,
@@ -3400,7 +3395,7 @@ class ApplicantsServiceClass {
       .toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
-      `SELECT region, division, COALESCE(desired_position, desire_position, reclass_position) as target_position, COALESCE(desired_position, desire_position, reclass_position) as desired_position, reclass_position, current_position, first_name, last_name, school_name
+      `SELECT region, division, COALESCE(desired_position, initial_assessment) as target_position, desired_position, current_position, first_name, last_name, school_name
        FROM reclass_gc
        WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
        LIMIT 1`,
