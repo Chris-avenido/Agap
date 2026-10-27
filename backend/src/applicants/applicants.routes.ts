@@ -1338,7 +1338,9 @@ router.put('/:id/reclass-target-position', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error updating target position:', error);
-    res.status(500).json({
+    const status = (error.message && error.message.includes('disabled')) ? 400 : 500;
+    res.status(status).json({
+      success: false,
       message: error.message || 'Error updating target reclassification position.',
     });
   }
@@ -1366,7 +1368,9 @@ router.put('/:id/reclass-update-preference', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error updating application preference:', error);
-    res.status(500).json({
+    const status = (error.message && error.message.includes('disabled')) ? 400 : 500;
+    res.status(status).json({
+      success: false,
       message: error.message || 'Error updating reclassification application preference.',
     });
   }

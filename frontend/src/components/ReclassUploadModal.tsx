@@ -394,9 +394,14 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight leading-tight">
-                Reclassification Document Submission
-              </h2>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-xl font-extrabold tracking-tight leading-tight">
+                  Reclassification Document Submission
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#facc15] text-[#022851] shadow-2xs">
+                  For Updating
+                </span>
+              </div>
               <p className="text-xs text-sky-100 font-medium mt-0.5">
                 DepEd Incumbent → School Counselor Requirements Folder
               </p>
@@ -417,6 +422,9 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Submission Progress</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+                For Updating
+              </span>
               <span className="text-xs font-bold text-[#022851] bg-white border border-gray-200 px-2.5 py-0.5 rounded-full">
                 {totalUploadedCount} of {RECLASS_REQUIREMENTS.length} Uploaded ({uploadedMandatoryCount}/{totalMandatory} Mandatory)
               </span>
@@ -587,11 +595,11 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                             {!hasUploadedDoc && !isSubmitted && !stagedFile && !isForRevision && (
                               req.required ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                  <Clock className="w-3 h-3" /> Pending Upload
+                                  <Clock className="w-3 h-3" /> Pending Upload (For Updating)
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                  <Clock className="w-3 h-3 text-slate-400" /> Optional
+                                  <Clock className="w-3 h-3 text-slate-400" /> Optional (For Updating)
                                 </span>
                               )
                             )}
@@ -599,7 +607,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                             {/* Staged file badge */}
                             {stagedFile && !isForRevision && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
-                                <FileCheck className="w-3 h-3 text-sky-600" /> {hasUploadedDoc ? 'New File Selected' : 'Selected (Pending Upload)'}
+                                <FileCheck className="w-3 h-3 text-sky-600" /> {hasUploadedDoc ? 'New File Selected (For Updating)' : 'Selected for Updating'}
                               </span>
                             )}
                           </div>
@@ -747,7 +755,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                             }`}
                           >
                             <Upload className="w-3.5 h-3.5" />
-                            <span>Upload</span>
+                            <span>Upload for Updating</span>
                             <input
                               type="file"
                               accept=".pdf,application/pdf"

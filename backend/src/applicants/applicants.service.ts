@@ -1912,9 +1912,10 @@ class ApplicantsServiceClass {
       return null;
     };
 
-    const rawInitialPosition = incumbent?.initial_assessment_position || incumbent?.initial_assessment
-      ? String(incumbent.initial_assessment_position || incumbent.initial_assessment).trim()
-      : '';
+    const rawInitialPosition =
+      incumbent?.initial_assessment_position ||
+      incumbent?.reclass_position ||
+      '';
     const initialPosition =
       rawInitialPosition && rawInitialPosition.toUpperCase() !== 'N/A' && rawInitialPosition !== ''
         ? rawInitialPosition
@@ -1978,6 +1979,7 @@ class ApplicantsServiceClass {
         stageOfReclass,
       stage_of_reclassification: stageOfReclass,
       staging_of_reclassification: stageOfReclass,
+      initial_assessment: initialPosition,
       initial_assessment_position: initialPosition,
       initial_assessment_salary_grade: initialSalaryGrade,
       documents_count: docCount,
@@ -2002,6 +2004,18 @@ class ApplicantsServiceClass {
     };
   }
 
+  isAssessedSCIV(pos?: string | null): boolean {
+    if (!pos) return false;
+    const clean = pos.toUpperCase().trim();
+    if (clean.includes('ASSOCIATE')) return false;
+    return (
+      clean.includes('SCHOOL COUNSELOR IV') ||
+      clean.includes('SC IV') ||
+      clean === 'SC 4' ||
+      clean.includes('COUNSELOR IV')
+    );
+  }
+
   async updateTargetPosition(
     applicantId: number,
     targetPosition: string,
@@ -2020,6 +2034,20 @@ class ApplicantsServiceClass {
       [applicantId],
     );
     const plantilla = appRes.rows[0]?.plantilla_item_number;
+
+    if (plantilla) {
+      const incRes = await pool.query(
+        `SELECT reclass_position, target_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        [plantilla],
+      );
+      const inc = incRes.rows[0];
+      const initialPos = inc?.reclass_position;
+      if (this.isAssessedSCIV(initialPos)) {
+        throw new Error(
+          'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
+        );
+      }
+    }
 
     const parseBool = (val: any): boolean | null => {
       if (val === true || val === false) return val;
@@ -2092,6 +2120,18 @@ class ApplicantsServiceClass {
     const plantilla = appRes.rows[0]?.plantilla_item_number;
 
     if (plantilla) {
+      const incRes = await pool.query(
+        `SELECT reclass_position, target_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        [plantilla],
+      );
+      const inc = incRes.rows[0];
+      const initialPos = inc?.reclass_position;
+      if (this.isAssessedSCIV(initialPos)) {
+        throw new Error(
+          'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
+        );
+      }
+
       const updatesGc: string[] = ['updated_at = NOW()'];
       const paramsGc: any[] = [plantilla];
       let pIdx = 2;

@@ -15,6 +15,7 @@ import {
   Clock,
   Banknote,
   Info,
+  Lock,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -159,6 +160,7 @@ interface ReclassUpdateModalProps {
   initialIsRegistered?: boolean;
   initialTargetPosition?: string;
   initialStep?: 1 | 2;
+  isAlreadySCIV?: boolean;
   onSuccess: (updatedData: any) => void;
 }
 
@@ -184,6 +186,7 @@ export default function ReclassUpdateModal({
   initialIsRegistered,
   initialTargetPosition,
   initialStep = 1,
+  isAlreadySCIV = false,
   onSuccess,
 }: ReclassUpdateModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -208,6 +211,13 @@ export default function ReclassUpdateModal({
 
   useEffect(() => {
     if (isOpen) {
+      if (isAlreadySCIV) {
+        setStep(2);
+        setIsRegistered(true);
+        setSelectedPosition('SCHOOL COUNSELOR IV');
+        return;
+      }
+
       setStep(initialStep || 1);
       const isReg =
         initialIsRegistered !== undefined
@@ -228,11 +238,12 @@ export default function ReclassUpdateModal({
       );
       setSelectedPosition(matched ? matched.value : available[0].value);
     }
-  }, [isOpen, initialIsRegistered, initialTargetPosition, initialStep]);
+  }, [isOpen, initialIsRegistered, initialTargetPosition, initialStep, isAlreadySCIV]);
 
   if (!isOpen) return null;
 
   const handleTrackSelect = (registered: boolean) => {
+    if (isAlreadySCIV) return;
     setIsRegistered(registered);
     const available = registered ? REGISTERED_OPTIONS : NOT_REGISTERED_OPTIONS;
     const isCurrentInAvailable = available.some((opt) => opt.value === selectedPosition);
@@ -252,6 +263,14 @@ export default function ReclassUpdateModal({
 
   const handleSave = async () => {
     if (!applicantId) return;
+    if (isAlreadySCIV) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Updates Disabled',
+        text: 'You are already assessed as School Counselor IV (SC IV), the maximum reclassification role. Further updates are disabled.',
+      });
+      return;
+    }
     setIsSaving(true);
 
     try {
@@ -358,8 +377,13 @@ export default function ReclassUpdateModal({
             {/* Step 1 Indicator */}
             <button
               type="button"
-              onClick={() => setStep(1)}
-              className="flex items-center gap-2 text-left cursor-pointer group"
+              onClick={() => {
+                if (!isAlreadySCIV) setStep(1);
+              }}
+              disabled={isAlreadySCIV}
+              className={`flex items-center gap-2 text-left transition-all ${
+                isAlreadySCIV ? 'cursor-not-allowed opacity-60' : 'cursor-pointer group'
+              }`}
             >
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
@@ -535,6 +559,23 @@ export default function ReclassUpdateModal({
           {/* STEP 2: Ask for the Desired Position & Show Qualification Standards (QS) */}
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
+              {/* If user is already SC IV, show prominent terminal role banner */}
+              {isAlreadySCIV && (
+                <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3.5 flex items-start gap-3 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                      Assessed as School Counselor IV (Maximum Reclassification Level)
+                    </h4>
+                    <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+                      You were assessed as <strong>School Counselor IV (SG-22)</strong> during the initial assessment, which is the highest benchmark position in the School Counselor career track (DepEd Order No. 004, s. 2026). Further position or track updates are disabled. Below are the Qualification Standards (QS) for your role.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Answered Step 1 Confirmation Banner */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -557,22 +598,29 @@ export default function ReclassUpdateModal({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-[#0284c7] hover:text-[#0369a1] hover:underline cursor-pointer px-2.5 py-1 rounded-lg hover:bg-sky-50 transition-colors"
-                  title="Change registration status"
-                >
-                  <ArrowLeft className="w-3 h-3" />
-                  <span>Change Status</span>
-                </button>
+                {!isAlreadySCIV ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#0284c7] hover:text-[#0369a1] hover:underline cursor-pointer px-2.5 py-1 rounded-lg hover:bg-sky-50 transition-colors"
+                    title="Change registration status"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span>Change Status</span>
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg">
+                    <Lock className="w-3 h-3 text-emerald-600" />
+                    <span>Locked</span>
+                  </span>
+                )}
               </div>
 
               {/* Desired Position Selection Header & Quick Chips */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Select Desired Position:
+                    {isAlreadySCIV ? 'Reclassification Position:' : 'Select Desired Position:'}
                   </label>
                   <div className="flex items-center gap-1.5">
                     {currentSelectedOpt && (
@@ -588,47 +636,61 @@ export default function ReclassUpdateModal({
                   </div>
                 </div>
 
-                {/* Dropdown Select */}
-                <select
-                  value={selectedPosition}
-                  onChange={(e) => setSelectedPosition(e.target.value)}
-                  className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-slate-300 focus:border-[#0284c7] rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 shadow-xs cursor-pointer"
-                >
-                  {currentOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} ({opt.sg})
-                    </option>
-                  ))}
-                </select>
+                {/* Dropdown Select or Locked View */}
+                {isAlreadySCIV ? (
+                  <div className="w-full text-xs font-black text-[#022851] bg-slate-50 border-2 border-emerald-300 rounded-xl p-3 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-emerald-600" />
+                      <span>School Counselor IV (SG-22)</span>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                      Maximum Career Role • Updates Disabled
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedPosition}
+                    onChange={(e) => setSelectedPosition(e.target.value)}
+                    className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-slate-300 focus:border-[#0284c7] rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20 shadow-xs cursor-pointer"
+                  >
+                    {currentOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} ({opt.sg})
+                      </option>
+                    ))}
+                  </select>
+                )}
 
-                {/* Quick Selection Chips */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  <span className="text-[11px] font-semibold text-gray-500 mr-1">Quick Select:</span>
-                  {currentOptions.map((opt) => {
-                    const isSelected = opt.value === selectedPosition;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setSelectedPosition(opt.value)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-[#022851] text-white shadow-xs ring-2 ring-[#0284c7]/40'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                        }`}
-                      >
-                        <span>{opt.label}</span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded font-extrabold ${
-                            isSelected ? 'bg-white/20 text-[#facc15]' : 'bg-white text-slate-600'
+                {/* Quick Selection Chips (only if not already SC IV) */}
+                {!isAlreadySCIV && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[11px] font-semibold text-gray-500 mr-1">Quick Select:</span>
+                    {currentOptions.map((opt) => {
+                      const isSelected = opt.value === selectedPosition;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setSelectedPosition(opt.value)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-[#022851] text-white shadow-xs ring-2 ring-[#0284c7]/40'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                           }`}
                         >
-                          {opt.sg}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span>{opt.label}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.2 rounded font-extrabold ${
+                              isSelected ? 'bg-white/20 text-[#facc15]' : 'bg-white text-slate-600'
+                            }`}
+                          >
+                            {opt.sg}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* QUALIFICATION STANDARDS (QS) VISIBILITY PANEL */}
@@ -790,6 +852,20 @@ export default function ReclassUpdateModal({
             >
               <span>Next: Select Desired Position & QS</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
+        ) : isAlreadySCIV ? (
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <Lock className="w-4 h-4 text-emerald-600" />
+              <span>Assessed as School Counselor IV • Updates Disabled</span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-[#022851] hover:bg-[#033b77] rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <span>Close</span>
             </button>
           </div>
         ) : (

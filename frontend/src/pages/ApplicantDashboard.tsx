@@ -37,6 +37,18 @@ function isRegisteredPosition(pos?: string | null): boolean {
   return !clean.includes('ASSOCIATE') && (clean.includes('COUNSELOR') || clean.includes('SPECIALIST'));
 }
 
+export function isAssessedSCIV(pos?: string | null): boolean {
+  if (!pos) return false;
+  const clean = pos.toUpperCase().trim();
+  if (clean.includes('ASSOCIATE')) return false;
+  return (
+    clean.includes('SCHOOL COUNSELOR IV') ||
+    clean.includes('SC IV') ||
+    clean === 'SC 4' ||
+    clean.includes('COUNSELOR IV')
+  );
+}
+
 function getPositionSalaryGrade(posName?: string | null): string {
   if (!posName) return '—';
   const clean = posName.toUpperCase().trim();
@@ -325,6 +337,20 @@ export default function ApplicantDashboard() {
     if (!sessionStr) return;
     const session = JSON.parse(sessionStr);
 
+    const userInitial =
+      reclassData?.initial_assessment_position ||
+      reclassData?.initial_assessment ||
+      reclassData?.reclass_position;
+    if (isAssessedSCIV(userInitial)) {
+      setIsEditingTargetPosition(false);
+      Swal.fire({
+        icon: 'info',
+        title: 'Update Disabled',
+        text: 'You are already assessed as School Counselor IV (SC IV), the maximum reclassification role. Further updates are disabled.',
+      });
+      return;
+    }
+
     setIsSavingTargetPosition(true);
     const isReg = isRegisteredPosition(editTargetPositionValue);
     const regTrack = isReg ? 'registered' : 'not_registered';
@@ -389,6 +415,20 @@ export default function ApplicantDashboard() {
     const sessionStr = localStorage.getItem('session_data');
     if (!sessionStr) return;
     const session = JSON.parse(sessionStr);
+
+    const userInitial =
+      reclassData?.initial_assessment_position ||
+      reclassData?.initial_assessment ||
+      reclassData?.reclass_position;
+    if (isAssessedSCIV(userInitial)) {
+      setShowInitialPrompt(false);
+      Swal.fire({
+        icon: 'info',
+        title: 'Update Disabled',
+        text: 'You are already assessed as School Counselor IV (SC IV), the maximum reclassification role. Further updates are disabled.',
+      });
+      return;
+    }
 
     if (answer === 'yes') {
       setShowInitialPrompt(false);
@@ -547,8 +587,16 @@ export default function ApplicantDashboard() {
                 if (reclassRes.data.target_position || reclassRes.data.reclass_position) {
                   setEditTargetPositionValue(reclassRes.data.target_position || reclassRes.data.reclass_position);
                 }
-                if (reclassRes.data.update_application === null || reclassRes.data.update_application === undefined) {
+                const assessedPos =
+                  reclassRes.data.initial_assessment_position ||
+                  reclassRes.data.initial_assessment ||
+                  reclassRes.data.reclass_position;
+                const isSCIV = isAssessedSCIV(assessedPos);
+
+                if (!isSCIV && (reclassRes.data.update_application === null || reclassRes.data.update_application === undefined)) {
                   setShowInitialPrompt(true);
+                } else {
+                  setShowInitialPrompt(false);
                 }
               }
             }
@@ -986,6 +1034,9 @@ export default function ApplicantDashboard() {
                 >
                   <Upload className="w-4 h-4" />
                   <span>Upload Requirements</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-sky-400/20 text-sky-200 border border-sky-300/30">
+                    For Updating
+                  </span>
                   {revisionDocsCount > 0 && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-600 text-white shadow-xs animate-pulse tracking-wide">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1062,11 +1113,13 @@ export default function ApplicantDashboard() {
               const rawInitial =
                 reclassData.initial_assessment_position ||
                 reclassData.initial_assessment ||
+                reclassData.reclass_position ||
                 '';
               const initialAssessment =
                 rawInitial && rawInitial.toUpperCase() !== 'N/A' && rawInitial.trim() !== ''
                   ? rawInitial.trim()
                   : '';
+              const isUserSCIV = isAssessedSCIV(initialAssessment || reclassData.reclass_position);
 
               const initialSalaryGrade =
                 initialAssessment
@@ -1245,46 +1298,60 @@ export default function ApplicantDashboard() {
                 <div className="p-6 space-y-6">
                   {/* Would You Like to Update Your Application Status Card / Banner */}
                   <div className={`rounded-2xl p-5 border shadow-xs transition-all ${
-                    reclassData?.update_application === true
-                      ? 'bg-gradient-to-r from-sky-50/90 to-blue-50/70 border-sky-300 ring-1 ring-sky-200'
-                      : reclassData?.update_application === false
-                        ? 'bg-slate-50 border-slate-300'
-                        : 'bg-gradient-to-r from-amber-50 to-orange-50/60 border-amber-300 ring-1 ring-amber-200'
+                    isUserSCIV
+                      ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border-emerald-300 ring-1 ring-emerald-200'
+                      : reclassData?.update_application === true
+                        ? 'bg-gradient-to-r from-sky-50/90 to-blue-50/70 border-sky-300 ring-1 ring-sky-200'
+                        : reclassData?.update_application === false
+                          ? 'bg-slate-50 border-slate-300'
+                          : 'bg-gradient-to-r from-amber-50 to-orange-50/60 border-amber-300 ring-1 ring-amber-200'
                   }`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <HelpCircle className={`w-4 h-4 ${
-                            reclassData?.update_application === true
-                              ? 'text-[#0284c7]'
-                              : reclassData?.update_application === false
-                                ? 'text-slate-600'
-                                : 'text-amber-600'
-                          }`} />
+                          {isUserSCIV ? (
+                            <Award className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <HelpCircle className={`w-4 h-4 ${
+                              reclassData?.update_application === true
+                                ? 'text-[#0284c7]'
+                                : reclassData?.update_application === false
+                                  ? 'text-slate-600'
+                                  : 'text-amber-600'
+                            }`} />
+                          )}
                           <h3 className="text-xs font-black tracking-wider uppercase text-[#022851]">
                             Application Update Preference
                           </h3>
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
-                            reclassData?.update_application === true
+                            isUserSCIV
                               ? 'bg-emerald-600 text-white shadow-2xs'
-                              : reclassData?.update_application === false
-                                ? 'bg-slate-600 text-white shadow-2xs'
-                                : 'bg-amber-500 text-white shadow-2xs animate-pulse'
+                              : reclassData?.update_application === true
+                                ? 'bg-emerald-600 text-white shadow-2xs'
+                                : reclassData?.update_application === false
+                                  ? 'bg-slate-600 text-white shadow-2xs'
+                                  : 'bg-amber-500 text-white shadow-2xs animate-pulse'
                           }`}>
-                            {reclassData?.update_application === true
-                              ? '✓ YES (Updating Application)'
-                              : reclassData?.update_application === false
-                                ? 'NO (Keep Existing)'
-                                : 'Pending Response'}
+                            {isUserSCIV
+                              ? '✓ MAXIMUM LEVEL (SC IV)'
+                              : reclassData?.update_application === true
+                                ? '✓ YES (Updating Application)'
+                                : reclassData?.update_application === false
+                                  ? 'NO (Keep Existing)'
+                                  : 'Pending Response'}
                           </span>
                         </div>
 
                         <p className="text-sm font-bold text-[#022851]">
-                          Would you like to update your application?
+                          {isUserSCIV
+                            ? 'Assessed as School Counselor IV (SG-22)'
+                            : 'Would you like to update your application?'}
                         </p>
 
                         <p className="text-xs text-gray-600 leading-relaxed">
-                          {reclassData?.update_application === true ? (
+                          {isUserSCIV ? (
+                            'You were assessed as School Counselor IV (SG-22) during the initial assessment, which is the highest benchmark position under the School Counselor career ladder (DepEd Order No. 004, s. 2026). Further position or track update options are disabled.'
+                          ) : reclassData?.update_application === true ? (
                             <>
                               You have chosen to update your application.
                               <span className="ml-1 font-semibold text-[#0284c7]">
@@ -1305,7 +1372,26 @@ export default function ApplicantDashboard() {
                       </div>
 
                       <div className="flex items-center gap-2 self-start md:self-center shrink-0 flex-wrap">
-                        {reclassData?.update_application === true ? (
+                        {isUserSCIV ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUpdateModalInitialStep(2);
+                                setIsUpdateModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-[#0284c7] bg-white hover:bg-sky-50 border border-sky-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
+                              title="View Qualification Standards (QS) for School Counselor IV"
+                            >
+                              <GraduationCap className="w-3.5 h-3.5" />
+                              <span>View QS</span>
+                            </button>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-500 bg-white/90 border border-slate-200 rounded-xl shadow-2xs">
+                              <Lock className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Updates Disabled</span>
+                            </span>
+                          </>
+                        ) : reclassData?.update_application === true ? (
                           <>
                             <button
                               type="button"
@@ -1411,7 +1497,7 @@ export default function ApplicantDashboard() {
                         <h3 className="text-xs font-extrabold text-[#022851] tracking-wider uppercase">
                           Reclassification Info
                         </h3>
-                        <p className="text-[11px] text-gray-500">Current plantilla record, initial assessment, and target reclass intent</p>
+                        <p className="text-[11px] text-gray-500">Current plantilla record, initial assessment, desired position, and QS-based assessed position</p>
                       </div>
                     </div>
 
@@ -1432,7 +1518,7 @@ export default function ApplicantDashboard() {
                         </p>
                       </div>
 
-                      {/* Salary Grade (Matches Target Reclass Position) */}
+                      {/* Salary Grade (Matches Desired / Assessed Position) */}
                       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Salary Grade</p>
                         <p className="text-[15px] font-extrabold text-[#022851] mt-0.5">
@@ -1491,18 +1577,28 @@ export default function ApplicantDashboard() {
                                 <GraduationCap className="w-3 h-3" />
                                 <span>View QS</span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setUpdateModalInitialStep(1);
-                                  setIsUpdateModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs"
-                                title="Update registration track and desired position"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                                <span>Change</span>
-                              </button>
+                              {!isUserSCIV ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUpdateModalInitialStep(1);
+                                    setIsUpdateModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs"
+                                  title="Update registration track and desired position"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Change</span>
+                                </button>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md shadow-2xs"
+                                  title="You are already assessed as School Counselor IV, the highest benchmark role."
+                                >
+                                  <Lock className="w-3 h-3 text-emerald-600" />
+                                  <span>Max Level</span>
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1598,10 +1694,10 @@ export default function ApplicantDashboard() {
                         )}
                       </div>
 
-                      {/* Target Reclass */}
+                      {/* QS-Based Assessed Position */}
                       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Target Reclass</p>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">QS-Based Assessed Position</p>
                         </div>
                         <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words">
                           {reclassData.reclass_position || '—'}
@@ -1744,9 +1840,14 @@ export default function ApplicantDashboard() {
                           <p className={`text-[11px] font-bold uppercase tracking-wider ${currentStep === 1 ? 'text-[#0284c7]' : hasSubmittedAllDocs ? 'text-emerald-800' : 'text-gray-400'}`}>
                             Step 1 • Applicant
                           </p>
-                          <h4 className={`text-[14px] font-extrabold tracking-tight mt-0.5 ${currentStep === 1 ? 'text-[#022851]' : 'text-gray-800'}`}>
-                            Updating of Documents
-                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <h4 className={`text-[14px] font-extrabold tracking-tight ${currentStep === 1 ? 'text-[#022851]' : 'text-gray-800'}`}>
+                              Updating of Documents
+                            </h4>
+                            <span className="inline-flex items-center px-2 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-sky-100 text-[#0284c7] border border-sky-200">
+                              For Updating
+                            </span>
+                          </div>
 
                           {/* Submission Deadline */}
                           <div className="flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg bg-amber-50/90 border border-amber-300/80 text-amber-950 text-[10px] mt-2 mb-1 w-full shadow-2xs">
@@ -1803,8 +1904,8 @@ export default function ApplicantDashboard() {
                           <Upload className="w-3 h-3" />
                           <span>
                             {hasSubmittedAllDocs
-                              ? 'Manage Docs'
-                              : `Upload Docs (${uploadedDocsCount}/8)`}
+                              ? 'Manage Updated Docs'
+                              : `Upload for Updating (${uploadedDocsCount}/8)`}
                           </span>
                         </button>
                       </div>
@@ -2703,6 +2804,7 @@ export default function ApplicantDashboard() {
           initialIsRegistered={reclassData?.is_registered !== undefined ? !!reclassData.is_registered : isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position)}
           initialTargetPosition={reclassData?.target_position || reclassData?.reclass_position || editTargetPositionValue}
           initialStep={updateModalInitialStep}
+          isAlreadySCIV={isAssessedSCIV(reclassData?.initial_assessment_position || reclassData?.initial_assessment || reclassData?.reclass_position)}
           onSuccess={handleUpdateModalSuccess}
         />
       )}

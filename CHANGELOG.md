@@ -1,5 +1,54 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-27] [Reclass] Renamed "Target Reclass" Field to "QS-Based Assessed Position"
+- **Field Label Standardization in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - Renamed the display-only **"Target Reclass"** card header to **"QS-Based Assessed Position"** in the **Reclassification Info** grid.
+  - This accurately reflects the evaluation criteria: it presents the position evaluated against DepEd Qualification Standards (QS) based on incumbent credentials, distinct from the user's editable "Desired Position".
+  - Updated the section subtitle to `"Current plantilla record, initial assessment, desired position, and QS-based assessed position"`.
+  - Preserved underlying data bindings (`reclassData.reclass_position`), calculations, and styling without regressions.
+
+## [2026-10-27] [Reclass] Disable Further Update Options for Users Assessed as SC IV During Initial Assessment
+- **Core Rule & Requirement**:
+  - Incumbents already assessed as **School Counselor IV** (`SC IV` / `SG-22`) during the initial assessment have achieved the terminal benchmark position under the School Counselor career track (DepEd Order No. 004, s. 2026).
+  - All options allowing them to update their desired position, change registration tracks, or toggle application update preferences are disabled, while preserving their ability to inspect their Qualification Standards (QS).
+- **Backend API & Service Safeguards**:
+  - Added helper `isAssessedSCIV()` in [`ApplicantsService`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) to accurately detect SC IV while explicitly distinguishing it from *School Counselor Associate IV* (`SG-14`).
+  - Added server-side validation in `ApplicantsService.updateTargetPosition()` and `ApplicantsService.updateReclassApplicationPreference()`. If an incumbent's initial assessment is SC IV, the update is rejected with an Error: *"Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role."*
+  - Updated [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts) to return an HTTP `400 Bad Request` status for disabled update attempts.
+- **No Schema Changes / Zero Unnecessary Columns**:
+  - Reverted and dropped the temporary `initial_assessment` column from `reclass_gc` in [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts) and the live database.
+  - Leverages the existing data fetch (`reclass_position` / `initial_assessment_position`) already used by the dashboard's assessment card to evaluate whether an applicant is assessed as SC IV without modifying the database schema.
+  - Adheres strictly to the bug-fix and minimal-change protocol in [`.agents/agents.md`](file:///e:/christop/AGAP%20Portal/.agents/agents.md).
+- **Frontend Dashboard Logic & Presentation in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - Suppressed the initial reclassification popup prompt modal (`showInitialPrompt`) for SC IV incumbents on initial login.
+  - Replaced the *Application Update Preference* card with a dedicated **Maximum Level Reached (SC IV)** state:
+    - Displays green/emerald badge: `✓ MAXIMUM LEVEL (SC IV)`.
+    - Shows informational notice explaining that SC IV is the highest position under DO 004, s. 2026.
+    - Replaced the update action buttons with **"View QS"** and **"Updates Disabled"** indicators.
+  - On the *Desired Position* card, replaced the **"Change"** button with a locked **"Max Level"** badge while keeping **"View QS"** accessible.
+  - Added guards in `handleSaveTargetPosition` and `handleUpdateApplicationAnswer` preventing any client-side update attempts.
+- **Reclass Update Modal Controls in [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx)**:
+  - Added `isAlreadySCIV` prop.
+  - When true, automatically initializes modal in Step 2 with `School Counselor IV` and `Registered (RA 1080)` locked.
+  - Displays a clear terminal role notice banner.
+  - Disables track switching, hides Quick Select chips, disables position dropdown, and replaces the footer *"Save & Confirm"* button with an informational *"Close"* button.
+- **Strict Adherence to Guidelines (`.agents/agents.md`)**:
+  - Preserved all existing applicant dashboard and reclassification functions without regressions.
+  - Retained `'None Required'` display formatting for 0 years experience and 0 training hours.
+
+## [2026-10-27] [Reclass] Added Tag Indicating Uploading of Document is For Updating
+- **Document Upload Modal Tagging in [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx)**:
+  - Added prominent **`For Updating`** header pill tag (`bg-[#facc15] text-[#022851]`) directly in the modal title bar beside *"Reclassification Document Submission"*.
+  - Added **`For Updating`** pill badge in the Submission Progress counter banner.
+  - Added **`For Updating`** tags on individual requirement cards (`Pending Upload (For Updating)`, `Optional (For Updating)`, and `Selected for Updating` for staged files).
+  - Updated primary per-item upload action label to **`Upload for Updating`**.
+- **Applicant Dashboard Synchronization in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - Added a dedicated **`For Updating`** badge (`bg-sky-400/20 text-sky-200 border-sky-300/30`) on the primary **"Upload Requirements"** header action button.
+  - Added a dedicated **`For Updating`** badge beside the **"Updating of Documents"** title on the Step 1 Stepper card.
+  - Updated Step 1 button text to **`Upload for Updating (${uploadedDocsCount}/8)`** (or `Manage Updated Docs`).
+- **Strict Guideline Compliance (`.agents/agents.md`)**:
+  - Preserved all existing document upload, revision, replacement, and evaluator checklist review logic without breaking changes or regression.
+
 ## [2026-10-27] [Reclass] Enable Qualification Standards (QS) Visibility for Applicants
 - **Qualification Standards (QS) Integration in [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx)**:
   - Enabled dynamic Qualification Standards (QS) visibility when choosing a desired reclassification role in Step 2.
