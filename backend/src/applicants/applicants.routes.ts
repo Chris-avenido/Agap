@@ -1322,7 +1322,8 @@ router.put('/:id/reclass-target-position', async (req, res) => {
     if (isNaN(id)) {
       return res.status(400).json({ message: 'Invalid applicant ID.' });
     }
-    const { target_position, update_application, is_registered } = req.body;
+    const target_position = req.body.desired_position || req.body.desire_position || req.body.target_position;
+    const { update_application, is_registered } = req.body;
     if (!target_position || !String(target_position).trim()) {
       return res.status(400).json({ message: 'Target position is required.' });
     }
@@ -1353,13 +1354,13 @@ router.put('/:id/reclass-update-preference', async (req, res) => {
     if (isNaN(id)) {
       return res.status(400).json({ message: 'Invalid applicant ID.' });
     }
-    const { update_application, is_registered, target_position } = req.body;
+    const { update_application, is_registered, target_position, desire_position, desired_position } = req.body;
     if (update_application === undefined || update_application === null) {
       return res.status(400).json({ message: 'update_application answer is required.' });
     }
     const updated = await ApplicantsService.updateReclassApplicationPreference(
       id,
-      { update_application, is_registered, target_position },
+      { update_application, is_registered, target_position, desired_position: desired_position || desire_position },
     );
     res.json({
       success: true,

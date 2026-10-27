@@ -283,6 +283,7 @@ export default function ReclassUpdateModal({
             update_application: true,
             is_registered: isRegistered,
             target_position: selectedPosition,
+            desired_position: selectedPosition,
           }),
         }
       );

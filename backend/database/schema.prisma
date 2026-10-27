@@ -4121,6 +4121,7 @@ model reclass_gc {
   qs_status                 String?   @db.VarChar(100)
   stage_of_reclassification String?   @default("UPDATING OF DOCUMENTS") @db.VarChar(100)
   reclass_position          String?   @db.VarChar(255)
+  desired_position          String?   @db.VarChar(255)
   new_item_no               String?   @db.VarChar(150)
   nosca_serial_no           String?   @db.VarChar(150)
   is_test                   Boolean?  @default(false)

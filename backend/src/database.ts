@@ -72,7 +72,7 @@ async function runSchemaMigrations(client: any) {
         school_name VARCHAR(255),
         qs_status VARCHAR(100),
         stage_of_reclassification VARCHAR(100) DEFAULT 'For Review',
-        target_position VARCHAR(255),
+        desired_position VARCHAR(255),
         reclass_position VARCHAR(255),
         new_item_no VARCHAR(150),
         nosca_serial_no VARCHAR(150),
@@ -96,7 +96,9 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS eligibility VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_checklist JSONB;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_status VARCHAR(100);
-      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS target_position VARCHAR(255);
+      ALTER TABLE reclass_gc DROP COLUMN IF EXISTS target_position;
+      ALTER TABLE reclass_gc DROP COLUMN IF EXISTS desire_position;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
@@ -107,6 +109,7 @@ async function runSchemaMigrations(client: any) {
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc(is_registered);
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_desired_position ON reclass_gc(desired_position);
       DROP INDEX IF EXISTS idx_reclass_gc_registered_or_not;
 
       CREATE OR REPLACE FUNCTION public.trg_uppercase_reclass_gc()
@@ -157,8 +160,8 @@ async function runSchemaMigrations(client: any) {
             NEW.stage_of_reclassification := 'FOR REVIEW';
           END IF;
         END IF;
-        IF NEW.target_position IS NOT NULL THEN NEW.target_position := UPPER(TRIM(NEW.target_position)); END IF;
         IF NEW.reclass_position IS NOT NULL THEN NEW.reclass_position := UPPER(TRIM(NEW.reclass_position)); END IF;
+        IF NEW.desired_position IS NOT NULL THEN NEW.desired_position := UPPER(TRIM(NEW.desired_position)); END IF;
         IF NEW.new_item_no IS NOT NULL THEN NEW.new_item_no := UPPER(TRIM(NEW.new_item_no)); END IF;
 
         -- Automatically calculate document_status in ALL CAPS based on document_checklist

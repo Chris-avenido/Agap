@@ -1738,13 +1738,13 @@ class ApplicantsServiceClass {
       const params: any[] = [];
       let paramIdx = 1;
 
-      if (targetPosition && incumbent.target_position !== targetPosition) {
-        updates.push(`target_position = $${paramIdx++}`);
-        params.push(targetPosition);
+      if (targetPosition && (incumbent.desired_position !== targetPosition || incumbent.desire_position !== targetPosition)) {
         updates.push(`reclass_position = $${paramIdx++}`);
         params.push(targetPosition);
-        incumbent.target_position = targetPosition;
+        updates.push(`desired_position = $${paramIdx++}`);
+        params.push(targetPosition);
         incumbent.reclass_position = targetPosition;
+        incumbent.desired_position = targetPosition;
       }
       const upperDivision = division ? division.trim().toUpperCase() : undefined;
       if (upperDivision && incumbent.division !== upperDivision) {
@@ -1842,11 +1842,13 @@ class ApplicantsServiceClass {
       reclassApp?.current_position ||
       incumbent?.current_position ||
       'Guidance Counselor';
-    const targetPosition =
-      incumbent?.target_position ||
+    const desiredPosition =
+      incumbent?.desired_position ||
+      incumbent?.desire_position ||
       reclassApp?.reclass_position ||
       incumbent?.reclass_position ||
       null;
+    const targetPosition = desiredPosition;
     const reclassPosition =
       incumbent?.reclass_position ||
       reclassApp?.reclass_position ||
@@ -1956,6 +1958,8 @@ class ApplicantsServiceClass {
       full_name: fullName,
       plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
       target_position: targetPosition,
+      desired_position: desiredPosition,
+      desire_position: desiredPosition,
       reclass_position: reclassPosition,
       current_position: currentPosition,
       salary_grade:
@@ -2037,7 +2041,7 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT reclass_position, target_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT reclass_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
@@ -2061,8 +2065,8 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const updatesGc: string[] = [
-        'target_position = $1',
         'reclass_position = $1',
+        'desired_position = $1',
         'updated_at = NOW()',
       ];
       const paramsGc: any[] = [cleanPosition, plantilla];
@@ -2095,9 +2099,11 @@ class ApplicantsServiceClass {
       update_application: boolean | string;
       is_registered?: boolean | string;
       target_position?: string;
+      desire_position?: string;
+      desired_position?: string;
     },
   ) {
-    const { update_application, is_registered, target_position } = data;
+    const { update_application, is_registered, target_position, desire_position, desired_position } = data;
 
     const parseBool = (val: any): boolean | null => {
       if (val === true || val === false) return val;
@@ -2111,7 +2117,11 @@ class ApplicantsServiceClass {
 
     const boolUpdate = update_application !== undefined ? parseBool(update_application) : null;
     const boolReg = is_registered !== undefined ? parseBool(is_registered) : null;
-    const cleanPos = target_position ? (target_position || '').trim() : null;
+    const cleanPos = desired_position
+      ? (desired_position || '').trim()
+      : (target_position
+          ? (target_position || '').trim()
+          : (desire_position ? (desire_position || '').trim() : null));
 
     const appRes = await pool.query(
       `SELECT plantilla_item_number FROM applicants WHERE id = $1`,
@@ -2121,7 +2131,7 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT reclass_position, target_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT reclass_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
@@ -2145,9 +2155,9 @@ class ApplicantsServiceClass {
         paramsGc.push(boolReg);
       }
       if (cleanPos) {
-        updatesGc.push(`target_position = $${pIdx++}`);
-        paramsGc.push(cleanPos);
         updatesGc.push(`reclass_position = $${pIdx++}`);
+        paramsGc.push(cleanPos);
+        updatesGc.push(`desired_position = $${pIdx++}`);
         paramsGc.push(cleanPos);
       }
 
@@ -3108,11 +3118,11 @@ class ApplicantsServiceClass {
         let pIdx = 1;
 
         if (targetPosition && targetPosition.trim()) {
-          incUpdates.push(`target_position = $${pIdx}`);
-          incUpdates.push(`reclass_position = $${pIdx++}`);
+          incUpdates.push(`reclass_position = $${pIdx}`);
+          incUpdates.push(`desired_position = $${pIdx++}`);
           incParams.push(targetPosition.trim());
-          incumbent.target_position = targetPosition.trim();
           incumbent.reclass_position = targetPosition.trim();
+          incumbent.desired_position = targetPosition.trim();
         }
         if (region && region.trim()) {
           const upperRegion = region.trim().toUpperCase();
@@ -3207,8 +3217,9 @@ class ApplicantsServiceClass {
           `INSERT INTO reclass_gc (
             item_no, first_name, last_name, region, division,
             school_id, school_name, current_position, reclass_position,
+            desired_position,
             stage_of_reclassification, is_test, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'For Review', false, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, 'For Review', false, NOW(), NOW())
           RETURNING *`,
           [
             normalizedPlantilla,
@@ -3389,7 +3400,7 @@ class ApplicantsServiceClass {
       .toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
-      `SELECT region, division, COALESCE(target_position, reclass_position) as target_position, target_position as gc_target_position, reclass_position, current_position, first_name, last_name, school_name
+      `SELECT region, division, COALESCE(desired_position, desire_position, reclass_position) as target_position, COALESCE(desired_position, desire_position, reclass_position) as desired_position, reclass_position, current_position, first_name, last_name, school_name
        FROM reclass_gc
        WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
        LIMIT 1`,

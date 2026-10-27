@@ -363,6 +363,7 @@ export default function ApplicantDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             target_position: editTargetPositionValue,
+            desired_position: editTargetPositionValue,
             update_application: true,
             is_registered: isReg,
           }),
@@ -374,6 +375,7 @@ export default function ApplicantDashboard() {
         setReclassData((prev: any) => ({
           ...prev,
           target_position: editTargetPositionValue,
+          desired_position: editTargetPositionValue,
           reclass_position: editTargetPositionValue,
           salary_grade: newSG,
           indicative_position: data.data?.indicative_position || editTargetPositionValue,
@@ -2801,8 +2803,8 @@ export default function ApplicantDashboard() {
           isOpen={isUpdateModalOpen}
           onClose={() => setIsUpdateModalOpen(false)}
           applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
-          initialIsRegistered={reclassData?.is_registered !== undefined ? !!reclassData.is_registered : isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position)}
-          initialTargetPosition={reclassData?.target_position || reclassData?.reclass_position || editTargetPositionValue}
+          initialIsRegistered={reclassData?.is_registered !== undefined ? !!reclassData.is_registered : isRegisteredPosition(reclassData?.desired_position || reclassData?.desire_position || reclassData?.target_position || reclassData?.reclass_position)}
+          initialTargetPosition={reclassData?.desired_position || reclassData?.desire_position || reclassData?.target_position || reclassData?.reclass_position || editTargetPositionValue}
           initialStep={updateModalInitialStep}
           isAlreadySCIV={isAssessedSCIV(reclassData?.initial_assessment_position || reclassData?.initial_assessment || reclassData?.reclass_position)}
           onSuccess={handleUpdateModalSuccess}

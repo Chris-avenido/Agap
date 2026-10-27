@@ -1,5 +1,20 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-27] [Reclass] Added `desired_position` Column to `public.reclass_gc` & Cleaned Up Schema
+- **Database Migration (`backend/database/migrations/add_desire_position_migration.sql`)**:
+  - Added `ALTER TABLE public.reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);`.
+  - Dropped obsolete `target_position` and `desire_position` columns if present.
+  - Added index `idx_reclass_gc_desired_position` on `public.reclass_gc(desired_position)`.
+  - Backfilled existing `desired_position` from existing `reclass_position` values.
+- **Backend Schema & Service Synchronization**:
+  - Updated [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts) `runSchemaMigrations` to ensure `desired_position` exists automatically on database connection and included in uppercase trigger.
+  - Updated [`schema.prisma`](file:///e:/christop/AGAP%20Portal/backend/database/schema.prisma) model `reclass_gc` with `desired_position String? @db.VarChar(255)`.
+  - Updated [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) to update and query `desired_position` directly.
+  - Updated [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts) to accept `desired_position` in PUT `/reclass-update-preference` and PUT `/reclass-target-position`.
+- **Frontend Integration**:
+  - Updated [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx) to pass `desired_position: selectedPosition` in `handleSave`.
+  - Updated [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx) to send and read `desired_position`.
+
 ## [2026-10-27] [Reclass] Renamed "Target Reclass" Field to "QS-Based Assessed Position"
 - **Field Label Standardization in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
   - Renamed the display-only **"Target Reclass"** card header to **"QS-Based Assessed Position"** in the **Reclassification Info** grid.
