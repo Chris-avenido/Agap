@@ -20,6 +20,16 @@
      - In [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx) line 311, passed `qualificationData` into the `reclass-set-new-application` payload when closing/finishing modal submission without new files staged.
    5. **Removal of Legacy Preference Status Card / Banner**:
      - Completely removed the legacy banner tag (`<div className="rounded-2xl p-5 border shadow-xs transition-all bg-slate-50 border-slate-300">`) formerly rendering the "Application Update Preference: NO (Keep Existing)" banner on the applicant dashboard.
+   6. **Modal Transition: "Reclassification Application" Auto-Shown on Document Submission Success**:
+     - Once documents are successfully uploaded in **"Reclassification Document Submission"** (`ReclassUploadModal`), the modal invokes `onSubmissionComplete()`.
+     - [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx) automatically transitions and displays the **"Reclassification Application"** modal (`ReclassUpdateModal`), allowing the applicant to select their Registration Status (Step 1: Registered RA 1080 vs Not Registered) and Desired Position & Qualification Standards (Step 2).
+   7. **Responsive Layout Fix for "Desired Position" Card & Action Buttons**:
+     - Upgraded the Reclassification Info grid from `md:grid-cols-3` to `lg:grid-cols-3` (switching to 2 generous columns on tablet/half-screen DevTools views instead of 3 cramped columns).
+     - Restructured the Desired Position card to a flex-column layout with `flex-col justify-between`:
+       - Top row: Clean, non-wrapping `Desired Position` label with right-aligned `[View QS]` and `[Change]` action buttons (`shrink-0 whitespace-nowrap`).
+       - Middle: Prominent position title with `min-h-[22px]`.
+       - Bottom: Registration status pill (`[Not Registered]` / `[Registered]`), aligned with neighboring cards' metadata rows.
+     - Completely prevents button overlap, text collisions, or right-border overflow regardless of screen or split-view width.
 
 ## [2026-10-28] [Reclass] "Do you want to apply for reclassification?" Prompt & Qualification Input Workflow for Incumbents with Null Initial Assessment (`gmis_gc_items.initial_assessment`)
 - **Requirement & Root Cause**:

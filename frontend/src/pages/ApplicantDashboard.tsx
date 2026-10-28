@@ -568,6 +568,14 @@ export default function ApplicantDashboard() {
     });
   };
 
+  const handleReclassSubmissionComplete = async () => {
+    setIsReclassUploadModalOpen(false);
+    await refreshReclassData();
+    // After success "Reclassification Document Submission", show modal "Reclassification Application"
+    setUpdateModalInitialStep(1);
+    setIsUpdateModalOpen(true);
+  };
+
   const handleUpdateModalSuccess = (updatedData: any) => {
     if (updatedData) {
       setReclassData(updatedData);
@@ -1463,7 +1471,7 @@ export default function ApplicantDashboard() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                       {/* Plantilla Item No. */}
                       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Plantilla Item No.</p>
@@ -1493,13 +1501,15 @@ export default function ApplicantDashboard() {
                       </div>
 
                       {/* Initial Assessment */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs relative">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Initial Assessment</p>
+                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs relative flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Initial Assessment</p>
+                          </div>
+                          <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words min-h-[22px]">
+                            {initialAssessment || '—'}
+                          </p>
                         </div>
-                        <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words min-h-[22px]">
-                          {initialAssessment || '—'}
-                        </p>
                         <div className="flex items-center gap-1.5 mt-1 min-h-[18px]">
                           {initialSalaryGrade ? (
                             <>
@@ -1511,11 +1521,146 @@ export default function ApplicantDashboard() {
                       </div>
 
                       {/* Desired Position (Editable with Dropdown and Register Track) */}
-                      <div className={`border rounded-xl p-3.5 shadow-xs transition-all ${isEditingTargetPosition ? 'bg-sky-50/70 border-[#0284c7] ring-2 ring-[#0284c7]/20' : 'bg-white border-slate-200/90'}`}>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Desired Position</p>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      <div className={`border rounded-xl p-3.5 shadow-xs transition-all flex flex-col justify-between ${isEditingTargetPosition ? 'bg-sky-50/70 border-[#0284c7] ring-2 ring-[#0284c7]/20' : 'bg-white border-slate-200/90'}`}>
+                        <div>
+                          <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                              Desired Position
+                            </p>
+                            {!isEditingTargetPosition && !isInitialAssessmentNull && (
+                              <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUpdateModalInitialStep(2);
+                                    setIsUpdateModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-[#0284c7] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                                  title="View Qualification Standards (QS) for this role"
+                                >
+                                  <GraduationCap className="w-3 h-3" />
+                                  <span>View QS</span>
+                                </button>
+                                {!isUserSCIV ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setUpdateModalInitialStep(1);
+                                      setIsUpdateModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                                    title="Update registration track and desired position"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                    <span>Change</span>
+                                  </button>
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md shadow-2xs whitespace-nowrap"
+                                    title="You are already assessed as School Counselor IV, the highest benchmark role."
+                                  >
+                                    <Lock className="w-3 h-3 text-emerald-600" />
+                                    <span>Max Level</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {isEditingTargetPosition ? (
+                            <div className="mt-2 space-y-2.5">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                  Track (Register or Not):
+                                </label>
+                                <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-lg">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditTargetPositionValue(NOT_REGISTERED_TARGET_OPTIONS[0].value);
+                                    }}
+                                    className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
+                                      !isRegisteredPosition(editTargetPositionValue)
+                                        ? 'bg-white text-[#022851] shadow-xs'
+                                        : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                                  >
+                                    Not Registered
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditTargetPositionValue(REGISTERED_TARGET_OPTIONS[0].value);
+                                    }}
+                                    className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
+                                      isRegisteredPosition(editTargetPositionValue)
+                                        ? 'bg-white text-[#022851] shadow-xs'
+                                        : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                                  >
+                                    Registered (RA 1080)
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                  Select desired position:
+                                </label>
+                                <select
+                                  value={editTargetPositionValue}
+                                  onChange={(e) => setEditTargetPositionValue(e.target.value)}
+                                  className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-[#0284c7] rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/30 shadow-xs cursor-pointer"
+                                >
+                                  {(isRegisteredPosition(editTargetPositionValue) ? REGISTERED_TARGET_OPTIONS : NOT_REGISTERED_TARGET_OPTIONS).map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label} ({opt.sg})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleSaveTargetPosition}
+                                  disabled={isSavingTargetPosition}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 rounded-lg shadow-xs transition-colors cursor-pointer"
+                                >
+                                  {isSavingTargetPosition ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Save</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsEditingTargetPosition(false)}
+                                  disabled={isSavingTargetPosition}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Cancel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[14px] font-extrabold text-[#0284c7] mt-0.5 break-words min-h-[22px]">
+                              {(() => {
+                                const current = (reclassData?.target_position || reclassData?.reclass_position || '').toUpperCase().trim();
+                                const matched = TARGET_POSITION_OPTIONS.find(
+                                  (opt) => opt.value === current || opt.label.toUpperCase() === current
+                                );
+                                return matched ? matched.label : (reclassData?.target_position || reclassData?.reclass_position || '—');
+                              })()}
+                            </p>
+                          )}
+                        </div>
+
+                        {!isEditingTargetPosition && (
+                          <div className="flex items-center gap-1.5 mt-2 min-h-[18px]">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                               (reclassData?.is_registered === true || isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position))
                                 ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                                 : 'bg-sky-100 text-sky-800 border border-sky-200'
@@ -1525,145 +1670,20 @@ export default function ApplicantDashboard() {
                                 : 'Not Registered'}
                             </span>
                           </div>
-                          {!isEditingTargetPosition && !isInitialAssessmentNull && (
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setUpdateModalInitialStep(2);
-                                  setIsUpdateModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-[#0284c7] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors cursor-pointer shadow-2xs"
-                                title="View Qualification Standards (QS) for this role"
-                              >
-                                <GraduationCap className="w-3 h-3" />
-                                <span>View QS</span>
-                              </button>
-                              {!isUserSCIV ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setUpdateModalInitialStep(1);
-                                    setIsUpdateModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs"
-                                  title="Update registration track and desired position"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                  <span>Change</span>
-                                </button>
-                              ) : (
-                                <span
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md shadow-2xs"
-                                  title="You are already assessed as School Counselor IV, the highest benchmark role."
-                                >
-                                  <Lock className="w-3 h-3 text-emerald-600" />
-                                  <span>Max Level</span>
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {isEditingTargetPosition ? (
-                          <div className="mt-2 space-y-2.5">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                                Track (Register or Not):
-                              </label>
-                              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-lg">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditTargetPositionValue(NOT_REGISTERED_TARGET_OPTIONS[0].value);
-                                  }}
-                                  className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
-                                    !isRegisteredPosition(editTargetPositionValue)
-                                      ? 'bg-white text-[#022851] shadow-xs'
-                                      : 'text-gray-500 hover:text-gray-900'
-                                  }`}
-                                >
-                                  Not Registered
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditTargetPositionValue(REGISTERED_TARGET_OPTIONS[0].value);
-                                  }}
-                                  className={`py-1 px-2 text-[11px] font-bold rounded-md transition-all ${
-                                    isRegisteredPosition(editTargetPositionValue)
-                                      ? 'bg-white text-[#022851] shadow-xs'
-                                      : 'text-gray-500 hover:text-gray-900'
-                                  }`}
-                                >
-                                  Registered (RA 1080)
-                                </button>
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                                Select desired position:
-                              </label>
-                              <select
-                                value={editTargetPositionValue}
-                                onChange={(e) => setEditTargetPositionValue(e.target.value)}
-                                className="w-full text-xs font-bold text-[#022851] bg-white border-2 border-[#0284c7] rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#0284c7]/30 shadow-xs cursor-pointer"
-                              >
-                                {(isRegisteredPosition(editTargetPositionValue) ? REGISTERED_TARGET_OPTIONS : NOT_REGISTERED_TARGET_OPTIONS).map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label} ({opt.sg})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={handleSaveTargetPosition}
-                                disabled={isSavingTargetPosition}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-50 rounded-lg shadow-xs transition-colors cursor-pointer"
-                              >
-                                {isSavingTargetPosition ? (
-                                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5" />
-                                )}
-                                <span>Save</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setIsEditingTargetPosition(false)}
-                                disabled={isSavingTargetPosition}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                                <span>Cancel</span>
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-[14px] font-extrabold text-[#0284c7] mt-0.5 break-words">
-                            {(() => {
-                              const current = (reclassData?.target_position || reclassData?.reclass_position || '').toUpperCase().trim();
-                              const matched = TARGET_POSITION_OPTIONS.find(
-                                (opt) => opt.value === current || opt.label.toUpperCase() === current
-                              );
-                              return matched ? matched.label : (reclassData?.target_position || reclassData?.reclass_position || '—');
-                            })()}
-                          </p>
                         )}
                       </div>
 
                       {/* QS-Based Assessed Position */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">QS-Based Assessed Position</p>
+                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">QS-Based Assessed Position</p>
+                          </div>
+                          <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words min-h-[22px]">
+                            {reclassData.reclass_position || '—'}
+                          </p>
                         </div>
-                        <p className="text-[14px] font-bold text-[#022851] mt-0.5 break-words">
-                          {reclassData.reclass_position || '—'}
-                        </p>
+                        <div className="mt-1 min-h-[18px]" />
                       </div>
                     </div>
                   </div>
@@ -2653,6 +2673,7 @@ export default function ApplicantDashboard() {
           onUploadSuccess={() => {
             refreshReclassData();
           }}
+          onSubmissionComplete={handleReclassSubmissionComplete}
           revisionDocuments={revisionDocuments}
           checklistDocuments={checklistDocuments}
         />
@@ -2902,7 +2923,15 @@ export default function ApplicantDashboard() {
           isOpen={isUpdateModalOpen}
           onClose={() => setIsUpdateModalOpen(false)}
           applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
-          initialIsRegistered={reclassData?.is_registered !== undefined ? !!reclassData.is_registered : isRegisteredPosition(reclassData?.desired_position || reclassData?.desire_position || reclassData?.target_position || reclassData?.reclass_position)}
+          initialIsRegistered={
+            reclassData?.is_registered !== undefined
+              ? !!reclassData.is_registered
+              : (pendingQualificationData?.eligibility?.toUpperCase().includes('1080') ||
+                 pendingQualificationData?.eligibility?.toUpperCase().includes('REGISTERED') ||
+                 applyEligibility?.toUpperCase().includes('1080') ||
+                 applyEligibility?.toUpperCase().includes('REGISTERED') ||
+                 isRegisteredPosition(reclassData?.desired_position || reclassData?.desire_position || reclassData?.target_position || reclassData?.reclass_position))
+          }
           initialTargetPosition={reclassData?.desired_position || reclassData?.desire_position || reclassData?.target_position || reclassData?.reclass_position || editTargetPositionValue}
           initialStep={updateModalInitialStep}
           isAlreadySCIV={isAssessedSCIV(reclassData?.initial_assessment_position || reclassData?.initial_assessment || reclassData?.reclass_position)}

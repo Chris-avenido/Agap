@@ -130,6 +130,7 @@ interface ReclassUploadModalProps {
   } | null;
   onClose: () => void;
   onUploadSuccess?: () => void;
+  onSubmissionComplete?: () => void;
   revisionDocuments?: any[];
   checklistDocuments?: any[];
 }
@@ -140,6 +141,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   qualificationData,
   onClose,
   onUploadSuccess,
+  onSubmissionComplete,
   revisionDocuments = [],
   checklistDocuments = [],
 }) => {
@@ -316,6 +318,8 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
               ...(qualificationData || {}),
             }),
           });
+          if (onUploadSuccess) onUploadSuccess();
+          if (onSubmissionComplete) onSubmissionComplete();
         } catch (e) {
           console.warn('Could not set new_application:', e);
         }
@@ -390,16 +394,20 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     }
 
     if (failedTitles.length === 0) {
+      const isNewApp = Boolean(qualificationData) || revisionDocuments.length === 0;
       Swal.fire({
         icon: 'success',
-        title: 'Documents Resubmitted',
-        text: `${successCount} document(s) have been successfully uploaded and marked as Resubmit.`,
-        timer: 2500,
+        title: isNewApp ? 'Documents Submitted' : 'Documents Resubmitted',
+        text: isNewApp
+          ? `${successCount} document(s) have been successfully uploaded and attached to your application.`
+          : `${successCount} document(s) have been successfully uploaded and marked as Resubmit.`,
+        timer: 2000,
         showConfirmButton: false,
       });
       setStagedFiles({});
       await fetchDocuments();
       if (onUploadSuccess) onUploadSuccess();
+      if (onSubmissionComplete) onSubmissionComplete();
       onClose();
     } else {
       Swal.fire({
