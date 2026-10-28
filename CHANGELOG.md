@@ -1,5 +1,29 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-29] [Reclass] "Not Registered" Track Modal Exit Rule (Do Not Proceed to Step 2)
+- **Modal Step 1 Exit Enforcement**:
+  - In [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx) (*"Are you already a Registered Guidance Counselor?"*), when **"No, Not Registered"** is selected, the applicant cannot proceed to Step 2 (*"Desired Position & QS"*).
+  - The primary footer button dynamically switches to **Exit** (`handleExitNotRegistered`), cleanly persisting `is_registered = false` and `update_application = false` to `reclass_gc`, showing a confirmation toast, and exiting the modal.
+  - Step 2 navigation is guarded (`handleProceedToStep2` blocks when `!isRegistered` and exits), preventing accidental advancement without RA 1080 registration.
+- **Visual Feedback & Badging**:
+  - The *"No, Not Registered"* selection card and status banner display clear badges indicating non-licensed status exits without Desired Position & QS selection.
+
+## [2026-10-29] [Reclass] Application Update Prompt Workflow for Existing Initial Assessment & Full Editability
+- **Trigger Condition**:
+  - When `gmis_gc_items.initial_assessment` is not null (incumbent has an evaluated DepEd initial assessment) AND `reclass_gc.update_application` is not a boolean (`update_application !== true && update_application !== false`, i.e. pending/null).
+- **Modal Display & Full Editability**:
+  - Displays question modal: *"Do you want to update your application for reclassification?"* with choices **Yes** or **No**.
+  - **Editable Selection State**: When reopened, the modal highlights the candidate's active choice with a `Current Choice` badge, allowing them to freely switch and edit between **Yes** and **No**.
+  - **Dashboard Re-Opening / Edit Trigger**: In [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx), incumbents can click the **Change** action or the **Update App: Yes/No** badge in the Desired Position card at any time to re-open the question modal and edit their preference.
+  - **Editable "Reclassification Application" Modal**: In [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx), removed locks preventing SC IV incumbents from editing their track or desired position, enabling full editability and saving for all candidates.
+- **Choice Actions & Transitions**:
+  - **Yes**: Persists `reclass_gc.update_application = true` via `PUT /api/applicants/:id/reclass-update-preference`, closes question modal, and displays modal **"Reclassification Application"** (`ReclassUpdateModal`) for choosing registration status (RA 1080) and target position & Qualification Standards.
+  - **No**: Persists `reclass_gc.update_application = false` via `PUT /api/applicants/:id/reclass-update-preference`, keeping existing plantilla record and initial assessment.
+- **Database & Backend Adaptations**:
+  - Dropped default `FALSE` on `reclass_gc.update_application` so initial state accurately defaults to `NULL` for new evaluations until user answers.
+  - Removed restrictive error throws in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) so preference updates and position selections can be edited and saved without restriction.
+
+
 ## [2026-10-28] [Reclass] Qualification Standards Details Inserted with Document Submission & Conditional Display for Null Initial Assessment
 - **Workflow & Requirements Implemented**:
   1. **Qualification Standards Details Insertion Included in Saving Documents**:
@@ -31,8 +55,13 @@
        - Bottom: Registration status pill (`[Not Registered]` / `[Registered]`), aligned with neighboring cards' metadata rows.
      - Completely prevents button overlap, text collisions, or right-border overflow regardless of screen or split-view width.
    8. **Locked "New Reclassification Application" Option**:
-     - In the **"Select Application Category"** modal on [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx), locked Option 2 (**New Reclassification Application**).
-     - Rendered with disabled `cursor-not-allowed` styling, lock iconography, `[Locked]` badge, and informative feedback toast directing applicants to proceed with Incumbent GMIS Plantilla Record.
+      - In the **"Select Application Category"** modal on [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx), locked Option 2 (**New Reclassification Application**).
+      - Rendered with disabled `cursor-not-allowed` styling, lock iconography, `[Locked]` badge, and informative feedback toast directing applicants to proceed with Incumbent GMIS Plantilla Record.
+   9. **Immediate Database Persistence of `reclass_gc.is_registered` on Card Click**:
+      - **Target Storage**: Database table `public.reclass_gc`, column `is_registered` (`BOOLEAN`: `TRUE` for Registered PRC RA 1080, `FALSE` for Not Registered).
+      - **Immediate Auto-Save on Click**: In [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx), `handleTrackSelect` now immediately sends an asynchronous `PUT /api/applicants/:id/reclass-update-preference` request on click of either card ("Yes, Registered" or "No, Not Registered").
+      - **Instant Visual Feedback & Synchronization**: Added auto-saving indicator badge (`Saving...` with spinner) on the active card and calls `onSuccess` so the dashboard state updates instantly.
+      - **Accurate Primary-Key Backend Targeting**: Enhanced `ApplicantsService.updateReclassApplicationPreference()` in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts) to retrieve the incumbent record via `getReclassDetails()` and update `reclass_gc` directly `WHERE id = $1` (with fallback to `item_no` and `new_item_no`).
 
 ## [2026-10-28] [Reclass] "Do you want to apply for reclassification?" Prompt & Qualification Input Workflow for Incumbents with Null Initial Assessment (`gmis_gc_items.initial_assessment`)
 - **Requirement & Root Cause**:

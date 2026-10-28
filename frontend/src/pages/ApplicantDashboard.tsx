@@ -296,6 +296,7 @@ export default function ApplicantDashboard() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateModalInitialStep, setUpdateModalInitialStep] = useState<1 | 2>(1);
   const [showInitialPrompt, setShowInitialPrompt] = useState(false);
+  const [initialPromptType, setInitialPromptType] = useState<'apply' | 'update'>('apply');
   const [reclassApplyStep, setReclassApplyStep] = useState<'prompt' | 'form'>('prompt');
   const [applyEducation, setApplyEducation] = useState('');
   const [applyYearsExperience, setApplyYearsExperience] = useState('');
@@ -443,29 +444,33 @@ export default function ApplicantDashboard() {
     if (!sessionStr) return;
     const session = JSON.parse(sessionStr);
 
-    const userInitial =
-      reclassData?.initial_assessment_position ||
-      reclassData?.initial_assessment ||
-      reclassData?.reclass_position;
-    if (isAssessedSCIV(userInitial)) {
-      setShowInitialPrompt(false);
-      Swal.fire({
-        icon: 'info',
-        title: 'Update Disabled',
-        text: 'You are already assessed as School Counselor IV (SC IV), the maximum reclassification role. Further updates are disabled.',
-      });
-      return;
-    }
 
-    if (answer === 'yes') {
-      setShowInitialPrompt(false);
-      setIsUpdateModalOpen(true);
-    } else {
-      setShowInitialPrompt(false);
-      setIsSavingPreference(true);
-      try {
+
+    setIsSavingPreference(true);
+    try {
+      if (answer === 'yes') {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ update_application: true }),
+          }
+        );
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setReclassData((prev: any) => ({
+            ...prev,
+            update_application: true,
+          }));
+        }
+        setShowInitialPrompt(false);
+        // Show Reclassification Application modal after selecting Yes
+        setIsUpdateModalOpen(true);
+        setUpdateModalInitialStep(1);
+      } else {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -481,18 +486,24 @@ export default function ApplicantDashboard() {
           Swal.fire({
             icon: 'info',
             title: 'Preference Saved',
-            text: 'Your application will proceed under your current plantilla record.',
+            text: 'Your application will proceed under your current plantilla record and initial assessment.',
             timer: 2500,
             showConfirmButton: false,
             toast: true,
             position: 'top-end',
           });
         }
-      } catch (err) {
-        console.error('Error saving update preference:', err);
-      } finally {
-        setIsSavingPreference(false);
+        setShowInitialPrompt(false);
       }
+    } catch (err) {
+      console.error('Error saving update preference:', err);
+      if (answer === 'yes') {
+        setShowInitialPrompt(false);
+        setIsUpdateModalOpen(true);
+        setUpdateModalInitialStep(1);
+      }
+    } finally {
+      setIsSavingPreference(false);
     }
   };
 
@@ -700,15 +711,25 @@ export default function ApplicantDashboard() {
                   reclassRes.data.reclass_position;
                 const isSCIV = isAssessedSCIV(assessedPos);
 
+                const hasInitialAssessment =
+                  !!reclassRes.data.initial_assessment &&
+                  String(reclassRes.data.initial_assessment).trim() !== '' &&
+                  String(reclassRes.data.initial_assessment).toUpperCase() !== 'N/A';
+
                 const isInitialNull =
-                  (!reclassRes.data.initial_assessment ||
-                    String(reclassRes.data.initial_assessment).trim() === '' ||
-                    String(reclassRes.data.initial_assessment).toUpperCase() === 'N/A') &&
-                  reclassRes.data.new_application !== true;
+                  !hasInitialAssessment && reclassRes.data.new_application !== true;
+
+                const isUpdateAppNotBool =
+                  reclassRes.data.update_application !== true &&
+                  reclassRes.data.update_application !== false;
 
                 if (!isSCIV && isInitialNull) {
                   setShowInitialPrompt(true);
+                  setInitialPromptType('apply');
                   setReclassApplyStep('prompt');
+                } else if (hasInitialAssessment && isUpdateAppNotBool) {
+                  setShowInitialPrompt(true);
+                  setInitialPromptType('update');
                 } else {
                   setShowInitialPrompt(false);
                 }
@@ -1541,28 +1562,18 @@ export default function ApplicantDashboard() {
                                   <GraduationCap className="w-3 h-3" />
                                   <span>View QS</span>
                                 </button>
-                                {!isUserSCIV ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setUpdateModalInitialStep(1);
-                                      setIsUpdateModalOpen(true);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-                                    title="Update registration track and desired position"
-                                  >
-                                    <Edit2 className="w-3 h-3" />
-                                    <span>Change</span>
-                                  </button>
-                                ) : (
-                                  <span
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md shadow-2xs whitespace-nowrap"
-                                    title="You are already assessed as School Counselor IV, the highest benchmark role."
-                                  >
-                                    <Lock className="w-3 h-3 text-emerald-600" />
-                                    <span>Max Level</span>
-                                  </span>
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowInitialPrompt(true);
+                                    setInitialPromptType('update');
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-md transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                                  title="Edit reclassification application update preference (Yes or No)"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Change</span>
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1659,7 +1670,7 @@ export default function ApplicantDashboard() {
                         </div>
 
                         {!isEditingTargetPosition && (
-                          <div className="flex items-center gap-1.5 mt-2 min-h-[18px]">
+                          <div className="flex items-center gap-1.5 mt-2 min-h-[18px] flex-wrap">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                               (reclassData?.is_registered === true || isRegisteredPosition(reclassData?.target_position || reclassData?.reclass_position))
                                 ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
@@ -1669,6 +1680,24 @@ export default function ApplicantDashboard() {
                                 ? 'Registered'
                                 : 'Not Registered'}
                             </span>
+                            {reclassData?.update_application !== undefined && reclassData?.update_application !== null && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowInitialPrompt(true);
+                                  setInitialPromptType('update');
+                                }}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
+                                  reclassData?.update_application === true
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+                                }`}
+                                title="Click to edit reclassification application preference (Yes or No)"
+                              >
+                                <span>Update App: {reclassData?.update_application === true ? 'Yes' : 'No'}</span>
+                                <Edit2 className="w-2.5 h-2.5 opacity-70" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2648,14 +2677,31 @@ export default function ApplicantDashboard() {
           onVerified={(incumbentRecord) => {
             setShowGateModal(false);
             setReclassData(incumbentRecord);
+            const assessedPos =
+              incumbentRecord?.initial_assessment_position ||
+              incumbentRecord?.initial_assessment ||
+              incumbentRecord?.reclass_position;
+            const isSCIV = isAssessedSCIV(assessedPos);
+
+            const hasInitialAssessment =
+              !!incumbentRecord?.initial_assessment &&
+              String(incumbentRecord?.initial_assessment).trim() !== '' &&
+              String(incumbentRecord?.initial_assessment).toUpperCase() !== 'N/A';
+
             const isInitialNull =
-              (!incumbentRecord?.initial_assessment ||
-                String(incumbentRecord?.initial_assessment).trim() === '' ||
-                String(incumbentRecord?.initial_assessment).toUpperCase() === 'N/A') &&
-              incumbentRecord?.new_application !== true;
-            if (isInitialNull) {
+              !hasInitialAssessment && incumbentRecord?.new_application !== true;
+
+            const isUpdateAppNotBool =
+              incumbentRecord?.update_application !== true &&
+              incumbentRecord?.update_application !== false;
+
+            if (!isSCIV && isInitialNull) {
               setShowInitialPrompt(true);
+              setInitialPromptType('apply');
               setReclassApplyStep('prompt');
+            } else if (hasInitialAssessment && isUpdateAppNotBool) {
+              setShowInitialPrompt(true);
+              setInitialPromptType('update');
             }
           }}
         />
@@ -2709,8 +2755,110 @@ export default function ApplicantDashboard() {
               </button>
             </div>
 
-            {/* Step 1: Prompt Question ("Do you want to apply for reclassification?") */}
-            {reclassApplyStep === 'prompt' ? (
+            {/* Step 1: Prompt Question */}
+            {initialPromptType === 'update' ? (
+              <div className="p-6 space-y-5">
+                <div className="text-center space-y-2">
+                  <h4 className="text-lg font-black text-[#022851]">
+                    Do you want to update your application for reclassification?
+                  </h4>
+                  <p className="text-xs text-gray-600 leading-relaxed max-w-md mx-auto">
+                    Your plantilla record has an existing initial assessment. You can edit your choice below to update your application or proceed under your current record.
+                  </p>
+                </div>
+
+                {/* Two Option Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  {/* YES Option */}
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateApplicationAnswer('yes')}
+                    disabled={isSavingPreference}
+                    className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                      reclassData?.update_application === true
+                        ? 'border-[#0284c7] bg-sky-50/80 ring-2 ring-[#0284c7]/30 shadow-md'
+                        : 'border-[#0284c7]/50 bg-sky-50/30 hover:bg-sky-50 hover:border-[#0284c7] hover:shadow-xs'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-lg bg-[#0284c7] text-white flex items-center justify-center shadow-xs">
+                          <Check className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        {reclassData?.update_application === true && (
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0284c7] text-white shadow-2xs">
+                            Current Choice
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-base font-black text-[#022851] group-hover:text-[#0284c7] transition-colors">
+                        Yes
+                      </span>
+                      <p className="text-[11px] text-gray-600 leading-normal">
+                        Update application for reclassification (choose registration track and desired position).
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-center justify-between text-xs font-bold text-[#0284c7]">
+                      <span>{isSavingPreference ? 'Saving...' : reclassData?.update_application === true ? 'Selected • Click to open application' : 'Select Yes'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </button>
+
+                  {/* NO Option */}
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateApplicationAnswer('no')}
+                    disabled={isSavingPreference}
+                    className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                      reclassData?.update_application === false
+                        ? 'border-slate-400 bg-slate-100/90 ring-2 ring-slate-400/30 shadow-md'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-xs'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                          <X className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        {reclassData?.update_application === false && (
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-600 text-white shadow-2xs">
+                            Current Choice
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-base font-black text-[#022851] group-hover:text-slate-700 transition-colors">
+                        No
+                      </span>
+                      <p className="text-[11px] text-gray-600 leading-normal">
+                        Proceed with your current plantilla position and initial assessment without changes.
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-gray-500">
+                      <span>{isSavingPreference ? 'Saving...' : reclassData?.update_application === false ? 'Selected • Keep current record' : 'Select No'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed">
+                    You can change your response at any time by clicking Change in your Desired Position card.
+                  </p>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowInitialPrompt(false)}
+                    className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : reclassApplyStep === 'prompt' ? (
               <div className="p-6 space-y-5">
                 <div className="text-center space-y-2">
                   <h4 className="text-lg font-black text-[#022851]">

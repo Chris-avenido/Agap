@@ -16,6 +16,7 @@ import {
   Banknote,
   Info,
   Lock,
+  Loader2,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -193,6 +194,7 @@ export default function ReclassUpdateModal({
   const [isRegistered, setIsRegistered] = useState<boolean>(false);
   const [selectedPosition, setSelectedPosition] = useState<string>('SCHOOL COUNSELOR ASSOCIATE I');
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSavingTrack, setIsAutoSavingTrack] = useState(false);
   const [qsDataList, setQsDataList] = useState<PositionQS[]>(BENCHMARK_QS_DATA);
 
   // Fetch dynamic Qualification Standards from backend API
@@ -242,18 +244,120 @@ export default function ReclassUpdateModal({
 
   if (!isOpen) return null;
 
-  const handleTrackSelect = (registered: boolean) => {
-    if (isAlreadySCIV) return;
+  const handleTrackSelect = async (registered: boolean) => {
     setIsRegistered(registered);
-    const available = registered ? REGISTERED_OPTIONS : NOT_REGISTERED_OPTIONS;
+
+    if (!registered) {
+      // If Not Registered is selected, auto-save status and do not prepare Step 2 position
+      if (applicantId) {
+        setIsAutoSavingTrack(true);
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${applicantId}/reclass-update-preference`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                update_application: false,
+                is_registered: false,
+              }),
+            }
+          );
+          const data = await response.json();
+          if (response.ok && data.success && data.data) {
+            onSuccess(data.data);
+          }
+        } catch (err) {
+          console.error('Failed to auto-save not registered preference:', err);
+        } finally {
+          setIsAutoSavingTrack(false);
+        }
+      }
+      return;
+    }
+
+    const available = REGISTERED_OPTIONS;
     const isCurrentInAvailable = available.some((opt) => opt.value === selectedPosition);
+    const nextPos = isCurrentInAvailable ? selectedPosition : available[0].value;
     if (!isCurrentInAvailable) {
-      setSelectedPosition(available[0].value);
+      setSelectedPosition(nextPos);
+    }
+
+    if (applicantId) {
+      setIsAutoSavingTrack(true);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${applicantId}/reclass-update-preference`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              update_application: true,
+              is_registered: true,
+              target_position: nextPos,
+              desired_position: nextPos,
+            }),
+          }
+        );
+        const data = await response.json();
+        if (response.ok && data.success && data.data) {
+          onSuccess(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to auto-save registration preference:', err);
+      } finally {
+        setIsAutoSavingTrack(false);
+      }
+    }
+  };
+
+  const handleExitNotRegistered = async () => {
+    if (!applicantId) {
+      onClose();
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${applicantId}/reclass-update-preference`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            update_application: false,
+            is_registered: false,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.success) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Not Registered Selected',
+          text: 'Non-licensed status recorded. Your application proceeds under your current plantilla record without Desired Position & QS update.',
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        });
+        if (data.data) {
+          onSuccess(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving not registered preference:', err);
+    } finally {
+      setIsSaving(false);
+      onClose();
     }
   };
 
   const handleProceedToStep2 = () => {
-    const available = isRegistered ? REGISTERED_OPTIONS : NOT_REGISTERED_OPTIONS;
+    if (!isRegistered) {
+      handleExitNotRegistered();
+      return;
+    }
+    const available = REGISTERED_OPTIONS;
     const isCurrentInAvailable = available.some((opt) => opt.value === selectedPosition);
     if (!isCurrentInAvailable) {
       setSelectedPosition(available[0].value);
@@ -482,8 +586,15 @@ export default function ReclassUpdateModal({
                     }`}
                   >
                     {isRegistered && (
-                      <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-2xs">
-                        <Check className="w-3 h-3 stroke-[3]" />
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                        {isAutoSavingTrack && (
+                          <span className="text-[10px] text-[#0284c7] font-semibold flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                          </span>
+                        )}
+                        <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-2xs">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
                       </div>
                     )}
                     <div>
@@ -518,8 +629,15 @@ export default function ReclassUpdateModal({
                     }`}
                   >
                     {!isRegistered && (
-                      <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-2xs">
-                        <Check className="w-3 h-3 stroke-[3]" />
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                        {isAutoSavingTrack && (
+                          <span className="text-[10px] text-[#0284c7] font-semibold flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                          </span>
+                        )}
+                        <div className="w-5 h-5 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-2xs">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
                       </div>
                     )}
                     <div>
@@ -533,11 +651,14 @@ export default function ReclassUpdateModal({
                         Non-licensed / Associate
                       </p>
                       <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-                        Associate Track (SG 11–15)
+                        Non-licensed / Associate (Exits without Desired Position & QS update)
                       </p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-200/80">
+                      <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between">
                         <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
-                          School Counselor Associate I to V
+                          Associate Track
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          Exit without QS
                         </span>
                       </div>
                     </div>
@@ -550,8 +671,8 @@ export default function ReclassUpdateModal({
                 <span>Selected Status:</span>
                 <span className="font-extrabold text-[#022851]">
                   {isRegistered
-                    ? 'Registered Guidance Counselor (RA 1080)'
-                    : 'Not Registered (Associate Track)'}
+                    ? 'Registered Guidance Counselor (Proceed to Step 2)'
+                    : 'Not Registered (Exit — Do not proceed to Desired Position & QS)'}
                 </span>
               </div>
             </div>
@@ -663,7 +784,7 @@ export default function ReclassUpdateModal({
                 )}
 
                 {/* Quick Selection Chips (only if not already SC IV) */}
-                {!isAlreadySCIV && (
+                {true && (
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[11px] font-semibold text-gray-500 mr-1">Quick Select:</span>
                     {currentOptions.map((opt) => {
@@ -846,14 +967,27 @@ export default function ReclassUpdateModal({
             >
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={handleProceedToStep2}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-md transition-all cursor-pointer group"
-            >
-              <span>Next: Select Desired Position & QS</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            {isRegistered ? (
+              <button
+                type="button"
+                onClick={handleProceedToStep2}
+                disabled={isSaving || isAutoSavingTrack}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-md transition-all cursor-pointer group disabled:opacity-50"
+              >
+                <span>Next: Select Desired Position & QS</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleExitNotRegistered}
+                disabled={isSaving || isAutoSavingTrack}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-slate-700 hover:bg-slate-800 rounded-xl shadow-md transition-all cursor-pointer group disabled:opacity-50"
+              >
+                <span>Exit</span>
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ) : isAlreadySCIV ? (
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">

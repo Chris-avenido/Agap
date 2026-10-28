@@ -2110,11 +2110,7 @@ class ApplicantsServiceClass {
       );
       const inc = incRes.rows[0];
       const initialPos = inc?.initial_assessment || inc?.desired_position;
-      if (this.isAssessedSCIV(initialPos)) {
-        throw new Error(
-          'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
-        );
-      }
+
     }
 
     const parseBool = (val: any): boolean | null => {
@@ -2202,46 +2198,17 @@ class ApplicantsServiceClass {
           ? (target_position || '').trim()
           : (desire_position ? (desire_position || '').trim() : null));
 
-    const appRes = await pool.query(
-      `SELECT plantilla_item_number, email_address, email FROM applicants WHERE id = $1`,
-      [applicantId],
-    );
-    let plantilla = appRes.rows[0]?.plantilla_item_number;
-    if (!plantilla) {
-      const email = appRes.rows[0]?.email_address || appRes.rows[0]?.email;
-      if (email) {
-        const incRes = await pool.query(
-          `SELECT item_no FROM reclass_gc WHERE UPPER(TRIM(email)) = UPPER(TRIM($1)) LIMIT 1`,
-          [email],
-        );
-        plantilla = incRes.rows[0]?.item_no;
-      }
-    }
+    const reclassDetails = await this.getReclassDetails(applicantId);
+    const initialPos = reclassDetails?.initial_assessment || reclassDetails?.desired_position;
 
-    if (plantilla) {
-      const incRes = await pool.query(
-        `SELECT g.initial_assessment, r.desired_position 
-         FROM reclass_gc r
-         LEFT JOIN gmis_gc_items g ON (
-           (r.item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
-           OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
-           OR g.reclass_gc_id = r.id
-         )
-         WHERE UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)) OR UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1))
-         LIMIT 1`,
-        [plantilla],
-      );
-      const inc = incRes.rows[0];
-      const initialPos = inc?.initial_assessment || inc?.desired_position;
-      if (this.isAssessedSCIV(initialPos)) {
-        throw new Error(
-          'Further update options are disabled: Applicant is already assessed as School Counselor IV (SC IV), the maximum reclassification role.',
-        );
-      }
 
+    const gcId = reclassDetails?.id;
+    const plantilla = reclassDetails?.plantilla_item_number || reclassDetails?.item_no;
+
+    if (gcId || plantilla) {
       const updatesGc: string[] = ['updated_at = NOW()'];
-      const paramsGc: any[] = [plantilla];
-      let pIdx = 2;
+      const paramsGc: any[] = [];
+      let pIdx = 1;
 
       if (boolUpdate !== null) {
         updatesGc.push(`update_application = $${pIdx++}`);
@@ -2277,41 +2244,51 @@ class ApplicantsServiceClass {
         paramsGc.push(cleanElig);
       }
 
-      await pool.query(
-        `UPDATE reclass_gc SET ${updatesGc.join(', ')} WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
-        paramsGc,
-      );
-
-      // Sync with applicants table
-      const updatesApp: string[] = ['updated_at = NOW()'];
-      const paramsApp: any[] = [applicantId];
-      let aIdx = 2;
-      if (education !== undefined) {
-        const cleanEdu = education ? String(education).trim().toUpperCase() : null;
-        updatesApp.push(`bachelor_degree = $${aIdx++}`, `bachelors_degree = $${aIdx++}`);
-        paramsApp.push(cleanEdu, cleanEdu);
-      }
-      if (expVal !== undefined) {
-        const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
-        updatesApp.push(`years_experience = $${aIdx++}`);
-        paramsApp.push(numExp);
-      }
-      if (hours_of_training !== undefined) {
-        const numTraining = hours_of_training !== null && String(hours_of_training).trim() !== '' ? Number(hours_of_training) : null;
-        updatesApp.push(`training_hours = $${aIdx++}`);
-        paramsApp.push(numTraining);
-      }
-      if (eligibility !== undefined) {
-        const cleanElig = eligibility ? String(eligibility).trim().toUpperCase() : null;
-        updatesApp.push(`eligibility = $${aIdx++}`);
-        paramsApp.push(cleanElig);
-      }
-      if (updatesApp.length > 1) {
+      if (gcId) {
+        paramsGc.push(gcId);
         await pool.query(
-          `UPDATE applicants SET ${updatesApp.join(', ')} WHERE id = $1`,
-          paramsApp,
+          `UPDATE reclass_gc SET ${updatesGc.join(', ')} WHERE id = $${pIdx}`,
+          paramsGc,
+        );
+      } else if (plantilla) {
+        paramsGc.push(plantilla);
+        await pool.query(
+          `UPDATE reclass_gc SET ${updatesGc.join(', ')} WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($${pIdx})) OR UPPER(TRIM(new_item_no)) = UPPER(TRIM($${pIdx}))`,
+          paramsGc,
         );
       }
+    }
+
+    // Sync with applicants table
+    const updatesApp: string[] = ['updated_at = NOW()'];
+    const paramsApp: any[] = [applicantId];
+    let aIdx = 2;
+    if (education !== undefined) {
+      const cleanEdu = education ? String(education).trim().toUpperCase() : null;
+      updatesApp.push(`bachelor_degree = $${aIdx++}`, `bachelors_degree = $${aIdx++}`);
+      paramsApp.push(cleanEdu, cleanEdu);
+    }
+    const expVal = years_experience !== undefined ? years_experience : year_of_experience;
+    if (expVal !== undefined) {
+      const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
+      updatesApp.push(`years_experience = $${aIdx++}`);
+      paramsApp.push(numExp);
+    }
+    if (hours_of_training !== undefined) {
+      const numTraining = hours_of_training !== null && String(hours_of_training).trim() !== '' ? Number(hours_of_training) : null;
+      updatesApp.push(`training_hours = $${aIdx++}`);
+      paramsApp.push(numTraining);
+    }
+    if (eligibility !== undefined) {
+      const cleanElig = eligibility ? String(eligibility).trim().toUpperCase() : null;
+      updatesApp.push(`eligibility = $${aIdx++}`);
+      paramsApp.push(cleanElig);
+    }
+    if (updatesApp.length > 1) {
+      await pool.query(
+        `UPDATE applicants SET ${updatesApp.join(', ')} WHERE id = $1`,
+        paramsApp,
+      );
     }
 
     return this.getReclassDetails(applicantId);
