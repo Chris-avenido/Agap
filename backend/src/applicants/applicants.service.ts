@@ -1775,7 +1775,7 @@ class ApplicantsServiceClass {
 
     // Look up in both reclass_gc AND gmis_gc_items
     const incumbentRes = await pool.query(
-      `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region
+      `SELECT r.*, g.psi_cd, g.initial_assessment, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region
        FROM reclass_gc r
        INNER JOIN gmis_gc_items g 
          ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
@@ -1807,7 +1807,7 @@ class ApplicantsServiceClass {
   async getReclassDetails(applicantId: number) {
     let incumbent: any = null;
     const applicantRes = await pool.query(
-      `SELECT plantilla_item_number, surname, first_name FROM applicants WHERE id = $1`,
+      `SELECT plantilla_item_number, surname, first_name, email, email_address FROM applicants WHERE id = $1`,
       [applicantId],
     );
     const appRow = applicantRes.rows[0];
@@ -1815,18 +1815,68 @@ class ApplicantsServiceClass {
 
     if (plantillaItemNumber) {
       const incRes = await pool.query(
-        `SELECT * FROM reclass_gc
-         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT r.*, g.initial_assessment, g.psi_cd as gmis_psi_cd
+         FROM reclass_gc r
+         LEFT JOIN gmis_gc_items g ON (
+           (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+           OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+           OR g.reclass_gc_id = r.id
+         )
+         WHERE UPPER(TRIM(r.item_no)) = UPPER(TRIM($1))
+            OR UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1))
+         LIMIT 1`,
         [plantillaItemNumber],
       );
       incumbent = incRes.rows[0] || null;
     } else if (appRow?.surname && appRow?.first_name) {
       const incByName = await pool.query(
-        `SELECT * FROM reclass_gc
-         WHERE UPPER(TRIM(last_name)) = UPPER(TRIM($1)) AND UPPER(TRIM(first_name)) = UPPER(TRIM($2)) LIMIT 1`,
+        `SELECT r.*, g.initial_assessment, g.psi_cd as gmis_psi_cd
+         FROM reclass_gc r
+         LEFT JOIN gmis_gc_items g ON (
+           (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+           OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+           OR g.reclass_gc_id = r.id
+         )
+         WHERE UPPER(TRIM(r.last_name)) = UPPER(TRIM($1)) AND UPPER(TRIM(r.first_name)) = UPPER(TRIM($2))
+         LIMIT 1`,
         [appRow.surname, appRow.first_name],
       );
       incumbent = incByName.rows[0] || null;
+    }
+
+    if (!incumbent && (appRow?.email || appRow?.email_address)) {
+      const email = appRow.email || appRow.email_address;
+      const incByEmail = await pool.query(
+        `SELECT r.*, g.initial_assessment, g.psi_cd as gmis_psi_cd
+         FROM reclass_gc r
+         LEFT JOIN gmis_gc_items g ON (
+           (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+           OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+           OR g.reclass_gc_id = r.id
+         )
+         WHERE LOWER(TRIM(r.email)) = LOWER(TRIM($1))
+         LIMIT 1`,
+        [email],
+      );
+      incumbent = incByEmail.rows[0] || null;
+    }
+
+    if (!incumbent && plantillaItemNumber) {
+      const gmisOnly = await pool.query(
+        `SELECT *, initial_assessment FROM gmis_gc_items WHERE UPPER(TRIM(psi_cd)) = UPPER(TRIM($1)) LIMIT 1`,
+        [plantillaItemNumber],
+      );
+      if (gmisOnly.rows[0]) {
+        incumbent = {
+          item_no: gmisOnly.rows[0].psi_cd,
+          current_position: gmisOnly.rows[0].pos_dsc,
+          first_name: gmisOnly.rows[0].first_name,
+          last_name: gmisOnly.rows[0].last_name,
+          region: gmisOnly.rows[0].region,
+          division: gmisOnly.rows[0].division,
+          initial_assessment: gmisOnly.rows[0].initial_assessment,
+        };
+      }
     }
 
     const reclassApp = incumbent || null;
@@ -1914,13 +1964,13 @@ class ApplicantsServiceClass {
     };
 
     const rawInitialPosition =
+      incumbent?.initial_assessment ||
       incumbent?.initial_assessment_position ||
-      incumbent?.reclass_position ||
-      '';
+      null;
     const initialPosition =
-      rawInitialPosition && rawInitialPosition.toUpperCase() !== 'N/A' && rawInitialPosition !== ''
-        ? rawInitialPosition
-        : '';
+      rawInitialPosition && rawInitialPosition.toUpperCase() !== 'N/A' && String(rawInitialPosition).trim() !== ''
+        ? String(rawInitialPosition).trim()
+        : null;
 
     const initialSalaryGrade =
       initialPosition
@@ -1942,11 +1992,11 @@ class ApplicantsServiceClass {
 
     const stageOfReclass = (incumbent?.stage_of_reclassification && String(incumbent.stage_of_reclassification).trim())
       ? String(incumbent.stage_of_reclassification).trim().toUpperCase()
-      : (docCount >= 8 ? 'FOR REVIEW' : 'UPDATING OF DOCUMENTS');
+      : (docCount >= 8 ? 'FOR REVIEW' : (!initialPosition && incumbent?.new_application !== true ? 'PENDING APPLICATION' : 'UPDATING OF DOCUMENTS'));
 
     const documentStatus = (incumbent?.document_status && String(incumbent.document_status).trim())
       ? String(incumbent.document_status).trim().toUpperCase()
-      : (docCount >= 8 ? 'DOCUMENTS SUBMITTED' : 'DOCUMENTS SUBMITTED');
+      : (docCount >= 8 ? 'DOCUMENTS SUBMITTED' : (docCount > 0 ? 'PARTIAL SUBMISSION' : (incumbent?.new_application ? 'DOCUMENTS SUBMITTED' : 'PENDING APPLICATION')));
 
     const targetSalaryGrade = getSalaryGradeForPosition(targetPosition);
     const indicativeSalaryGrade = getSalaryGradeForPosition(indicativePosition);
@@ -1961,6 +2011,8 @@ class ApplicantsServiceClass {
       desire_position: desiredPosition,
       reclass_position: reclassPosition,
       current_position: currentPosition,
+      new_application: incumbent?.new_application === true,
+      is_new_application: incumbent?.new_application === true,
       salary_grade:
         targetSalaryGrade ||
         indicativeSalaryGrade ||
@@ -1985,6 +2037,11 @@ class ApplicantsServiceClass {
       initial_assessment: initialPosition,
       initial_assessment_position: initialPosition,
       initial_assessment_salary_grade: initialSalaryGrade,
+      is_initial_assessment_null: !initialPosition && incumbent?.new_application !== true,
+      education: incumbent?.education || null,
+      years_experience: incumbent?.years_experience !== null && incumbent?.years_experience !== undefined ? Number(incumbent.years_experience) : null,
+      hours_of_training: incumbent?.hours_of_training !== null && incumbent?.hours_of_training !== undefined ? Number(incumbent.hours_of_training) : null,
+      eligibility: incumbent?.eligibility || null,
       documents_count: docCount,
       required_documents_count: 8,
       submission_deadline: 'October 31, 2026',
@@ -2040,7 +2097,15 @@ class ApplicantsServiceClass {
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT initial_assessment, desired_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT g.initial_assessment, r.desired_position 
+         FROM reclass_gc r
+         LEFT JOIN gmis_gc_items g ON (
+           (r.item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+           OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+           OR g.reclass_gc_id = r.id
+         )
+         WHERE UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)) OR UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1))
+         LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
@@ -2099,9 +2164,25 @@ class ApplicantsServiceClass {
       target_position?: string;
       desire_position?: string;
       desired_position?: string;
+      education?: string | null;
+      years_experience?: number | string | null;
+      year_of_experience?: number | string | null;
+      hours_of_training?: number | string | null;
+      eligibility?: string | null;
     },
   ) {
-    const { update_application, is_registered, target_position, desire_position, desired_position } = data;
+    const {
+      update_application,
+      is_registered,
+      target_position,
+      desire_position,
+      desired_position,
+      education,
+      years_experience,
+      year_of_experience,
+      hours_of_training,
+      eligibility,
+    } = data;
 
     const parseBool = (val: any): boolean | null => {
       if (val === true || val === false) return val;
@@ -2122,14 +2203,32 @@ class ApplicantsServiceClass {
           : (desire_position ? (desire_position || '').trim() : null));
 
     const appRes = await pool.query(
-      `SELECT plantilla_item_number FROM applicants WHERE id = $1`,
+      `SELECT plantilla_item_number, email_address, email FROM applicants WHERE id = $1`,
       [applicantId],
     );
-    const plantilla = appRes.rows[0]?.plantilla_item_number;
+    let plantilla = appRes.rows[0]?.plantilla_item_number;
+    if (!plantilla) {
+      const email = appRes.rows[0]?.email_address || appRes.rows[0]?.email;
+      if (email) {
+        const incRes = await pool.query(
+          `SELECT item_no FROM reclass_gc WHERE UPPER(TRIM(email)) = UPPER(TRIM($1)) LIMIT 1`,
+          [email],
+        );
+        plantilla = incRes.rows[0]?.item_no;
+      }
+    }
 
     if (plantilla) {
       const incRes = await pool.query(
-        `SELECT initial_assessment, desired_position FROM reclass_gc WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) LIMIT 1`,
+        `SELECT g.initial_assessment, r.desired_position 
+         FROM reclass_gc r
+         LEFT JOIN gmis_gc_items g ON (
+           (r.item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+           OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+           OR g.reclass_gc_id = r.id
+         )
+         WHERE UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)) OR UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1))
+         LIMIT 1`,
         [plantilla],
       );
       const inc = incRes.rows[0];
@@ -2156,11 +2255,180 @@ class ApplicantsServiceClass {
         updatesGc.push(`desired_position = $${pIdx++}`);
         paramsGc.push(cleanPos);
       }
+      if (education !== undefined) {
+        const cleanEdu = education ? String(education).trim().toUpperCase() : null;
+        updatesGc.push(`education = $${pIdx++}`);
+        paramsGc.push(cleanEdu);
+      }
+      const expVal = years_experience !== undefined ? years_experience : year_of_experience;
+      if (expVal !== undefined) {
+        const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
+        updatesGc.push(`years_experience = $${pIdx++}`);
+        paramsGc.push(numExp);
+      }
+      if (hours_of_training !== undefined) {
+        const numTraining = hours_of_training !== null && String(hours_of_training).trim() !== '' ? Number(hours_of_training) : null;
+        updatesGc.push(`hours_of_training = $${pIdx++}`);
+        paramsGc.push(numTraining);
+      }
+      if (eligibility !== undefined) {
+        const cleanElig = eligibility ? String(eligibility).trim().toUpperCase() : null;
+        updatesGc.push(`eligibility = $${pIdx++}`);
+        paramsGc.push(cleanElig);
+      }
 
       await pool.query(
         `UPDATE reclass_gc SET ${updatesGc.join(', ')} WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
         paramsGc,
       );
+
+      // Sync with applicants table
+      const updatesApp: string[] = ['updated_at = NOW()'];
+      const paramsApp: any[] = [applicantId];
+      let aIdx = 2;
+      if (education !== undefined) {
+        const cleanEdu = education ? String(education).trim().toUpperCase() : null;
+        updatesApp.push(`bachelor_degree = $${aIdx++}`, `bachelors_degree = $${aIdx++}`);
+        paramsApp.push(cleanEdu, cleanEdu);
+      }
+      if (expVal !== undefined) {
+        const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
+        updatesApp.push(`years_experience = $${aIdx++}`);
+        paramsApp.push(numExp);
+      }
+      if (hours_of_training !== undefined) {
+        const numTraining = hours_of_training !== null && String(hours_of_training).trim() !== '' ? Number(hours_of_training) : null;
+        updatesApp.push(`training_hours = $${aIdx++}`);
+        paramsApp.push(numTraining);
+      }
+      if (eligibility !== undefined) {
+        const cleanElig = eligibility ? String(eligibility).trim().toUpperCase() : null;
+        updatesApp.push(`eligibility = $${aIdx++}`);
+        paramsApp.push(cleanElig);
+      }
+      if (updatesApp.length > 1) {
+        await pool.query(
+          `UPDATE applicants SET ${updatesApp.join(', ')} WHERE id = $1`,
+          paramsApp,
+        );
+      }
+    }
+
+    return this.getReclassDetails(applicantId);
+  }
+
+  async applyForReclassification(
+    applicantId: number,
+    data: {
+      education?: string | null;
+      years_experience?: number | string | null;
+      year_of_experience?: number | string | null;
+      hours_of_training?: number | string | null;
+      eligibility?: string | null;
+      update_application?: boolean | string;
+    },
+  ) {
+    return this.updateReclassApplicationPreference(applicantId, {
+      update_application: true,
+      education: data.education,
+      years_experience: data.years_experience !== undefined ? data.years_experience : data.year_of_experience,
+      hours_of_training: data.hours_of_training,
+      eligibility: data.eligibility,
+    });
+  }
+
+  async setReclassNewApplication(
+    applicantId: number,
+    isNewApp = true,
+    data?: {
+      education?: string | null;
+      years_experience?: number | string | null;
+      year_of_experience?: number | string | null;
+      hours_of_training?: number | string | null;
+      eligibility?: string | null;
+    },
+  ) {
+    const reclassDetails = await this.getReclassDetails(applicantId);
+    const plantilla =
+      reclassDetails?.plantilla_item_number ||
+      reclassDetails?.item_no ||
+      null;
+    const gcId = reclassDetails?.id;
+
+    const updates: string[] = ['new_application = $1', 'updated_at = NOW()'];
+    const params: any[] = [isNewApp];
+    let pIdx = 2;
+
+    if (data?.education !== undefined) {
+      const cleanEdu = data.education ? String(data.education).trim().toUpperCase() : null;
+      updates.push(`education = $${pIdx++}`);
+      params.push(cleanEdu);
+    }
+    const expVal = data?.years_experience !== undefined ? data?.years_experience : data?.year_of_experience;
+    if (expVal !== undefined) {
+      const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
+      updates.push(`years_experience = $${pIdx++}`);
+      params.push(numExp);
+    }
+    if (data?.hours_of_training !== undefined) {
+      const numTraining = data.hours_of_training !== null && String(data.hours_of_training).trim() !== '' ? Number(data.hours_of_training) : null;
+      updates.push(`hours_of_training = $${pIdx++}`);
+      params.push(numTraining);
+    }
+    if (data?.eligibility !== undefined) {
+      const cleanElig = data.eligibility ? String(data.eligibility).trim().toUpperCase() : null;
+      updates.push(`eligibility = $${pIdx++}`);
+      params.push(cleanElig);
+    }
+
+    if (plantilla) {
+      await pool.query(
+        `UPDATE reclass_gc
+         SET ${updates.join(', ')}
+         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($${pIdx})) OR UPPER(TRIM(new_item_no)) = UPPER(TRIM($${pIdx}))`,
+        [...params, plantilla],
+      );
+    }
+    if (gcId) {
+      await pool.query(
+        `UPDATE reclass_gc
+         SET ${updates.join(', ')}
+         WHERE id = $${pIdx}`,
+        [...params, gcId],
+      );
+    }
+
+    // Sync to applicants table if qualification fields provided
+    if (data && (data.education !== undefined || expVal !== undefined || data.hours_of_training !== undefined || data.eligibility !== undefined)) {
+      const updatesApp: string[] = ['updated_at = NOW()'];
+      const paramsApp: any[] = [applicantId];
+      let aIdx = 2;
+      if (data.education !== undefined) {
+        const cleanEdu = data.education ? String(data.education).trim().toUpperCase() : null;
+        updatesApp.push(`bachelor_degree = $${aIdx++}`, `bachelors_degree = $${aIdx++}`);
+        paramsApp.push(cleanEdu, cleanEdu);
+      }
+      if (expVal !== undefined) {
+        const numExp = expVal !== null && String(expVal).trim() !== '' ? Number(expVal) : null;
+        updatesApp.push(`years_experience = $${aIdx++}`);
+        paramsApp.push(numExp);
+      }
+      if (data.hours_of_training !== undefined) {
+        const numTraining = data.hours_of_training !== null && String(data.hours_of_training).trim() !== '' ? Number(data.hours_of_training) : null;
+        updatesApp.push(`training_hours = $${aIdx++}`);
+        paramsApp.push(numTraining);
+      }
+      if (data.eligibility !== undefined) {
+        const cleanElig = data.eligibility ? String(data.eligibility).trim().toUpperCase() : null;
+        updatesApp.push(`eligibility = $${aIdx++}`);
+        paramsApp.push(cleanElig);
+      }
+      if (updatesApp.length > 1) {
+        await pool.query(
+          `UPDATE applicants SET ${updatesApp.join(', ')} WHERE id = $1`,
+          paramsApp,
+        );
+      }
     }
 
     return this.getReclassDetails(applicantId);
@@ -3395,9 +3663,14 @@ class ApplicantsServiceClass {
       .toUpperCase();
     if (!normalized) return null;
     const res = await pool.query(
-      `SELECT region, division, COALESCE(desired_position, initial_assessment) as target_position, desired_position, current_position, first_name, last_name, school_name
-       FROM reclass_gc
-       WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))
+      `SELECT r.region, r.division, COALESCE(r.desired_position, g.initial_assessment) as target_position, r.desired_position, r.current_position, r.first_name, r.last_name, r.school_name, g.initial_assessment
+       FROM reclass_gc r
+       LEFT JOIN gmis_gc_items g ON (
+         (r.item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
+         OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
+         OR g.reclass_gc_id = r.id
+       )
+       WHERE UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)) OR UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1))
        LIMIT 1`,
       [normalized],
     );
@@ -3623,6 +3896,13 @@ class ApplicantsServiceClass {
       size: number;
     },
     description?: string,
+    qualificationData?: {
+      education?: string | null;
+      years_experience?: number | string | null;
+      year_of_experience?: number | string | null;
+      hours_of_training?: number | string | null;
+      eligibility?: string | null;
+    },
   ) {
     const reclassDetails = await this.getReclassDetails(applicantId);
     if (!reclassDetails) {
@@ -3754,17 +4034,31 @@ class ApplicantsServiceClass {
       savedDocRow = insertDocRes.rows[0];
     }
 
-    // 3. Update reclass_gc updated_at timestamp
-    if (plantillaItemNumber) {
-      await pool.query(
-        `UPDATE reclass_gc
-         SET updated_at = NOW()
-         WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1))`,
-        [plantillaItemNumber],
-      );
+    // 3. Update reclass_gc updated_at timestamp & new_application = true (including qualification details if provided)
+    if (qualificationData && (qualificationData.education !== undefined || qualificationData.years_experience !== undefined || qualificationData.year_of_experience !== undefined || qualificationData.hours_of_training !== undefined || qualificationData.eligibility !== undefined)) {
+      await this.setReclassNewApplication(applicantId, true, qualificationData);
+    } else {
+      if (plantillaItemNumber) {
+        await pool.query(
+          `UPDATE reclass_gc
+           SET new_application = true,
+               updated_at = NOW()
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) OR UPPER(TRIM(new_item_no)) = UPPER(TRIM($1))`,
+          [plantillaItemNumber],
+        );
+      }
+      if (reclassGcId) {
+        await pool.query(
+          `UPDATE reclass_gc
+           SET new_application = true,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [reclassGcId],
+        );
+      }
     }
 
-    // 4. Update reclass_gc.reupload = true and update document_checklist:
+    // 4. Update reclass_gc.reupload = true, new_application = true and update document_checklist:
     // If a document has status 'for_revision', upon re-upload / re-submission, its status changes to 'submitted'
     try {
       const gcRows = await pool.query(
@@ -3844,6 +4138,7 @@ class ApplicantsServiceClass {
             `UPDATE reclass_gc
              SET document_checklist = $1,
                  reupload = true,
+                 new_application = true,
                  updated_at = NOW()
              WHERE id = $2`,
             [JSON.stringify(checklist), gcRow.id],
@@ -3852,6 +4147,7 @@ class ApplicantsServiceClass {
           await pool.query(
             `UPDATE reclass_gc
              SET reupload = true,
+                 new_application = true,
                  updated_at = NOW()
              WHERE id = $1`,
             [gcRow.id],
@@ -3860,9 +4156,14 @@ class ApplicantsServiceClass {
       }
     } catch (checkErr) {
       console.error('Error updating document_checklist on re-upload:', checkErr);
-      if (folderGcId) {
+      if (reclassGcId) {
         await pool.query(
-          `UPDATE reclass_gc SET reupload = true, updated_at = NOW() WHERE id = $1`,
+          `UPDATE reclass_gc SET reupload = true, new_application = true, updated_at = NOW() WHERE id = $1`,
+          [reclassGcId],
+        );
+      } else if (folderGcId) {
+        await pool.query(
+          `UPDATE reclass_gc SET reupload = true, new_application = true, updated_at = NOW() WHERE id = $1`,
           [folderGcId],
         );
       }

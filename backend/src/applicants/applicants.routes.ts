@@ -1356,13 +1356,33 @@ router.put('/:id/reclass-update-preference', async (req, res) => {
     if (isNaN(id)) {
       return res.status(400).json({ message: 'Invalid applicant ID.' });
     }
-    const { update_application, is_registered, target_position, desire_position, desired_position } = req.body;
+    const {
+      update_application,
+      is_registered,
+      target_position,
+      desire_position,
+      desired_position,
+      education,
+      years_experience,
+      year_of_experience,
+      hours_of_training,
+      eligibility,
+    } = req.body;
     if (update_application === undefined || update_application === null) {
       return res.status(400).json({ message: 'update_application answer is required.' });
     }
     const updated = await ApplicantsService.updateReclassApplicationPreference(
       id,
-      { update_application, is_registered, target_position, desired_position: desired_position || desire_position },
+      {
+        update_application,
+        is_registered,
+        target_position,
+        desired_position: desired_position || desire_position,
+        education,
+        years_experience: years_experience !== undefined ? years_experience : year_of_experience,
+        hours_of_training,
+        eligibility,
+      },
     );
     res.json({
       success: true,
@@ -1375,6 +1395,75 @@ router.put('/:id/reclass-update-preference', async (req, res) => {
     res.status(status).json({
       success: false,
       message: error.message || 'Error updating reclassification application preference.',
+    });
+  }
+});
+
+// PUT /api/applicants/:id/reclass-apply
+router.put('/:id/reclass-apply', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const {
+      education,
+      years_experience,
+      year_of_experience,
+      hours_of_training,
+      eligibility,
+      update_application,
+    } = req.body;
+
+    const exp = years_experience !== undefined ? years_experience : year_of_experience;
+    const updated = await ApplicantsService.applyForReclassification(id, {
+      education,
+      years_experience: exp,
+      hours_of_training,
+      eligibility,
+      update_application: update_application !== undefined ? update_application : true,
+    });
+    res.json({
+      success: true,
+      message: 'Reclassification application submitted successfully.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error applying for reclassification:', error);
+    const status = (error.message && error.message.includes('disabled')) ? 400 : 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Error applying for reclassification.',
+    });
+  }
+});
+
+// PUT /api/applicants/:id/reclass-set-new-application
+router.put('/:id/reclass-set-new-application', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid applicant ID.' });
+    }
+    const isNewApp = req.body.new_application !== undefined ? !!req.body.new_application : true;
+    const { education, years_experience, year_of_experience, hours_of_training, eligibility } = req.body;
+    const updated = await ApplicantsService.setReclassNewApplication(id, isNewApp, {
+      education,
+      years_experience,
+      year_of_experience,
+      hours_of_training,
+      eligibility,
+    });
+    res.json({
+      success: true,
+      message: 'Reclassification new_application status updated successfully.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error setting reclass new_application:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update reclassification new_application status.',
     });
   }
 });
@@ -1424,7 +1513,16 @@ router.post(
         });
       }
 
-      const { category_key, category_title, description } = req.body;
+      const {
+        category_key,
+        category_title,
+        description,
+        education,
+        years_experience,
+        year_of_experience,
+        hours_of_training,
+        eligibility,
+      } = req.body;
       if (!category_key) {
         return res
           .status(400)
@@ -1437,6 +1535,12 @@ router.post(
         category_title || category_key,
         file,
         description,
+        {
+          education,
+          years_experience: years_experience !== undefined ? years_experience : year_of_experience,
+          hours_of_training,
+          eligibility,
+        },
       );
 
       res.json({

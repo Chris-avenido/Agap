@@ -1,5 +1,61 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-28] [Reclass] Qualification Standards Details Inserted with Document Submission & Conditional Display for Null Initial Assessment
+- **Workflow & Requirements Implemented**:
+  1. **Qualification Standards Details Insertion Included in Saving Documents**:
+     - Submitting the Qualification Standards Details form in Step 2 of the prompt modal stages the data in state (`pendingQualificationData`) and immediately opens the upload modal: **"Reclassification Document Submission"** (`ReclassUploadModal`).
+     - The insertion of qualification data (`education`, `years_experience`, `hours_of_training`, `eligibility`) into `public.reclass_gc` (and synchronization with `public.applicants`) is deferred to and executed **during document saving/uploading** (`uploadReclassDocument` and `setReclassNewApplication`).
+     - If the user closes the upload modal without saving documents, no premature database insertion occurs, keeping their state clean and pending.
+  2. **Complete Hiding of the "HRMO Review & Evaluation" Card Display and "View QS" / "Change" Buttons**:
+     - Evaluated via `isInitialAssessmentNull` (`reclass_gc.new_application is not true and reclass_gc.initial_assessment is null`):
+       - **Hidden**: Entire card display for **"HRMO Review & Evaluation"** (Card 3: Stages / Process Stepper displaying `Current Stage: Step 2 of 5: HRMO Review & Evaluation` and the evaluation stages).
+       - **Hidden**: **"View QS"** and **"Change"** buttons in the *Desired Position* card.
+       - **Guarded**: `isHrmoReview` in `ApplicantDashboard.tsx` is explicitly guarded with `!isInitialAssessmentNull` so it cannot be inadvertently triggered before an application is submitted.
+       - **Corrected Fallback**: In `ApplicantsService.getReclassDetails()`, fixed `documentStatus` and `stageOfReclass` default when `docCount = 0` to return `'PENDING APPLICATION'` rather than prematurely returning `'DOCUMENTS SUBMITTED'`.
+  3. **Database Schema & `reclass_gc.initial_assessment` Synchronization**:
+     - Added `ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS initial_assessment VARCHAR(255);` to [`database.ts`](file:///e:/christop/AGAP%20Portal/backend/src/database.ts) line 93.
+     - Executed database migration adding the column and backfilling `reclass_gc.initial_assessment` directly from `gmis_gc_items.initial_assessment`.
+  4. **PostgreSQL Trigger `trg_uppercase_reclass_gc()` Synchronization & Modal Payload**:
+     - Fixed `trg_uppercase_reclass_gc()` trigger in PostgreSQL which threw `record "new" has no field "initial_assessment"` during `PUT /api/applicants/:id/reclass-set-new-application`.
+     - In [`ReclassUploadModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUploadModal.tsx) line 311, passed `qualificationData` into the `reclass-set-new-application` payload when closing/finishing modal submission without new files staged.
+   5. **Removal of Legacy Preference Status Card / Banner**:
+     - Completely removed the legacy banner tag (`<div className="rounded-2xl p-5 border shadow-xs transition-all bg-slate-50 border-slate-300">`) formerly rendering the "Application Update Preference: NO (Keep Existing)" banner on the applicant dashboard.
+
+## [2026-10-28] [Reclass] "Do you want to apply for reclassification?" Prompt & Qualification Input Workflow for Incumbents with Null Initial Assessment (`gmis_gc_items.initial_assessment`)
+- **Requirement & Root Cause**:
+  - Previously, incumbent applicants were shown the prompt *"Do you want to update your application for reclassification?"* / *"Would you like to update your application?"* when `update_application === null`.
+  - Replaced that prompt with **"Do you want to apply for reclassification?"**, displayed whenever the initial assessment is null and `reclass_gc.new_application is not true`.
+  - **Authoritative Source Table for `initial_assessment`**:
+    - The `initial_assessment` column resides in `public.gmis_gc_items` (the central GMIS master item table), linked to `reclass_gc` via `psi_cd = item_no` (or `reclass_gc_id = reclass_gc.id`).
+    - The `reclass_gc` table holds the candidate application details (`education`, `years_experience`, `hours_of_training`, `eligibility`, `new_application`, etc.), while `gmis_gc_items.initial_assessment` holds the authoritative DepEd assessment status.
+    - Updated the assessment check to join `gmis_gc_items` and evaluate `gmis_gc_items.initial_assessment IS NULL` (or empty/pending) **AND** `reclass_gc.new_application is not true` (`new_application !== true`).
+  - If the user selects **"Yes"**, the modal transitions to display qualification input fields:
+    1. **Education** (`education`)
+    2. **Year of Experience** (`years_experience`)
+    3. **Hours of Training** (`hours_of_training`)
+    4. **Eligibility** (`eligibility`)
+  - Submitting the form inserts and updates these values directly into `public.reclass_gc` (and synchronizes with the `applicants` table).
+  - Adhered strictly to the guideline in [`.agents/agents.md`](file:///e:/christop/AGAP%20Portal/.agents/agents.md): if years of experience or training hours is 0, the frontend displays `'None Required'`.
+- **Backend Service & Route Updates**:
+  - In `ApplicantsService.getReclassDetails()` in [`applicants.service.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.service.ts):
+    - Joins `gmis_gc_items g` on `(r.item_no IS NOT NULL AND g.psi_cd = r.item_no) OR (r.new_item_no IS NOT NULL AND g.psi_cd = r.new_item_no) OR g.reclass_gc_id = r.id`.
+    - Accurately checks `g.initial_assessment` from `gmis_gc_items`, returning `null` when not assessed (without false fallback to `reclass_position`).
+    - Explicitly returns `new_application`, `is_new_application`, `education`, `years_experience`, `hours_of_training`, `eligibility`, and `is_initial_assessment_null: !initialPosition && incumbent?.new_application !== true`.
+  - In `ApplicantsService.verifyPlantillaItem()`:
+    - Joins and selects `g.initial_assessment` alongside `r.*` so newly verified incumbents immediately have their initial assessment evaluated.
+  - In `ApplicantsService.updateTargetPosition()`, `updateReclassApplicationPreference()`, and `getIncumbentInfoByPlantilla()`:
+    - Replaced invalid direct selections of `reclass_gc.initial_assessment` with joined queries against `gmis_gc_items.initial_assessment`.
+  - Added `ApplicantsService.applyForReclassification()` to update `reclass_gc` columns `education`, `years_experience`, `hours_of_training`, and `eligibility`, and set `update_application = TRUE`.
+  - Updated `ApplicantsService.updateReclassApplicationPreference()` to also accept and persist qualification fields.
+  - Added endpoint `PUT /api/applicants/:id/reclass-apply` in [`applicants.routes.ts`](file:///e:/christop/AGAP%20Portal/backend/src/applicants/applicants.routes.ts).
+- **Frontend Presentation & Interaction in [`ApplicantDashboard.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/ApplicantDashboard.tsx)**:
+  - Updated condition for showing initial prompt: displays whenever `isInitialAssessmentNull` is true (`initial_assessment` from `gmis_gc_items` is null, empty, or 'N/A') AND `reclass_gc.new_application is not true` (`new_application !== true`) and applicant is not SC IV.
+  - Replaced prompt modal copy with **"Do you want to apply for reclassification?"**.
+  - Selecting "Yes, Apply for Reclassification" opens the qualification input form with fields for Education, Year of Experience, Hours of Training, and Eligibility.
+  - Shows dynamic helper badge `'None Required'` when 0 is entered for Experience or Training.
+  - Submitting the form calls `PUT /api/applicants/:id/reclass-apply`, updates `reclassData`, and shows a confirmation toast.
+  - Updated the dashboard status banner when `initial_assessment is null` to show **"Do you want to apply for reclassification?"**, displaying submitted qualification pills (with `'None Required'` for 0 values) and an "Update Application Details" button, or an "Apply for Reclassification" button if pending.
+
 ## [2026-10-27] [Reclass] Retained `reclass_position` Column in `public.reclass_gc` & Ensured Live Database Schema Synchronization
 - **Root Cause & Resolution**:
   - The PostgreSQL trigger `trg_uppercase_reclass_gc()` on `reclass_gc` references `NEW.reclass_position`. Because the live database table was previously missing the column, row updates threw `record "new" has no field "reclass_position"`.

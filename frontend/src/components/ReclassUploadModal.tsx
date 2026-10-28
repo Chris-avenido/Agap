@@ -122,6 +122,12 @@ function matchesRequirementDoc(reqKey: string, doc: any): boolean {
 interface ReclassUploadModalProps {
   isOpen: boolean;
   applicantId: number | string;
+  qualificationData?: {
+    education?: string;
+    years_experience?: number;
+    hours_of_training?: number;
+    eligibility?: string;
+  } | null;
   onClose: () => void;
   onUploadSuccess?: () => void;
   revisionDocuments?: any[];
@@ -131,6 +137,7 @@ interface ReclassUploadModalProps {
 export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   isOpen,
   applicantId,
+  qualificationData,
   onClose,
   onUploadSuccess,
   revisionDocuments = [],
@@ -236,6 +243,12 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
       formData.append('category_key', key);
       formData.append('category_title', categoryTitle);
       formData.append('description', description);
+      if (qualificationData) {
+        if (qualificationData.education !== undefined) formData.append('education', qualificationData.education);
+        if (qualificationData.years_experience !== undefined) formData.append('years_experience', String(qualificationData.years_experience));
+        if (qualificationData.hours_of_training !== undefined) formData.append('hours_of_training', String(qualificationData.hours_of_training));
+        if (qualificationData.eligibility !== undefined) formData.append('eligibility', qualificationData.eligibility);
+      }
 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-documents`, {
         method: 'POST',
@@ -250,6 +263,18 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
           delete copy[key];
           return copy;
         });
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-set-new-application`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              new_application: true,
+              ...(qualificationData || {}),
+            }),
+          });
+        } catch (e) {
+          console.warn('Could not set new_application:', e);
+        }
         await fetchDocuments();
         if (onUploadSuccess) onUploadSuccess();
         Swal.fire({
@@ -281,6 +306,20 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   const handleDoneOrUpload = async () => {
     const stagedKeys = Object.keys(stagedFiles);
     if (stagedKeys.length === 0) {
+      if (documents.length > 0) {
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-set-new-application`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              new_application: true,
+              ...(qualificationData || {}),
+            }),
+          });
+        } catch (e) {
+          console.warn('Could not set new_application:', e);
+        }
+      }
       onClose();
       return;
     }
@@ -307,6 +346,12 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
         formData.append('category_key', key);
         formData.append('category_title', categoryTitle);
         formData.append('description', description);
+        if (qualificationData) {
+          if (qualificationData.education !== undefined) formData.append('education', qualificationData.education);
+          if (qualificationData.years_experience !== undefined) formData.append('years_experience', String(qualificationData.years_experience));
+          if (qualificationData.hours_of_training !== undefined) formData.append('hours_of_training', String(qualificationData.hours_of_training));
+          if (qualificationData.eligibility !== undefined) formData.append('eligibility', qualificationData.eligibility);
+        }
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-documents`, {
           method: 'POST',
@@ -330,6 +375,18 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
 
     if (uploadedSuccessKeys.length > 0) {
       setRecentlySubmittedKeys((prev) => Array.from(new Set([...prev, ...uploadedSuccessKeys])));
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${applicantId}/reclass-set-new-application`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            new_application: true,
+            ...(qualificationData || {}),
+          }),
+        });
+      } catch (e) {
+        console.warn('Could not set new_application:', e);
+      }
     }
 
     if (failedTitles.length === 0) {
