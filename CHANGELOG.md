@@ -30,6 +30,9 @@
        - Middle: Prominent position title with `min-h-[22px]`.
        - Bottom: Registration status pill (`[Not Registered]` / `[Registered]`), aligned with neighboring cards' metadata rows.
      - Completely prevents button overlap, text collisions, or right-border overflow regardless of screen or split-view width.
+   8. **Locked "New Reclassification Application" Option**:
+     - In the **"Select Application Category"** modal on [`Login.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/pages/Login.tsx), locked Option 2 (**New Reclassification Application**).
+     - Rendered with disabled `cursor-not-allowed` styling, lock iconography, `[Locked]` badge, and informative feedback toast directing applicants to proceed with Incumbent GMIS Plantilla Record.
 
 ## [2026-10-28] [Reclass] "Do you want to apply for reclassification?" Prompt & Qualification Input Workflow for Incumbents with Null Initial Assessment (`gmis_gc_items.initial_assessment`)
 - **Requirement & Root Cause**:

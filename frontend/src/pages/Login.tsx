@@ -2589,32 +2589,41 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Option 2: New Reclassification Application */}
+              {/* Option 2: New Reclassification Application (Locked) */}
               <div
                 onClick={() => {
-                  setShowCategoryModal(false);
-                  setReclassRegType('new');
-                  setReclassView('register');
+                  Swal.fire({
+                    icon: 'info',
+                    title: 'Category Locked',
+                    text: 'New Reclassification Application is currently locked. Please proceed with Incumbent GMIS Plantilla Record.',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                  });
                 }}
-                className="group border-2 border-indigo-200 hover:border-indigo-600 bg-indigo-50/40 hover:bg-indigo-50/70 rounded-2xl p-4 transition-all cursor-pointer shadow-xs hover:shadow-md flex items-start gap-4"
+                className="group border-2 border-slate-200 bg-slate-50/70 rounded-2xl p-4 transition-all cursor-not-allowed opacity-75 flex items-start gap-4 relative overflow-hidden"
+                title="New Reclassification Application is currently locked"
               >
-                <div className="w-11 h-11 rounded-xl bg-white border border-indigo-200 group-hover:border-indigo-600 text-indigo-600 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-all">
-                  <UserPlus className="w-6 h-6 text-indigo-600" />
+                <div className="w-11 h-11 rounded-xl bg-slate-200/80 border border-slate-300 text-slate-500 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Lock className="w-5 h-5 text-slate-500" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <h4 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                    <h4 className="text-sm font-bold text-slate-600">
                       New Reclassification Application
                     </h4>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 uppercase tracking-wide shrink-0">
-                      New Candidate Profile
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 uppercase tracking-wide shrink-0 inline-flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      Locked
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     For personnel filing a new reclassification application without an existing pre-loaded GMIS incumbent record. Create a fresh candidate profile.
                   </p>
-                  <div className="mt-2.5 flex items-center gap-1.5 text-xs font-bold text-indigo-600">
-                    <span>Create New Application &rarr;</span>
+                  <div className="mt-2.5 flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Currently Locked</span>
                   </div>
                 </div>
               </div>
