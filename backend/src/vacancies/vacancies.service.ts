@@ -68,7 +68,7 @@ export class VacanciesService {
         : Promise.resolve({ rows: [] }),
       authenticatedApplicantNumId !== null
         ? pool.query(
-            `SELECT DISTINCT job_cluster_id FROM applications WHERE applicant_id = $1 OR applicant_id::text = $2`,
+            `SELECT * FROM applications WHERE applicant_id = $1 OR applicant_id::text = $2`,
             [authenticatedApplicantNumId, String(authenticatedApplicantNumId)],
           )
         : Promise.resolve({ rows: [] }),
@@ -86,7 +86,8 @@ export class VacanciesService {
 
     const appliedClusterIds = new Set<string>();
     appliedRes.rows.forEach((r: any) => {
-      if (r.job_cluster_id) {
+      const status = String(r.application_status || r.status || '').trim().toUpperCase();
+      if (r.job_cluster_id && status !== 'EXCLUDED' && status !== 'DISQUALIFIED') {
         appliedClusterIds.add(String(r.job_cluster_id).trim());
       }
     });

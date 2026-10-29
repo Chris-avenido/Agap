@@ -1,5 +1,18 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-10-29] [AGAP] Allow Resubmission of Application for Excluded or Disqualified Job Cluster Applications
+- **Backend Application Validation (`ApplicantsService.applyJob`)**:
+  - Relaxed strict duplicate blocking on `applications` table (`SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2`).
+  - Previously, any existing application row for the same job cluster threw `'You have already applied for this job cluster.'` unconditionally.
+  - Now, the check inspects all existing applications for the cluster: resubmission is permitted if all existing applications have an `application_status` or `status` of `'EXCLUDED'` or `'DISQUALIFIED'`. Active applications (e.g. `Pending`, `Under Review`, `Qualified`) continue to block duplicate submissions.
+- **Vacancies Cluster Query (`VacanciesService.getVacancies`)**:
+  - `appliedClusterIds` now filters out clusters where the applicant's existing application status is `'EXCLUDED'` or `'DISQUALIFIED'`.
+  - Ensures vacancies with open slots remain visible and accessible for resubmission.
+- **Frontend Job Board & Applied State (`ApplicantJobList.tsx`)**:
+  - `appliedJobIds` now filters out applications with an `application_status` or `status` of `'EXCLUDED'` or `'DISQUALIFIED'`.
+  - When an existing application has been marked Excluded or Disqualified, the vacancy card/table row re-enables the **"APPLY NOW"** button rather than remaining disabled as **"APPLIED"**.
+  - Updated application stage display fallback to `app.application_status || app.status || 'Applied'`.
+
 ## [2026-10-29] [Reclass] "Not Registered" Track Modal Exit Rule (Do Not Proceed to Step 2)
 - **Modal Step 1 Exit Enforcement**:
   - In [`ReclassUpdateModal.tsx`](file:///e:/christop/AGAP%20Portal/frontend/src/components/ReclassUpdateModal.tsx) (*"Are you already a Registered Guidance Counselor?"*), when **"No, Not Registered"** is selected, the applicant cannot proceed to Step 2 (*"Desired Position & QS"*).

@@ -918,7 +918,11 @@ export default function ApplicantJobList() {
           .then(res => res.json())
           .then(appData => {
             if (appData.success && appData.data) {
-              setAppliedJobIds(appData.data.map((app: any) => app.position_id));
+              const activeApps = appData.data.filter((app: any) => {
+                const status = String(app.application_status || app.status || '').trim().toUpperCase();
+                return status !== 'EXCLUDED' && status !== 'DISQUALIFIED';
+              });
+              setAppliedJobIds(activeApps.map((app: any) => app.position_id));
               setApplications(appData.data.map((app: any) => {
                 const jobDetails = jobs.find((p: any) => p.id === app.position_id || p.jobClusterId === app.position_id) || {} as any;
                   return {
@@ -934,7 +938,7 @@ export default function ApplicantJobList() {
                     sg: app.salary_grade || jobDetails.sg || 'N/A',
                     itemNo: app.item_no || jobDetails.itemNo || 'N/A',
                     date: new Date(app.created_at).toLocaleDateString(),
-                    stage: app.application_status || 'Applied',
+                    stage: app.application_status || app.status || 'Applied',
                     assessmentStatus: app.assessment_status || 'Pending Assessment',
                     appointmentStatus: app.appointment_status || 'Pending Appointment',
                     comparativeAssessmentScores: app.comparative_assessment_scores || '',

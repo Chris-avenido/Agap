@@ -441,7 +441,17 @@ class ApplicantsServiceClass {
       'SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
       [applicantId.toString(), jobClusterId],
     );
-    if (checkResult.rows.length > 0) {
+    const hasActiveApp = checkResult.rows.some((row: any) => {
+      const appStatus = String(row.application_status || '').trim().toUpperCase();
+      const status = String(row.status || '').trim().toUpperCase();
+      const isExcludedOrDisqualified =
+        appStatus === 'EXCLUDED' ||
+        appStatus === 'DISQUALIFIED' ||
+        status === 'EXCLUDED' ||
+        status === 'DISQUALIFIED';
+      return !isExcludedOrDisqualified;
+    });
+    if (hasActiveApp) {
       throw new Error('You have already applied for this job cluster.');
     }
 
@@ -620,6 +630,7 @@ class ApplicantsServiceClass {
     return result.rows.map((r) => ({
       ...r,
       position_id: r.job_cluster_id,
+      application_status: r.application_status || r.status,
       is_invited: Boolean(r.is_invited),
       isInvited: Boolean(r.is_invited),
     }));
