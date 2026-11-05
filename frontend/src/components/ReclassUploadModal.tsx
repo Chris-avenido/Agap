@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Upload,
@@ -133,6 +133,7 @@ interface ReclassUploadModalProps {
   onSubmissionComplete?: () => void;
   revisionDocuments?: any[];
   checklistDocuments?: any[];
+  selectedDocumentKeys?: string[] | null;
 }
 
 export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
@@ -144,6 +145,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   onSubmissionComplete,
   revisionDocuments = [],
   checklistDocuments = [],
+  selectedDocumentKeys = null,
 }) => {
   const [documents, setDocuments] = useState<UploadedReclassDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,12 +193,19 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     }
   });
 
-  const mandatoryRequirements = RECLASS_REQUIREMENTS.filter((req) => req.required);
+  const activeRequirements = useMemo(() => {
+    if (selectedDocumentKeys && selectedDocumentKeys.length > 0) {
+      return RECLASS_REQUIREMENTS.filter((req) => selectedDocumentKeys.includes(req.key));
+    }
+    return RECLASS_REQUIREMENTS;
+  }, [selectedDocumentKeys]);
+
+  const mandatoryRequirements = activeRequirements.filter((req) => req.required);
   const totalMandatory = mandatoryRequirements.length;
   const uploadedMandatoryCount = mandatoryRequirements.filter((req) => !!uploadedMap[req.key]).length;
-  const totalUploadedCount = RECLASS_REQUIREMENTS.filter((req) => !!uploadedMap[req.key]).length;
+  const totalUploadedCount = activeRequirements.filter((req) => !!uploadedMap[req.key]).length;
   const stagedCount = Object.keys(stagedFiles).length;
-  const progressPercent = Math.min(100, Math.round((uploadedMandatoryCount / totalMandatory) * 100));
+  const progressPercent = totalMandatory > 0 ? Math.min(100, Math.round((uploadedMandatoryCount / totalMandatory) * 100)) : 100;
 
   const handleFileSelect = (req: ReclassDocumentRequirement, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -491,7 +500,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
                 For Updating
               </span>
               <span className="text-xs font-bold text-[#022851] bg-white border border-gray-200 px-2.5 py-0.5 rounded-full">
-                {totalUploadedCount} of {RECLASS_REQUIREMENTS.length} Uploaded ({uploadedMandatoryCount}/{totalMandatory} Mandatory)
+                {totalUploadedCount} of {activeRequirements.length} Uploaded ({uploadedMandatoryCount}/{totalMandatory} Mandatory)
               </span>
               {stagedCount > 0 && (
                 <span className="text-xs font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
@@ -539,7 +548,18 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
             </div>
           ) : (
             <div className="space-y-3.5">
-              {RECLASS_REQUIREMENTS.map((req, index) => {
+              {selectedDocumentKeys && selectedDocumentKeys.length > 0 && (
+                <div className="p-3 bg-sky-50 rounded-xl border border-sky-200 flex items-center justify-between text-xs text-sky-900 mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-sky-600 shrink-0" />
+                    <span>Showing <strong>{activeRequirements.length}</strong> document(s) selected for updating.</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-600 text-white shadow-2xs">
+                    Update Mode
+                  </span>
+                </div>
+              )}
+              {activeRequirements.map((req: ReclassDocumentRequirement, index: number) => {
                 const uploadedDoc = uploadedMap[req.key];
                 const hasUploadedDoc = Boolean(uploadedDoc && uploadedDoc.file_url);
                 const stagedFile = stagedFiles[req.key];
@@ -845,7 +865,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
             {stagedCount > 0
               ? `📄 ${stagedCount} file(s) selected and ready to upload.`
               : uploadedMandatoryCount === totalMandatory
-              ? '🎉 All 7 mandatory reclassification documents are uploaded.'
+              ? `🎉 All ${totalMandatory} required document(s) are uploaded.`
               : `${totalMandatory - uploadedMandatoryCount} mandatory document(s) pending.`}
           </span>
           <button

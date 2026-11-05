@@ -2013,10 +2013,29 @@ class ApplicantsServiceClass {
     const indicativeSalaryGrade = getSalaryGradeForPosition(indicativePosition);
     const currentSalaryGrade = getSalaryGradeForPosition(currentPosition);
 
+    const posTitle = incumbent?.position_title || currentPosition;
+    let positionSalaryGrade: string | null = null;
+    if (posTitle) {
+      try {
+        const sgRes = await pool.query(
+          `SELECT salary_grade FROM reclass_sg WHERE UPPER(TRIM(position_title)) = UPPER(TRIM($1)) LIMIT 1`,
+          [posTitle],
+        );
+        if (sgRes.rows.length > 0 && sgRes.rows[0].salary_grade) {
+          positionSalaryGrade = `SG-${sgRes.rows[0].salary_grade}`;
+        }
+      } catch (sgErr) { }
+      if (!positionSalaryGrade) {
+        positionSalaryGrade = getSalaryGradeForPosition(posTitle);
+      }
+    }
+
     return {
       ...(incumbent || {}),
       full_name: fullName,
       plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
+      position_title: posTitle,
+      position_salary_grade: positionSalaryGrade,
       target_position: targetPosition,
       desired_position: desiredPosition,
       desire_position: desiredPosition,

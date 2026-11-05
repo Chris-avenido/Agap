@@ -1,5 +1,18 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-05] [Reclass] Application Update Document Selection & Reclass SG Salary Grade Alignment
+- **"Do You Want to Update Your Application for Reclassification?" Document Selection Workflow**:
+  - In `ApplicantDashboard.tsx`, when the incumbent selects **"Yes"** to update their application, a new sub-view displays all reclassification documents (`RECLASS_REQUIREMENTS`) that need to be updated.
+  - Incumbents select which documents to update using interactive checkboxes, with **Select All** and **Clear** toolbar helpers.
+  - **Strict Block on Empty Selection**: If no documents are selected, proceeding is disabled (`selectedUpdateDocKeys.length === 0`), preventing empty submissions.
+  - Once documents are chosen and **"Proceed to Upload Documents"** is clicked, `update_application: 'Yes'` is saved, and `ReclassUploadModal` opens displaying and requiring only the selected documents.
+  - Upon completing document upload, the flow transitions directly into the `ReclassUpdateModal` ("Reclassification Application" modal).
+- **Salary Grade Card Linked to Position Title via `reclass_sg`**:
+  - In `ApplicantDashboard.tsx`, the **"Salary Grade"** card now derives the candidate's salary grade directly based on their current **"Position Title"** (`reclassData.position_title || reclassData.current_position`) from the `reclass_sg` table rather than matching their desired/target position.
+  - In `backend/src/applicants/applicants.service.ts` (`getReclassDetails`), added a query to `reclass_sg` to retrieve the exact `salary_grade` matching the incumbent's `position_title`, returning `position_salary_grade`.
+- **Initial Assessment Card Label Update**:
+  - In `ApplicantDashboard.tsx`, updated the previous evaluation indicator in the **"Initial Assessment"** card to: `• Base on Previous evaluation`.
+
 ## [2026-11-05] [Reclass] Column Type Migration: `update_application` Changed from BOOLEAN to VARCHAR(20) ('Yes' / 'No')
 - **Database Schema & Automatic Migration (`backend/src/database.ts`)**:
   - Changed `reclass_gc.update_application` column type from `BOOLEAN` to `VARCHAR(20)`.

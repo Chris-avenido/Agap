@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark, HelpCircle, BookOpen, GraduationCap } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark, HelpCircle, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
 import ApplicantHeader from '../components/ApplicantHeader';
 import ApplicationModal from '../components/ApplicationModal';
 import PlantillaGateModal from '../components/PlantillaGateModal';
-import ReclassUploadModal from '../components/ReclassUploadModal';
+import ReclassUploadModal, { RECLASS_REQUIREMENTS } from '../components/ReclassUploadModal';
 import ReclassUpdateModal from '../components/ReclassUpdateModal';
 
 const NOT_REGISTERED_TARGET_OPTIONS = [
@@ -296,6 +296,9 @@ export default function ApplicantDashboard() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateModalInitialStep, setUpdateModalInitialStep] = useState<1 | 2>(1);
   const [showInitialPrompt, setShowInitialPrompt] = useState(false);
+  const [isUpdateYesSelected, setIsUpdateYesSelected] = useState(false);
+  const [selectedUpdateDocKeys, setSelectedUpdateDocKeys] = useState<string[]>([]);
+  const [uploadFilterDocKeys, setUploadFilterDocKeys] = useState<string[] | null>(null);
   const [initialPromptType, setInitialPromptType] = useState<'apply' | 'update'>('apply');
   const [reclassApplyStep, setReclassApplyStep] = useState<'prompt' | 'form'>('prompt');
   const [applyEducation, setApplyEducation] = useState('');
@@ -437,6 +440,58 @@ export default function ApplicantDashboard() {
     } finally {
       setIsSavingTargetPosition(false);
     }
+  };
+
+  const handleProceedWithUpdateDocuments = async () => {
+    if (selectedUpdateDocKeys.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Documents Selected',
+        text: 'Please select at least one document to update before proceeding.',
+      });
+      return;
+    }
+
+    const sessionStr = localStorage.getItem('session_data');
+    if (!sessionStr) return;
+    const session = JSON.parse(sessionStr);
+
+    setIsSavingPreference(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ update_application: 'Yes' }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setReclassData((prev: any) => ({
+          ...prev,
+          update_application: 'Yes',
+        }));
+      }
+      setShowInitialPrompt(false);
+      setIsUpdateYesSelected(false);
+      setUploadFilterDocKeys(selectedUpdateDocKeys);
+      setIsReclassUploadModalOpen(true);
+    } catch (err) {
+      console.error('Error saving update preference with documents:', err);
+      setShowInitialPrompt(false);
+      setIsUpdateYesSelected(false);
+      setUploadFilterDocKeys(selectedUpdateDocKeys);
+      setIsReclassUploadModalOpen(true);
+    } finally {
+      setIsSavingPreference(false);
+    }
+  };
+
+  const toggleUpdateDocKey = (key: string) => {
+    setSelectedUpdateDocKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const handleUpdateApplicationAnswer = async (answer: 'yes' | 'no') => {
@@ -581,6 +636,8 @@ export default function ApplicantDashboard() {
 
   const handleReclassSubmissionComplete = async () => {
     setIsReclassUploadModalOpen(false);
+    setUploadFilterDocKeys(null);
+    setIsUpdateYesSelected(false);
     await refreshReclassData();
     // After success "Reclassification Document Submission", show modal "Reclassification Application"
     setUpdateModalInitialStep(1);
@@ -1511,15 +1568,12 @@ export default function ApplicantDashboard() {
                         </p>
                       </div>
 
-                      {/* Salary Grade (Matches Desired / Assessed Position) */}
+                      {/* Salary Grade (Based on Position Title from reclass_sg) */}
                       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs">
                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Salary Grade</p>
                         <p className="text-[15px] font-extrabold text-[#022851] mt-0.5">
-                          {getPositionSalaryGrade(
-                            isEditingTargetPosition
-                              ? editTargetPositionValue
-                              : (reclassData.target_position || reclassData.reclass_position || reclassData.indicative_position || initialAssessment || 'SCHOOL COUNSELOR ASSOCIATE I')
-                          )}
+                          {reclassData.position_salary_grade ||
+                            getPositionSalaryGrade(reclassData.position_title || reclassData.current_position)}
                         </p>
                       </div>
 
@@ -1537,7 +1591,7 @@ export default function ApplicantDashboard() {
                           {initialSalaryGrade ? (
                             <>
                               <span className="text-[11px] font-bold text-[#0284c7]">{initialSalaryGrade}</span>
-                              <span className="text-[10px] text-gray-500">• Previous evaluation</span>
+                              <span className="text-[10px] text-gray-500">• Base on Previous evaluation</span>
                             </>
                           ) : null}
                         </div>
@@ -2725,8 +2779,10 @@ export default function ApplicantDashboard() {
           isOpen={isReclassUploadModalOpen}
           applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
           qualificationData={pendingQualificationData}
+          selectedDocumentKeys={uploadFilterDocKeys}
           onClose={() => {
             setIsReclassUploadModalOpen(false);
+            setUploadFilterDocKeys(null);
             refreshReclassData();
           }}
           onUploadSuccess={() => {
@@ -2760,6 +2816,7 @@ export default function ApplicantDashboard() {
                 onClick={() => {
                   setShowInitialPrompt(false);
                   setReclassApplyStep('prompt');
+                  setIsUpdateYesSelected(false);
                 }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-sky-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 title="Close"
@@ -2771,123 +2828,245 @@ export default function ApplicantDashboard() {
             {/* Step 1: Prompt Question */}
             {initialPromptType === 'update' ? (
               <div className="p-6 space-y-5">
-                <div className="text-center space-y-2">
-                  <h4 className="text-lg font-black text-[#022851]">
-                    Do you want to update your application for reclassification?
-                  </h4>
-                  <p className="text-xs text-gray-600 leading-relaxed max-w-md mx-auto">
-                    Your plantilla record has an existing initial assessment. You can edit your choice below to update your application or proceed under your current record.
-                  </p>
-                </div>
-
-                {/* Two Option Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                  {/* YES Option */}
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateApplicationAnswer('yes')}
-                    disabled={isSavingPreference}
-                    className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
-                      String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
-                      reclassData?.update_application === true
-                        ? 'border-[#0284c7] bg-sky-50/80 ring-2 ring-[#0284c7]/30 shadow-md'
-                        : 'border-[#0284c7]/50 bg-sky-50/30 hover:bg-sky-50 hover:border-[#0284c7] hover:shadow-xs'
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="w-8 h-8 rounded-lg bg-[#0284c7] text-white flex items-center justify-center shadow-xs">
-                          <Check className="w-5 h-5 stroke-[2.5]" />
-                        </div>
-                        {(String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
-                          reclassData?.update_application === true) && (
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0284c7] text-white shadow-2xs">
-                            Current Choice
-                          </span>
-                        )}
-                      </div>
-                      <span className="block text-base font-black text-[#022851] group-hover:text-[#0284c7] transition-colors">
-                        Yes
-                      </span>
-                      <p className="text-[11px] text-gray-600 leading-normal">
-                        Update application for reclassification (choose registration track and desired position).
+                {!isUpdateYesSelected ? (
+                  <>
+                    <div className="text-center space-y-2">
+                      <h4 className="text-lg font-black text-[#022851]">
+                        Do you want to update your application for reclassification?
+                      </h4>
+                      <p className="text-xs text-gray-600 leading-relaxed max-w-md mx-auto">
+                        Your plantilla record has an existing initial assessment. You can edit your choice below to update your application or proceed under your current record.
                       </p>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-center justify-between text-xs font-bold text-[#0284c7]">
-                      <span>
-                        {isSavingPreference
-                          ? 'Saving...'
-                          : String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
-                            reclassData?.update_application === true
-                          ? 'Selected • Click to open application'
-                          : 'Select Yes'}
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </button>
 
-                  {/* NO Option */}
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateApplicationAnswer('no')}
-                    disabled={isSavingPreference}
-                    className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
-                      String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
-                      reclassData?.update_application === false
-                        ? 'border-slate-400 bg-slate-100/90 ring-2 ring-slate-400/30 shadow-md'
-                        : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-xs'
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
-                          <X className="w-5 h-5 stroke-[2.5]" />
-                        </div>
-                        {(String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
-                          reclassData?.update_application === false) && (
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-600 text-white shadow-2xs">
-                            Current Choice
+                    {/* Two Option Buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                      {/* YES Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUpdateYesSelected(true);
+                          setSelectedUpdateDocKeys([]);
+                        }}
+                        disabled={isSavingPreference}
+                        className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                          String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
+                          reclassData?.update_application === true
+                            ? 'border-[#0284c7] bg-sky-50/80 ring-2 ring-[#0284c7]/30 shadow-md'
+                            : 'border-[#0284c7]/50 bg-sky-50/30 hover:bg-sky-50 hover:border-[#0284c7] hover:shadow-xs'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="w-8 h-8 rounded-lg bg-[#0284c7] text-white flex items-center justify-center shadow-xs">
+                              <Check className="w-5 h-5 stroke-[2.5]" />
+                            </div>
+                            {(String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
+                              reclassData?.update_application === true) && (
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0284c7] text-white shadow-2xs">
+                                Current Choice
+                              </span>
+                            )}
+                          </div>
+                          <span className="block text-base font-black text-[#022851] group-hover:text-[#0284c7] transition-colors">
+                            Yes
                           </span>
-                        )}
-                      </div>
-                      <span className="block text-base font-black text-[#022851] group-hover:text-slate-700 transition-colors">
-                        No
-                      </span>
-                      <p className="text-[11px] text-gray-600 leading-normal">
-                        Proceed with your current plantilla position and initial assessment without changes.
+                          <p className="text-[11px] text-gray-600 leading-normal">
+                            Update application for reclassification (select documents that need to be updated).
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-center justify-between text-xs font-bold text-[#0284c7]">
+                          <span>Select Yes</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+
+                      {/* NO Option */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateApplicationAnswer('no')}
+                        disabled={isSavingPreference}
+                        className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                          String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
+                          reclassData?.update_application === false
+                            ? 'border-slate-400 bg-slate-100/90 ring-2 ring-slate-400/30 shadow-md'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-xs'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
+                              <X className="w-5 h-5 stroke-[2.5]" />
+                            </div>
+                            {(String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
+                              reclassData?.update_application === false) && (
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-600 text-white shadow-2xs">
+                                Current Choice
+                              </span>
+                            )}
+                          </div>
+                          <span className="block text-base font-black text-[#022851] group-hover:text-slate-700 transition-colors">
+                            No
+                          </span>
+                          <p className="text-[11px] text-gray-600 leading-normal">
+                            Proceed with your current plantilla position and initial assessment without changes.
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-gray-500">
+                          <span>
+                            {isSavingPreference
+                              ? 'Saving...'
+                              : String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
+                                reclassData?.update_application === false
+                              ? 'Selected • Keep current record'
+                              : 'Select No'}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-[11px] leading-relaxed">
+                        You can change your response at any time by clicking Change in your Desired Position card.
                       </p>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-gray-500">
-                      <span>
-                        {isSavingPreference
-                          ? 'Saving...'
-                          : String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
-                            reclassData?.update_application === false
-                          ? 'Selected • Keep current record'
-                          : 'Select No'}
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+                    {/* Modal Footer */}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowInitialPrompt(false);
+                          setIsUpdateYesSelected(false);
+                        }}
+                        className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      >
+                        Close
+                      </button>
                     </div>
-                  </button>
-                </div>
+                  </>
+                ) : (
+                  <>
+                    {/* View: Documents that need to be updated */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setIsUpdateYesSelected(false)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0284c7] hover:underline cursor-pointer mb-2"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" /> Back to choices
+                      </button>
+                      <h4 className="text-base sm:text-lg font-black text-[#022851]">
+                        Documents that Need to be Updated
+                      </h4>
+                      <p className="text-xs text-gray-600 leading-relaxed mt-1">
+                        Please select the document(s) you need to update. You must select at least one document to proceed to upload.
+                      </p>
+                    </div>
 
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[11px] leading-relaxed">
-                    You can change your response at any time by clicking Change in your Desired Position card.
-                  </p>
-                </div>
+                    {/* Selection Controls */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                      <span className="font-bold text-gray-600">
+                        {selectedUpdateDocKeys.length} of {RECLASS_REQUIREMENTS.length} document(s) selected
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUpdateDocKeys(RECLASS_REQUIREMENTS.map((r) => r.key))}
+                          className="text-[11px] font-bold text-[#0284c7] hover:underline cursor-pointer"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-gray-300">•</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUpdateDocKeys([])}
+                          className="text-[11px] font-bold text-gray-500 hover:underline cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Modal Footer */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowInitialPrompt(false)}
-                    className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
+                    {/* Document Checkbox List */}
+                    <div className="max-h-64 overflow-y-auto space-y-2 pr-1 border border-slate-200/90 rounded-xl p-2.5 bg-slate-50/60">
+                      {RECLASS_REQUIREMENTS.map((doc) => {
+                        const isChecked = selectedUpdateDocKeys.includes(doc.key);
+                        return (
+                          <label
+                            key={doc.key}
+                            className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-sky-50/90 border-[#0284c7] ring-1 ring-[#0284c7]/30 shadow-xs'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleUpdateDocKey(doc.key)}
+                              className="mt-0.5 w-4 h-4 text-[#0284c7] rounded border-gray-300 focus:ring-[#0284c7] cursor-pointer shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-[#022851]">{doc.title}</span>
+                                {doc.required ? (
+                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                                    Required
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                                    Optional
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                                {doc.description}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Proceed Action Footer */}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsUpdateYesSelected(false)}
+                        className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selectedUpdateDocKeys.length === 0 || isSavingPreference}
+                        onClick={handleProceedWithUpdateDocuments}
+                        className={`py-2.5 px-5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-xs ${
+                          selectedUpdateDocKeys.length === 0 || isSavingPreference
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                            : 'bg-[#0284c7] hover:bg-[#0274b0] text-white cursor-pointer active:scale-98'
+                        }`}
+                      >
+                        {isSavingPreference ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                            <span>Saving...</span>
+                          </>
+                        ) : selectedUpdateDocKeys.length === 0 ? (
+                          <span>Select at least 1 document to proceed</span>
+                        ) : (
+                          <>
+                            <span>Proceed to Upload Documents ({selectedUpdateDocKeys.length})</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : reclassApplyStep === 'prompt' ? (
               <div className="p-6 space-y-5">
