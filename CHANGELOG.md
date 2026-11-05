@@ -1,5 +1,22 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-05] [Reclass] Applicant Dashboard: Disabled Document Uploading
+- **Disabled Upload Actions on Dashboard (`ApplicantDashboard.tsx`)**:
+  - Top header action `"Upload Requirements"` button is disabled with disabled styling and badge.
+  - Step 1 Document Submission `"Upload for Updating"` button is disabled with disabled styling and `Upload Disabled` label.
+  - Step 2 HRMO Evaluation `"Submit Revisions"` button is disabled with disabled styling and `Submit Revisions (Disabled)` label.
+  - Application update prompt modal `"Proceed to Upload Documents"` button is disabled.
+  - New application prompt modal `"Submit & Proceed to Document Upload"` button is disabled.
+- **Read-Only / Disabled Upload Mode in Modal (`ReclassUploadModal.tsx`)**:
+  - Added `disableUpload` prop (`boolean`) passed as `true` from `ApplicantDashboard.tsx`.
+  - When `disableUpload` is active:
+    - All file inputs and drag-and-drop actions are disabled.
+    - Upload buttons (`Upload for Updating`, `Change`, `Re-upload`, `Replace`, `Resubmit`) are hidden or disabled with an `Upload Disabled` indicator.
+    - Existing uploaded documents remain accessible for inspection via the `View` button.
+    - Footer displays a clean `Close` action instead of upload submission.
+    - Informative banner notifies users: *"Document uploading is currently disabled. You may view any previously submitted documents below."*
+
+
 ## [2026-11-05] [Reclass] Incumbent Plantilla Registration: Filled Position Validation (`f_pos = 'FILLED'`)
 - **Filled Position Verification (`f_pos = 'FILLED'`)**:
   - In `backend/src/applicants/applicants.service.ts` (`verifyReclassItemNumber` & `registerReclassAccount`), added strict validation ensuring that the Plantilla Item Number in `gmis_gc_items` has `f_pos = 'FILLED'` (`UPPER(TRIM(f_pos)) === 'FILLED'`).

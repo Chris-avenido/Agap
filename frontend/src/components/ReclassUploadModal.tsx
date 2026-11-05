@@ -134,6 +134,7 @@ interface ReclassUploadModalProps {
   revisionDocuments?: any[];
   checklistDocuments?: any[];
   selectedDocumentKeys?: string[] | null;
+  disableUpload?: boolean;
 }
 
 export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
@@ -146,6 +147,7 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
   revisionDocuments = [],
   checklistDocuments = [],
   selectedDocumentKeys = null,
+  disableUpload = false,
 }) => {
   const [documents, setDocuments] = useState<UploadedReclassDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -534,12 +536,21 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
             </div>
           )}
 
-          <div className="text-xs text-gray-600 bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <span>
-              Select your PDF documents below (PDF only, max 15MB). All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>. Note: Training certificates are optional.
-            </span>
-          </div>
+          {disableUpload ? (
+            <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Document uploading is currently disabled. You may view any previously submitted documents below.
+              </span>
+            </div>
+          ) : (
+            <div className="text-xs text-gray-600 bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <span>
+                Select your PDF documents below (PDF only, max 15MB). All chosen files will be uploaded and attached to your reclassification application once you click <strong>Done / Close</strong>. Note: Training certificates are optional.
+              </span>
+            </div>
+          )}
 
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-gray-500">
@@ -750,8 +761,28 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
 
                       {/* Action buttons */}
                       <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-start mt-2 sm:mt-0">
-                        {/* Staged File Actions */}
-                        {stagedFile ? (
+                        {disableUpload ? (
+                          <>
+                            {hasUploadedDoc && uploadedDoc?.file_url ? (
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => handleViewFile(uploadedDoc.file_url)}
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-blue-600" /> View
+                              </button>
+                            ) : (
+                              <span
+                                className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                                title="Uploading documents is disabled"
+                              >
+                                <Upload className="w-3.5 h-3.5 text-gray-400" />
+                                <span>Upload Disabled</span>
+                              </span>
+                            )}
+                          </>
+                        ) : stagedFile ? (
                           <>
                             <button
                               type="button"
@@ -862,32 +893,44 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
         {/* Modal Footer */}
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-            {stagedCount > 0
+            {disableUpload
+              ? `${totalUploadedCount} of ${activeRequirements.length} document(s) uploaded.`
+              : stagedCount > 0
               ? `📄 ${stagedCount} file(s) selected and ready to upload.`
               : uploadedMandatoryCount === totalMandatory
               ? `🎉 All ${totalMandatory} required document(s) are uploaded.`
               : `${totalMandatory - uploadedMandatoryCount} mandatory document(s) pending.`}
           </span>
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={handleDoneOrUpload}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Uploading ({uploadProgress.current}/{uploadProgress.total})...</span>
-              </>
-            ) : stagedCount > 0 ? (
-              <>
-                <Upload className="w-4 h-4" />
-                <span>Upload & Submit ({stagedCount})</span>
-              </>
-            ) : (
-              'Done / Close'
-            )}
-          </button>
+          {disableUpload ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Close</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleDoneOrUpload}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#022851] hover:bg-[#033a76] text-white font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Uploading ({uploadProgress.current}/{uploadProgress.total})...</span>
+                </>
+              ) : stagedCount > 0 ? (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>Upload & Submit ({stagedCount})</span>
+                </>
+              ) : (
+                'Done / Close'
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

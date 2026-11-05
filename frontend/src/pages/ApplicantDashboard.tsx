@@ -1220,16 +1220,15 @@ export default function ApplicantDashboard() {
             {isReclass && (
               <div className="flex flex-col items-start sm:items-end gap-1">
                 <button
-                  onClick={() => setIsReclassUploadModalOpen(true)}
-                  className={`px-5 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-[14px] flex items-center justify-center gap-2.5 group cursor-pointer ${revisionDocsCount > 0
-                      ? 'bg-[#022851] hover:bg-[#033a76] text-white ring-2 ring-rose-500 shadow-rose-200'
-                      : 'bg-[#022851] hover:bg-[#033a76] text-white'
-                    }`}
+                  type="button"
+                  disabled
+                  className="px-5 py-3 rounded-xl font-bold transition-all text-[14px] flex items-center justify-center gap-2.5 bg-slate-200 text-slate-400 border border-slate-300 shadow-none cursor-not-allowed opacity-75"
+                  title="Document uploading is disabled"
                 >
-                  <Upload className="w-4 h-4" />
+                  <Upload className="w-4 h-4 text-slate-400" />
                   <span>Upload Requirements</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-sky-400/20 text-sky-200 border border-sky-300/30">
-                    For Updating
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-300 text-slate-500 border border-slate-400/40">
+                    Disabled
                   </span>
                   {revisionDocsCount > 0 && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-600 text-white shadow-xs animate-pulse tracking-wide">
@@ -1975,14 +1974,15 @@ export default function ApplicantDashboard() {
 
                         <button
                           type="button"
-                          onClick={() => setIsReclassUploadModalOpen(true)}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white shadow-xs transition-all cursor-pointer bg-[#022851] hover:bg-[#033b77]"
+                          disabled
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-slate-400 bg-slate-100 border border-slate-200 shadow-none cursor-not-allowed opacity-75"
+                          title="Document uploading is disabled"
                         >
-                          <Upload className="w-3 h-3" />
+                          <Upload className="w-3 h-3 text-slate-400" />
                           <span>
                             {hasSubmittedAllDocs
-                              ? 'Manage Updated Docs'
-                              : `Upload for Updating (${uploadedDocsCount}/8)`}
+                              ? 'Uploaded Docs (Disabled)'
+                              : `Upload for Updating (${uploadedDocsCount}/8) (Disabled)`}
                           </span>
                         </button>
                       </div>
@@ -2134,14 +2134,12 @@ export default function ApplicantDashboard() {
                               </p>
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIsReclassUploadModalOpen(true);
-                                }}
-                                className="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition-all cursor-pointer"
+                                disabled
+                                className="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 bg-slate-100 border border-slate-200 shadow-none cursor-not-allowed opacity-75"
+                                title="Document uploading is disabled"
                               >
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>Submit Revisions</span>
+                                <Upload className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Submit Revisions (Disabled)</span>
                               </button>
                             </div>
                           ) : isAllDocReviewed ? (
@@ -2780,6 +2778,7 @@ export default function ApplicantDashboard() {
           applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
           qualificationData={pendingQualificationData}
           selectedDocumentKeys={uploadFilterDocKeys}
+          disableUpload={true}
           onClose={() => {
             setIsReclassUploadModalOpen(false);
             setUploadFilterDocKeys(null);
@@ -3042,27 +3041,11 @@ export default function ApplicantDashboard() {
                       </button>
                       <button
                         type="button"
-                        disabled={selectedUpdateDocKeys.length === 0 || isSavingPreference}
-                        onClick={handleProceedWithUpdateDocuments}
-                        className={`py-2.5 px-5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shadow-xs ${
-                          selectedUpdateDocKeys.length === 0 || isSavingPreference
-                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60'
-                            : 'bg-[#0284c7] hover:bg-[#0274b0] text-white cursor-pointer active:scale-98'
-                        }`}
+                        disabled
+                        className="py-2.5 px-5 rounded-xl font-bold text-xs bg-slate-200 text-slate-400 cursor-not-allowed opacity-60 flex items-center gap-2 shadow-none"
+                        title="Document uploading is disabled"
                       >
-                        {isSavingPreference ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                            <span>Saving...</span>
-                          </>
-                        ) : selectedUpdateDocKeys.length === 0 ? (
-                          <span>Select at least 1 document to proceed</span>
-                        ) : (
-                          <>
-                            <span>Proceed to Upload Documents ({selectedUpdateDocKeys.length})</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </>
-                        )}
+                        <span>Proceed to Upload Documents (Disabled)</span>
                       </button>
                     </div>
                   </>
@@ -3253,20 +3236,11 @@ export default function ApplicantDashboard() {
 
                   <button
                     type="submit"
-                    disabled={isSubmittingReclassApply}
-                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-extrabold text-white bg-[#0284c7] hover:bg-[#0369a1] rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                    disabled
+                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-extrabold text-slate-400 bg-slate-200 rounded-xl shadow-none cursor-not-allowed opacity-60"
+                    title="Document uploading is disabled"
                   >
-                    {isSubmittingReclassApply ? (
-                      <>
-                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Submit & Proceed to Document Upload</span>
-                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </>
-                    )}
+                    <span>Submit & Proceed to Document Upload (Disabled)</span>
                   </button>
                 </div>
               </form>
