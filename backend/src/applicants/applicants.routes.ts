@@ -153,6 +153,9 @@ router.post('/reclass-verify-item', async (req, res) => {
     if (result.status === 'already_registered') {
       return res.status(409).json(result);
     }
+    if (result.status === 'invalid') {
+      return res.status(400).json(result);
+    }
     return res.json(result);
   } catch (error: any) {
     console.error('Error verifying plantilla item:', error);

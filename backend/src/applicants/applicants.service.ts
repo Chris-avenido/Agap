@@ -1784,26 +1784,61 @@ class ApplicantsServiceClass {
       throw new Error('Plantilla item number is required.');
     }
 
-    // Look up in both reclass_gc AND gmis_gc_items
-    const incumbentRes = await pool.query(
-      `SELECT r.*, g.psi_cd, g.initial_assessment, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region
-       FROM reclass_gc r
-       INNER JOIN gmis_gc_items g 
-         ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
-              (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
-              OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
-            ))
-       WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
-          OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
-          OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
+    // 1. Look up in gmis_gc_items first
+    const gmisRes = await pool.query(
+      `SELECT * FROM gmis_gc_items
+       WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
        LIMIT 1`,
       [normalized],
     );
 
-    if (incumbentRes.rows.length === 0) {
-      throw new Error(
-        'No records found.',
+    const gmisItem = gmisRes.rows[0] || null;
+
+    // 2. Check reclass_gc
+    const gcRes = await pool.query(
+      `SELECT * FROM reclass_gc
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
+       LIMIT 1`,
+      [normalized],
+    );
+
+    let incumbent = gcRes.rows[0] || null;
+
+    if (!gmisItem && !incumbent) {
+      throw new Error('No records found.');
+    }
+
+    if (!incumbent && gmisItem) {
+      // Register existing Plantilla Item Number in reclass_gc
+      const insertGc = await pool.query(
+        `INSERT INTO reclass_gc (
+          item_no,
+          current_position,
+          first_name,
+          last_name,
+          region,
+          division,
+          school_id,
+          school_name,
+          stage_of_reclassification,
+          is_test,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+        RETURNING *`,
+        [
+          normalized,
+          gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+          (gmisItem.first_name || '').trim(),
+          (gmisItem.last_name || '').trim(),
+          gmisItem.region || null,
+          gmisItem.division || null,
+          gmisItem.school_id || null,
+          gmisItem.school_name || null,
+        ],
       );
+      incumbent = insertGc.rows[0];
     }
 
     // Link the applicant's record to the verified plantilla item number
@@ -1812,7 +1847,7 @@ class ApplicantsServiceClass {
       [normalized, applicantId],
     );
 
-    return incumbentRes.rows[0] || null;
+    return incumbent;
   }
 
   async getReclassDetails(applicantId: number) {
@@ -2598,29 +2633,72 @@ class ApplicantsServiceClass {
     }
 
     // Incumbent GMIS Plantilla Record:
-    // 1. Verify existence in GMIS records: MUST exist in both reclass_gc and gmis_gc_items
-    const incRes = await pool.query(
-      `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region, g.first_name as gmis_first_name, g.last_name as gmis_last_name
-       FROM reclass_gc r
-       INNER JOIN gmis_gc_items g 
-         ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
-              (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
-              OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
-            ))
-       WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
-          OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
-          OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
+    // 1. Verify existence in gmis_gc_items: If not found in gmis_gc_items -> No records found
+    const gmisRes = await pool.query(
+      `SELECT * FROM gmis_gc_items 
+       WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
        LIMIT 1`,
       [normalized],
     );
 
-    const inc = incRes.rows[0] || null;
-
-    if (!inc) {
+    if (gmisRes.rows.length === 0) {
       return {
         status: 'not_found',
         message: 'No records found.',
       };
+    }
+
+    const gmisItem = gmisRes.rows[0];
+
+    // Validation: Only filled positions (f_pos = 'FILLED') are eligible for Incumbent Plantilla Registration
+    const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+    if (fPos !== 'FILLED') {
+      return {
+        status: 'invalid',
+        message: 'This Plantilla Item Number is currently unfilled (f_pos must be FILLED). Only filled positions can be registered for Incumbent Plantilla Registration.',
+      };
+    }
+
+    // 2. If existing Plantilla Item Number in gmis_gc_items, register / find in reclass_gc
+    const gcRes = await pool.query(
+      `SELECT * FROM reclass_gc
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
+       LIMIT 1`,
+      [normalized],
+    );
+
+    let inc = gcRes.rows[0] || null;
+
+    if (!inc) {
+      const insertGcRes = await pool.query(
+        `INSERT INTO reclass_gc (
+          item_no,
+          current_position,
+          first_name,
+          last_name,
+          region,
+          division,
+          school_id,
+          school_name,
+          stage_of_reclassification,
+          is_test,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+        RETURNING *`,
+        [
+          normalized,
+          gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+          (gmisItem.first_name || '').trim(),
+          (gmisItem.last_name || '').trim(),
+          gmisItem.region || null,
+          gmisItem.division || null,
+          gmisItem.school_id || null,
+          gmisItem.school_name || null,
+        ],
+      );
+      inc = insertGcRes.rows[0];
     }
 
     // 2. Check if already registered with real credentials in reclass_gc and applicants
@@ -2742,30 +2820,73 @@ class ApplicantsServiceClass {
       inc = reclassRes.rows[0];
     } else {
       // For Incumbent GMIS Plantilla Record:
-      // Plantilla Item Number MUST exist in BOTH reclass_gc AND gmis_gc_items (on psi_cd)
-      const incRes = await pool.query(
-        `SELECT r.*, g.psi_cd, g.pos_dsc as gmis_pos_dsc, g.division as gmis_division, g.region as gmis_region, g.first_name as gmis_first_name, g.last_name as gmis_last_name
-         FROM reclass_gc r
-         INNER JOIN gmis_gc_items g 
-           ON (g.psi_cd IS NOT NULL AND TRIM(g.psi_cd) <> '' AND (
-                (r.item_no IS NOT NULL AND TRIM(r.item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.item_no)))
-                OR (r.new_item_no IS NOT NULL AND TRIM(r.new_item_no) <> '' AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM(r.new_item_no)))
-              ))
-         WHERE (r.item_no IS NOT NULL AND UPPER(TRIM(r.item_no)) = UPPER(TRIM($1)))
-            OR (r.new_item_no IS NOT NULL AND UPPER(TRIM(r.new_item_no)) = UPPER(TRIM($1)))
-            OR (g.psi_cd IS NOT NULL AND UPPER(TRIM(g.psi_cd)) = UPPER(TRIM($1)))
+      // 1. Verify existence in gmis_gc_items
+      const gmisRes = await pool.query(
+        `SELECT * FROM gmis_gc_items
+         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
          LIMIT 1`,
         [normalizedItemNo],
       );
 
-      inc = incRes.rows[0] || null;
-
-      if (!inc) {
-        const err: any = new Error(
-          'No records found.',
-        );
+      if (gmisRes.rows.length === 0) {
+        const err: any = new Error('No records found.');
         err.statusCode = 404;
         throw err;
+      }
+
+      const gmisItem = gmisRes.rows[0];
+
+      // Validation: Only filled positions (f_pos = 'FILLED') are eligible for Incumbent Plantilla Registration
+      const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+      if (fPos !== 'FILLED') {
+        const err: any = new Error(
+          'This Plantilla Item Number is currently unfilled (f_pos must be FILLED). Only filled positions can be registered for Incumbent Plantilla Registration.',
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // 2. Check if already in reclass_gc
+      const gcRes = await pool.query(
+        `SELECT * FROM reclass_gc
+         WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+            OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
+         LIMIT 1`,
+        [normalizedItemNo],
+      );
+
+      inc = gcRes.rows[0] || null;
+
+      if (!inc) {
+        // Register in the table of reclass_gc
+        const insertGcRes = await pool.query(
+          `INSERT INTO reclass_gc (
+            item_no,
+            current_position,
+            first_name,
+            last_name,
+            region,
+            division,
+            school_id,
+            school_name,
+            stage_of_reclassification,
+            is_test,
+            created_at,
+            updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+          RETURNING *`,
+          [
+            normalizedItemNo,
+            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+            (cleanFirstName || gmisItem.first_name || '').trim(),
+            (cleanLastName || gmisItem.last_name || '').trim(),
+            gmisItem.region || null,
+            gmisItem.division || null,
+            gmisItem.school_id || null,
+            gmisItem.school_name || null,
+          ],
+        );
+        inc = insertGcRes.rows[0];
       }
     }
 

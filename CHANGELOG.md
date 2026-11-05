@@ -1,5 +1,21 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-05] [Reclass] Incumbent Plantilla Registration: Filled Position Validation (`f_pos = 'FILLED'`)
+- **Filled Position Verification (`f_pos = 'FILLED'`)**:
+  - In `backend/src/applicants/applicants.service.ts` (`verifyReclassItemNumber` & `registerReclassAccount`), added strict validation ensuring that the Plantilla Item Number in `gmis_gc_items` has `f_pos = 'FILLED'` (`UPPER(TRIM(f_pos)) === 'FILLED'`).
+  - **Unfilled Items Blocked**: If an item number in `gmis_gc_items` has `f_pos = 'UNFILLED'`, the verification and registration endpoints return a validation error: `"This Plantilla Item Number is currently unfilled (f_pos must be FILLED). Only filled positions can be registered for Incumbent Plantilla Registration."`
+  - In `backend/src/applicants/applicants.routes.ts`, handled `status: 'invalid'` to return HTTP 400 with the error message so it is surfaced directly to the applicant on the login/registration page.
+
+
+## [2026-11-05] [Reclass] Incumbent Plantilla Registration: GMIS Items Verification & Automatic Reclass GC Registration
+- **Verification against `gmis_gc_items`**:
+  - In `backend/src/applicants/applicants.service.ts` (`verifyReclassItemNumber`, `registerReclassAccount`, `verifyPlantillaItem`), verification for Incumbent Plantilla Registration now checks the central GMIS database table `gmis_gc_items` first using the Plantilla Item Number (`psi_cd` or `item_no`).
+  - **No Records Found Handling**: If the Plantilla Item Number is not found in `gmis_gc_items`, it strictly returns `"No records found."` with status `not_found`.
+- **Automatic Registration in `reclass_gc`**:
+  - When an incumbent's Plantilla Item Number exists in `gmis_gc_items`, the system checks whether the record already exists in `reclass_gc`.
+  - If the Plantilla Item Number does not yet exist in `reclass_gc`, it automatically registers/inserts the record into `reclass_gc` populated with their GMIS incumbent details (`item_no`, `current_position`, `first_name`, `last_name`, `region`, `division`, `school_id`, `school_name`).
+  - When completing account registration, credentials and contact details are linked and updated into `reclass_gc` and `applicants`.
+
 ## [2026-11-05] [Reclass] Application Update Document Selection & Reclass SG Salary Grade Alignment
 - **"Do You Want to Update Your Application for Reclassification?" Document Selection Workflow**:
   - In `ApplicantDashboard.tsx`, when the incumbent selects **"Yes"** to update their application, a new sub-view displays all reclassification documents (`RECLASS_REQUIREMENTS`) that need to be updated.
