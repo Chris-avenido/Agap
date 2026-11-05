@@ -1368,7 +1368,11 @@ router.put('/:id/reclass-update-preference', async (req, res) => {
       hours_of_training,
       eligibility,
     } = req.body;
-    if (update_application === undefined || update_application === null) {
+    if (
+      update_application === undefined ||
+      update_application === null ||
+      String(update_application).trim() === ''
+    ) {
       return res.status(400).json({ message: 'update_application answer is required.' });
     }
     const updated = await ApplicantsService.updateReclassApplicationPreference(
@@ -1421,7 +1425,7 @@ router.put('/:id/reclass-apply', async (req, res) => {
       years_experience: exp,
       hours_of_training,
       eligibility,
-      update_application: update_application !== undefined ? update_application : true,
+      update_application: update_application !== undefined ? update_application : 'Yes',
     });
     res.json({
       success: true,

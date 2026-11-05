@@ -258,7 +258,7 @@ export default function ReclassUpdateModal({
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                update_application: false,
+                update_application: 'No',
                 is_registered: false,
               }),
             }
@@ -292,7 +292,7 @@ export default function ReclassUpdateModal({
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              update_application: true,
+              update_application: 'Yes',
               is_registered: true,
               target_position: nextPos,
               desired_position: nextPos,
@@ -324,7 +324,7 @@ export default function ReclassUpdateModal({
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            update_application: false,
+            update_application: 'No',
             is_registered: false,
           }),
         }
@@ -384,7 +384,7 @@ export default function ReclassUpdateModal({
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            update_application: true,
+            update_application: 'Yes',
             is_registered: isRegistered,
             target_position: selectedPosition,
             desired_position: selectedPosition,

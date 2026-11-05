@@ -390,7 +390,7 @@ export default function ApplicantDashboard() {
           body: JSON.stringify({
             target_position: editTargetPositionValue,
             desired_position: editTargetPositionValue,
-            update_application: true,
+            update_application: 'Yes',
             is_registered: isReg,
           }),
         }
@@ -406,7 +406,7 @@ export default function ApplicantDashboard() {
           salary_grade: newSG,
           indicative_position: data.data?.indicative_position || editTargetPositionValue,
           indicative_salary_grade: data.data?.indicative_salary_grade || newSG,
-          update_application: true,
+          update_application: 'Yes',
           is_registered: isReg,
         }));
         setIsEditingTargetPosition(false);
@@ -454,14 +454,14 @@ export default function ApplicantDashboard() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ update_application: true }),
+            body: JSON.stringify({ update_application: 'Yes' }),
           }
         );
         const data = await response.json();
         if (response.ok && data.success) {
           setReclassData((prev: any) => ({
             ...prev,
-            update_application: true,
+            update_application: 'Yes',
           }));
         }
         setShowInitialPrompt(false);
@@ -474,14 +474,14 @@ export default function ApplicantDashboard() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ update_application: false }),
+            body: JSON.stringify({ update_application: 'No' }),
           }
         );
         const data = await response.json();
         if (response.ok && data.success) {
           setReclassData((prev: any) => ({
             ...prev,
-            update_application: false,
+            update_application: 'No',
           }));
           Swal.fire({
             icon: 'info',
@@ -719,15 +719,17 @@ export default function ApplicantDashboard() {
                 const isInitialNull =
                   !hasInitialAssessment && reclassRes.data.new_application !== true;
 
-                const isUpdateAppNotBool =
-                  reclassRes.data.update_application !== true &&
-                  reclassRes.data.update_application !== false;
+                const isUpdateAppAnswered =
+                  String(reclassRes.data.update_application).trim().toLowerCase() === 'yes' ||
+                  String(reclassRes.data.update_application).trim().toLowerCase() === 'no' ||
+                  reclassRes.data.update_application === true ||
+                  reclassRes.data.update_application === false;
 
                 if (!isSCIV && isInitialNull) {
                   setShowInitialPrompt(true);
                   setInitialPromptType('apply');
                   setReclassApplyStep('prompt');
-                } else if (hasInitialAssessment && isUpdateAppNotBool) {
+                } else if (hasInitialAssessment && !isUpdateAppAnswered) {
                   setShowInitialPrompt(true);
                   setInitialPromptType('update');
                 } else {
@@ -1680,7 +1682,9 @@ export default function ApplicantDashboard() {
                                 ? 'Registered'
                                 : 'Not Registered'}
                             </span>
-                            {reclassData?.update_application !== undefined && reclassData?.update_application !== null && (
+                            {reclassData?.update_application !== undefined &&
+                              reclassData?.update_application !== null &&
+                              String(reclassData?.update_application).trim() !== '' && (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1688,13 +1692,20 @@ export default function ApplicantDashboard() {
                                   setInitialPromptType('update');
                                 }}
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
+                                  String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
                                   reclassData?.update_application === true
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
                                     : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
                                 }`}
                                 title="Click to edit reclassification application preference (Yes or No)"
                               >
-                                <span>Update App: {reclassData?.update_application === true ? 'Yes' : 'No'}</span>
+                                <span>
+                                  Update App:{' '}
+                                  {String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
+                                  reclassData?.update_application === true
+                                    ? 'Yes'
+                                    : 'No'}
+                                </span>
                                 <Edit2 className="w-2.5 h-2.5 opacity-70" />
                               </button>
                             )}
@@ -2691,15 +2702,17 @@ export default function ApplicantDashboard() {
             const isInitialNull =
               !hasInitialAssessment && incumbentRecord?.new_application !== true;
 
-            const isUpdateAppNotBool =
-              incumbentRecord?.update_application !== true &&
-              incumbentRecord?.update_application !== false;
+            const isUpdateAppAnswered =
+              String(incumbentRecord?.update_application).trim().toLowerCase() === 'yes' ||
+              String(incumbentRecord?.update_application).trim().toLowerCase() === 'no' ||
+              incumbentRecord?.update_application === true ||
+              incumbentRecord?.update_application === false;
 
             if (!isSCIV && isInitialNull) {
               setShowInitialPrompt(true);
               setInitialPromptType('apply');
               setReclassApplyStep('prompt');
-            } else if (hasInitialAssessment && isUpdateAppNotBool) {
+            } else if (hasInitialAssessment && !isUpdateAppAnswered) {
               setShowInitialPrompt(true);
               setInitialPromptType('update');
             }
@@ -2775,6 +2788,7 @@ export default function ApplicantDashboard() {
                     onClick={() => handleUpdateApplicationAnswer('yes')}
                     disabled={isSavingPreference}
                     className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                      String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
                       reclassData?.update_application === true
                         ? 'border-[#0284c7] bg-sky-50/80 ring-2 ring-[#0284c7]/30 shadow-md'
                         : 'border-[#0284c7]/50 bg-sky-50/30 hover:bg-sky-50 hover:border-[#0284c7] hover:shadow-xs'
@@ -2785,7 +2799,8 @@ export default function ApplicantDashboard() {
                         <div className="w-8 h-8 rounded-lg bg-[#0284c7] text-white flex items-center justify-center shadow-xs">
                           <Check className="w-5 h-5 stroke-[2.5]" />
                         </div>
-                        {reclassData?.update_application === true && (
+                        {(String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
+                          reclassData?.update_application === true) && (
                           <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0284c7] text-white shadow-2xs">
                             Current Choice
                           </span>
@@ -2799,7 +2814,14 @@ export default function ApplicantDashboard() {
                       </p>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-center justify-between text-xs font-bold text-[#0284c7]">
-                      <span>{isSavingPreference ? 'Saving...' : reclassData?.update_application === true ? 'Selected • Click to open application' : 'Select Yes'}</span>
+                      <span>
+                        {isSavingPreference
+                          ? 'Saving...'
+                          : String(reclassData?.update_application).trim().toLowerCase() === 'yes' ||
+                            reclassData?.update_application === true
+                          ? 'Selected • Click to open application'
+                          : 'Select Yes'}
+                      </span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </button>
@@ -2810,6 +2832,7 @@ export default function ApplicantDashboard() {
                     onClick={() => handleUpdateApplicationAnswer('no')}
                     disabled={isSavingPreference}
                     className={`group relative p-4 rounded-xl border-2 text-left flex flex-col justify-between cursor-pointer transition-all disabled:opacity-50 ${
+                      String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
                       reclassData?.update_application === false
                         ? 'border-slate-400 bg-slate-100/90 ring-2 ring-slate-400/30 shadow-md'
                         : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-xs'
@@ -2820,7 +2843,8 @@ export default function ApplicantDashboard() {
                         <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs">
                           <X className="w-5 h-5 stroke-[2.5]" />
                         </div>
-                        {reclassData?.update_application === false && (
+                        {(String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
+                          reclassData?.update_application === false) && (
                           <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-600 text-white shadow-2xs">
                             Current Choice
                           </span>
@@ -2834,7 +2858,14 @@ export default function ApplicantDashboard() {
                       </p>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-gray-500">
-                      <span>{isSavingPreference ? 'Saving...' : reclassData?.update_application === false ? 'Selected • Keep current record' : 'Select No'}</span>
+                      <span>
+                        {isSavingPreference
+                          ? 'Saving...'
+                          : String(reclassData?.update_application).trim().toLowerCase() === 'no' ||
+                            reclassData?.update_application === false
+                          ? 'Selected • Keep current record'
+                          : 'Select No'}
+                      </span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </button>

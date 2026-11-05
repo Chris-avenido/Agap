@@ -1,5 +1,19 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-05] [Reclass] Column Type Migration: `update_application` Changed from BOOLEAN to VARCHAR(20) ('Yes' / 'No')
+- **Database Schema & Automatic Migration (`backend/src/database.ts`)**:
+  - Changed `reclass_gc.update_application` column type from `BOOLEAN` to `VARCHAR(20)`.
+  - Added schema migration in `runSchemaMigrations` that safely alters `reclass_gc.update_application` using `TYPE VARCHAR(20) USING (CASE WHEN update_application IS TRUE THEN 'Yes' WHEN update_application IS FALSE THEN 'No' ELSE NULL END)` to preserve existing data without downtime.
+- **Backend Service & Route Adaptations (`applicants.service.ts`, `applicants.routes.ts`)**:
+  - Updated `updateReclassApplicationPreference` and `updateTargetPosition` with helper `parseYesNo` to normalize and store `'Yes'` or `'No'` into `reclass_gc.update_application`.
+  - Updated `getReclassDetails` to return `'Yes'` or `'No'` (or null).
+  - Maintained backward compatibility for boolean inputs while storing string `'Yes'` / `'No'`.
+- **Frontend State & Modals (`ApplicantDashboard.tsx`, `ReclassUpdateModal.tsx`)**:
+  - `handleUpdateApplicationAnswer` sends `{ update_application: 'Yes' }` or `{ update_application: 'No' }`.
+  - `ReclassUpdateModal` sends `'Yes'` and `'No'`.
+  - Active button states, prompt conditions, and status badge in `ApplicantDashboard.tsx` evaluate `'Yes'` and `'No'` (case-insensitively) as well as legacy booleans.
+
+
 ## [2026-10-29] [AGAP] Allow Resubmission of Application for Excluded or Disqualified Job Cluster Applications
 - **Backend Application Validation (`ApplicantsService.applyJob`)**:
   - Relaxed strict duplicate blocking on `applications` table (`SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2`).

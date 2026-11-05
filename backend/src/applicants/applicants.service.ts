@@ -2064,9 +2064,12 @@ class ApplicantsServiceClass {
         reclassApp?.indicative_salary_grade ||
         null,
       update_application:
-        typeof incumbent?.update_application === 'boolean'
-          ? incumbent.update_application
-          : (typeof reclassApp?.update_application === 'boolean' ? reclassApp.update_application : null),
+        (() => {
+          const raw = incumbent?.update_application !== undefined ? incumbent?.update_application : reclassApp?.update_application;
+          if (raw === true || (typeof raw === 'string' && raw.trim().toLowerCase() === 'yes')) return 'Yes';
+          if (raw === false || (typeof raw === 'string' && raw.trim().toLowerCase() === 'no')) return 'No';
+          return raw !== null && raw !== undefined && String(raw).trim() !== '' ? String(raw) : null;
+        })(),
       is_registered:
         typeof incumbent?.is_registered === 'boolean'
           ? incumbent.is_registered
@@ -2134,6 +2137,18 @@ class ApplicantsServiceClass {
       return null;
     };
 
+    const parseYesNo = (val: any): string | null => {
+      if (val === true) return 'Yes';
+      if (val === false) return 'No';
+      if (typeof val === 'string') {
+        const s = val.trim().toLowerCase();
+        if (s === 'yes' || s === 'true' || s === '1') return 'Yes';
+        if (s === 'no' || s === 'false' || s === '0') return 'No';
+        if (s !== '') return val.trim();
+      }
+      return null;
+    };
+
     if (plantilla) {
       const updatesGc: string[] = [
         'desired_position = $1',
@@ -2142,12 +2157,12 @@ class ApplicantsServiceClass {
       const paramsGc: any[] = [cleanPosition, plantilla];
       let pIdx = 3;
 
-      const boolUpdate = options?.update_application !== undefined ? parseBool(options.update_application) : null;
+      const strUpdate = options?.update_application !== undefined ? parseYesNo(options.update_application) : null;
       const boolReg = options?.is_registered !== undefined ? parseBool(options.is_registered) : null;
 
-      if (boolUpdate !== null) {
+      if (strUpdate !== null) {
         updatesGc.push(`update_application = $${pIdx++}`);
-        paramsGc.push(boolUpdate);
+        paramsGc.push(strUpdate);
       }
       if (boolReg !== null) {
         updatesGc.push(`is_registered = $${pIdx++}`);
@@ -2201,7 +2216,19 @@ class ApplicantsServiceClass {
       return null;
     };
 
-    const boolUpdate = update_application !== undefined ? parseBool(update_application) : null;
+    const parseYesNo = (val: any): string | null => {
+      if (val === true) return 'Yes';
+      if (val === false) return 'No';
+      if (typeof val === 'string') {
+        const s = val.trim().toLowerCase();
+        if (s === 'yes' || s === 'true' || s === '1') return 'Yes';
+        if (s === 'no' || s === 'false' || s === '0') return 'No';
+        if (s !== '') return val.trim();
+      }
+      return null;
+    };
+
+    const strUpdate = update_application !== undefined ? parseYesNo(update_application) : null;
     const boolReg = is_registered !== undefined ? parseBool(is_registered) : null;
     const cleanPos = desired_position
       ? (desired_position || '').trim()
@@ -2221,9 +2248,9 @@ class ApplicantsServiceClass {
       const paramsGc: any[] = [];
       let pIdx = 1;
 
-      if (boolUpdate !== null) {
+      if (strUpdate !== null) {
         updatesGc.push(`update_application = $${pIdx++}`);
-        paramsGc.push(boolUpdate);
+        paramsGc.push(strUpdate);
       }
       if (boolReg !== null) {
         updatesGc.push(`is_registered = $${pIdx++}`);
@@ -2317,7 +2344,7 @@ class ApplicantsServiceClass {
     },
   ) {
     return this.updateReclassApplicationPreference(applicantId, {
-      update_application: true,
+      update_application: 'Yes',
       education: data.education,
       years_experience: data.years_experience !== undefined ? data.years_experience : data.year_of_experience,
       hours_of_training: data.hours_of_training,

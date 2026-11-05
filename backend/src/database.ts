@@ -100,8 +100,29 @@ async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS desire_position;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS reclass_position VARCHAR(255);
-      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application BOOLEAN;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application VARCHAR(20);
       ALTER TABLE reclass_gc ALTER COLUMN update_application DROP DEFAULT;
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'reclass_gc' 
+            AND column_name = 'update_application' 
+            AND data_type = 'boolean'
+        ) THEN
+          ALTER TABLE reclass_gc ALTER COLUMN update_application DROP DEFAULT;
+          ALTER TABLE reclass_gc 
+            ALTER COLUMN update_application TYPE VARCHAR(20) 
+            USING (
+              CASE 
+                WHEN update_application IS TRUE THEN 'Yes' 
+                WHEN update_application IS FALSE THEN 'No' 
+                ELSE NULL 
+              END
+            );
+        END IF;
+      END $$;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
