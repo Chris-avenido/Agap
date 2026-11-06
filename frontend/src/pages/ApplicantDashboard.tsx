@@ -459,7 +459,7 @@ export default function ApplicantDashboard() {
     setIsSavingPreference(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -505,7 +505,7 @@ export default function ApplicantDashboard() {
     try {
       if (answer === 'yes') {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -525,7 +525,7 @@ export default function ApplicantDashboard() {
         setUpdateModalInitialStep(1);
       } else {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/applicants/${session.id}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

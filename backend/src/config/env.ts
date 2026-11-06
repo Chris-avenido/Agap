@@ -1,11 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
+const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const backendRoot = path.resolve(__dirname, '..', '..');
 
-// The backend has its own private configuration, while the legacy deployment
-// still keeps shared values in the repository-level .env file. Load both in a
-// deterministic order without allowing the parent file to overwrite backend
-// settings.
+// Load root .env as primary single source of truth (consistent with agap_hrmo)
+dotenv.config({ path: path.join(repoRoot, '.env') });
+// Fallback to backend/.env if present
 dotenv.config({ path: path.join(backendRoot, '.env') });
-dotenv.config({ path: path.join(backendRoot, '..', '.env') });

@@ -372,7 +372,7 @@ async function runSchemaMigrations(client: any) {
   }
 }
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL;
 
 console.log('🌐 Connecting to PostgreSQL Database...');
 const pgPool = new Pool({
