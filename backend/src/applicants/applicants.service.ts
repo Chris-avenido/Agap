@@ -1809,6 +1809,23 @@ class ApplicantsServiceClass {
       throw new Error('No records found.');
     }
 
+    if (gmisItem) {
+      const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+      const initialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
+      const hasInitialAssessment = Boolean(
+        initialAssessment &&
+        initialAssessment.toUpperCase() !== 'NULL' &&
+        initialAssessment.toUpperCase() !== 'N/A'
+      );
+
+      if (fPos !== 'FILLED') {
+        throw new Error('This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration.');
+      }
+      if (!hasInitialAssessment) {
+        throw new Error('This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration.');
+      }
+    }
+
     if (!incumbent && gmisItem) {
       // Register existing Plantilla Item Number in reclass_gc
       const insertGc = await pool.query(
@@ -1822,10 +1839,13 @@ class ApplicantsServiceClass {
           school_id,
           school_name,
           stage_of_reclassification,
+          desired_position,
+          reclass_position,
+          gmis_id,
           is_test,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', $9, $10, $11, false, NOW(), NOW())
         RETURNING *`,
         [
           normalized,
@@ -1836,6 +1856,9 @@ class ApplicantsServiceClass {
           gmisItem.division || null,
           gmisItem.school_id || null,
           gmisItem.school_name || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.id || null,
         ],
       );
       incumbent = insertGc.rows[0];
@@ -2637,6 +2660,7 @@ class ApplicantsServiceClass {
     const gmisRes = await pool.query(
       `SELECT * FROM gmis_gc_items 
        WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
+       ORDER BY id ASC
        LIMIT 1`,
       [normalized],
     );
@@ -2650,12 +2674,26 @@ class ApplicantsServiceClass {
 
     const gmisItem = gmisRes.rows[0];
 
-    // Validation: Only filled positions (f_pos = 'FILLED') are eligible for Incumbent Plantilla Registration
+    // Validation: Only filled positions (f_pos = 'FILLED') and non-null initial assessment are eligible for Incumbent Plantilla Registration
     const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+    const initialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
+    const hasInitialAssessment = Boolean(
+      initialAssessment &&
+      initialAssessment.toUpperCase() !== 'NULL' &&
+      initialAssessment.toUpperCase() !== 'N/A'
+    );
+
     if (fPos !== 'FILLED') {
       return {
         status: 'invalid',
-        message: 'This Plantilla Item Number is currently unfilled (f_pos must be FILLED). Only filled positions can be registered for Incumbent Plantilla Registration.',
+        message: 'This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration.',
+      };
+    }
+
+    if (!hasInitialAssessment) {
+      return {
+        status: 'invalid',
+        message: 'This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration.',
       };
     }
 
@@ -2682,10 +2720,13 @@ class ApplicantsServiceClass {
           school_id,
           school_name,
           stage_of_reclassification,
+          desired_position,
+          reclass_position,
+          gmis_id,
           is_test,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', $9, $10, $11, false, NOW(), NOW())
         RETURNING *`,
         [
           normalized,
@@ -2696,6 +2737,9 @@ class ApplicantsServiceClass {
           gmisItem.division || null,
           gmisItem.school_id || null,
           gmisItem.school_name || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.id || null,
         ],
       );
       inc = insertGcRes.rows[0];
@@ -2824,6 +2868,7 @@ class ApplicantsServiceClass {
       const gmisRes = await pool.query(
         `SELECT * FROM gmis_gc_items
          WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
+         ORDER BY id ASC
          LIMIT 1`,
         [normalizedItemNo],
       );
@@ -2836,11 +2881,26 @@ class ApplicantsServiceClass {
 
       const gmisItem = gmisRes.rows[0];
 
-      // Validation: Only filled positions (f_pos = 'FILLED') are eligible for Incumbent Plantilla Registration
+      // Validation: Only filled positions (f_pos = 'FILLED') and non-null initial assessment are eligible for Incumbent Plantilla Registration
       const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+      const initialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
+      const hasInitialAssessment = Boolean(
+        initialAssessment &&
+        initialAssessment.toUpperCase() !== 'NULL' &&
+        initialAssessment.toUpperCase() !== 'N/A'
+      );
+
       if (fPos !== 'FILLED') {
         const err: any = new Error(
-          'This Plantilla Item Number is currently unfilled (f_pos must be FILLED). Only filled positions can be registered for Incumbent Plantilla Registration.',
+          'This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration.',
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (!hasInitialAssessment) {
+        const err: any = new Error(
+          'This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration.',
         );
         err.statusCode = 400;
         throw err;
@@ -2870,10 +2930,13 @@ class ApplicantsServiceClass {
             school_id,
             school_name,
             stage_of_reclassification,
+            desired_position,
+            reclass_position,
+            gmis_id,
             is_test,
             created_at,
             updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', false, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', $9, $10, $11, false, NOW(), NOW())
           RETURNING *`,
           [
             normalizedItemNo,
@@ -2884,6 +2947,9 @@ class ApplicantsServiceClass {
             gmisItem.division || null,
             gmisItem.school_id || null,
             gmisItem.school_name || null,
+            gmisItem.initial_assessment || null,
+            gmisItem.initial_assessment || null,
+            gmisItem.id || null,
           ],
         );
         inc = insertGcRes.rows[0];

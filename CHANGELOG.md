@@ -1,5 +1,17 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-06] [Reclass] Incumbent Plantilla Registration: `initial_assessment IS NOT NULL` & `f_pos = 'FILLED'` Validation
+- **Validation Criteria Updated (`backend/src/applicants/applicants.service.ts`)**:
+  - In `verifyReclassItemNumber`, `registerReclassAccount`, and `verifyPlantillaItem`, updated the validation query and checks against `gmis_gc_items` to enforce:
+    ```sql
+    initial_assessment IS NOT NULL AND f_pos = 'FILLED'
+    ```
+  - **Clean Error Messaging (No Table Column Names Exposed)**:
+    - If initial assessment is missing/null: `"This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration."`
+    - If plantilla position is unfilled: `"This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration."`
+  - **Automatic Reclass Profile Alignment**: When inserting newly registered incumbent records into `reclass_gc`, `gmis_id`, `desired_position`, and `reclass_position` are now automatically populated with `gmisItem.id` and `gmisItem.initial_assessment`.
+
+
 ## [2026-11-05] [Reclass] Applicant Dashboard: Disabled Document Uploading
 - **Disabled Upload Actions on Dashboard (`ApplicantDashboard.tsx`)**:
   - Top header action `"Upload Requirements"` button is disabled with disabled styling and badge.
