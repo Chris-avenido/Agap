@@ -7,8 +7,9 @@
 ALTER TABLE public.reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);
 ALTER TABLE public.reclass_gc ADD COLUMN IF NOT EXISTS reclass_position VARCHAR(255);
 
--- 2. Remove obsolete target_position and desire_position columns if they exist
-ALTER TABLE public.reclass_gc DROP COLUMN IF EXISTS target_position;
+-- 2. Remove obsolete desire_position column if it exists.
+-- NOTE (expand/contract): target_position is intentionally NOT dropped here. Code no longer
+-- references it; the physical DROP is deferred to a future release.
 ALTER TABLE public.reclass_gc DROP COLUMN IF EXISTS desire_position;
 
 -- 3. Populate existing desired_position from existing reclass_position records where desired_position is null

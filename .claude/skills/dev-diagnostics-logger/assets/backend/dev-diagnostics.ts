@@ -168,7 +168,7 @@ export function devLog(
   kind: string,
   context: string,
   message: string,
-  extra: { error?: unknown; details?: unknown; route?: string; durationMs?: number | undefined } = {},
+  extra: { error?: unknown; details?: unknown; route?: string; durationMs?: number | undefined; requestId?: string } = {},
 ): void {
   try {
     if (!enabled() || !config) return;
@@ -183,6 +183,7 @@ export function devLog(
       write('backend.jsonl', `${JSON.stringify({ ...last, collapsedRepeat: true })}\n`);
       return;
     }
+    const reqId = extra.requestId ?? als.getStore()?.requestId;
     const entry: BackendEntry = {
       id: randomUUID(),
       sessionId,
@@ -199,7 +200,7 @@ export function devLog(
       ...(formatted ? { error: formatted } : {}),
       ...(extra.details === undefined ? {} : { details: sanitizePayload(extra.details) }),
       ...(extra.route ? { route: extra.route } : {}),
-      ...(als.getStore() ? { requestId: als.getStore()?.requestId } : {}),
+      ...(reqId ? { requestId: reqId } : {}),
       ...(extra.durationMs === undefined ? {} : { durationMs: Math.round(extra.durationMs) }),
     };
     last = entry;
@@ -258,7 +259,7 @@ export function currentRequestId(): string | undefined {
 }
 
 type MiddlewareReq = { method?: string; url?: string; headers: Record<string, string | string[] | undefined>; route?: { path?: string }; baseUrl?: string };
-type MiddlewareRes = { statusCode: number; on: (event: string, cb: () => void) => void; getHeader: (name: string) => unknown };
+type MiddlewareRes = { statusCode: number; on: (event: string, cb: () => void) => void; getHeader: (name: string) => unknown; setHeader?: (name: string, value: string) => void };
 
 /** Request context + timing. Mount before the routes. Slow requests are keyed by route pattern, not raw URL. */
 export function devRequestMiddleware() {
@@ -268,6 +269,9 @@ export function devRequestMiddleware() {
     // The HTTP logger (pino-http) assigns the id and sets the response header first; reuse it so every layer agrees.
     const assigned = res.getHeader('x-request-id');
     const requestId = typeof assigned === 'string' ? assigned : ((Array.isArray(incoming) ? incoming[0] : incoming) ?? randomUUID());
+    if (!assigned && typeof res.setHeader === 'function') {
+      res.setHeader('x-request-id', requestId);
+    }
     const started = performance.now();
     als.run({ requestId, started, queries: new Map(), reportedShapes: new Set() }, () => {
       res.on('finish', () => {
@@ -276,7 +280,8 @@ export function devRequestMiddleware() {
           const pattern = req.route?.path ? `${req.baseUrl ?? ''}${req.route.path}` : (req.url ?? '').split('?')[0] ?? '';
           const route = `${req.method ?? 'GET'} ${pattern}`;
           const bytes = Number(res.getHeader('content-length') ?? 0);
-          if (res.statusCode >= 500) devLog('error', 'http', 'Request', `${route} responded ${res.statusCode}`, { route, durationMs: ms, details: { status: res.statusCode, requestId } });
+          if (res.statusCode >= 500) devLog('error', 'http', 'Request', `${route} responded ${res.statusCode}`, { route, durationMs: ms, requestId, details: { status: res.statusCode, requestId } });
+          else if (res.statusCode >= 400) devLog('warn', 'http', 'Request', `${route} responded ${res.statusCode}`, { route, durationMs: ms, requestId, details: { status: res.statusCode, requestId } });
           if (ms > threshold('slowRequestMs', 500)) devLog('warn', 'perf:slow-request', 'Request', `Slow request ${route}: ${Math.round(ms)} ms`, { route, durationMs: ms, details: { status: res.statusCode, requestId } });
           if (bytes > threshold('payloadBytes', 512000)) devLog('warn', 'perf:large-payload', 'Request', `Large response ${route}: ${bytes} bytes`, { route, details: { bytes, requestId } });
         } catch {

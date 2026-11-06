@@ -92,8 +92,12 @@ END $$;
 DROP INDEX IF EXISTS idx_reclass_app_registered_or_not;
 ALTER TABLE reclass_applications DROP COLUMN IF EXISTS registered_or_not;
 
--- 3. Indexes for fast lookup
-CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc (update_application);
-CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc (is_registered);
-CREATE INDEX IF NOT EXISTS idx_reclass_app_update_app ON reclass_applications (update_application);
-CREATE INDEX IF NOT EXISTS idx_reclass_app_is_registered ON reclass_applications (is_registered);
+-- 3. Partial indexes (low-cardinality booleans: index only the TRUE rows)
+DROP INDEX IF EXISTS idx_reclass_gc_update_app;
+DROP INDEX IF EXISTS idx_reclass_gc_is_registered;
+DROP INDEX IF EXISTS idx_reclass_app_update_app;
+DROP INDEX IF EXISTS idx_reclass_app_is_registered;
+CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc (update_application) WHERE update_application = TRUE;
+CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc (is_registered) WHERE is_registered = TRUE;
+CREATE INDEX IF NOT EXISTS idx_reclass_app_update_app ON reclass_applications (update_application) WHERE update_application = TRUE;
+CREATE INDEX IF NOT EXISTS idx_reclass_app_is_registered ON reclass_applications (is_registered) WHERE is_registered = TRUE;

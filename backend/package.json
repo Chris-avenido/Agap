@@ -9,9 +9,9 @@
     "build": "tsc",
     "postinstall": "prisma generate --schema=database/schema.prisma",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "dev": "tsx watch src/index.ts",
+    "dev": "npm run migrate:schema && tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "start:dev": "tsx watch src/index.ts",
+    "start:dev": "npm run migrate:schema && tsx watch src/index.ts",
     "start:prod": "node dist/index.js",
     "migrate:is_test": "tsx scripts/run_is_test_migration.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
@@ -19,7 +19,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typecheck": "tsc --noEmit",
+    "lint:check": "eslint \"{src,test}/**/*.ts\"",
+    "migrate:schema": "tsx scripts/run_schema_migrations.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.33.0",
@@ -57,6 +60,8 @@
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-boundaries": "^7.4.2",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
     "jest": "^30.0.0",

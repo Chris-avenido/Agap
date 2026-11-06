@@ -200,7 +200,14 @@ if (config.staticAnalysis?.tsc) {
   for (const dir of stack.tsconfigDirs ?? []) {
     if (!existsSync(join(root, dir, 'tsconfig.json'))) continue;
     snapshot.sources.tsc = { active: true, packages: [...(snapshot.sources.tsc?.packages ?? []), dir] };
-    const tsc = spawn(`npx --no-install tsc --noEmit --watch --preserveWatchOutput --pretty false -p ${dir}`, { cwd: root, shell: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const tsconfigJson = (() => {
+      try { return JSON.parse(readFileSync(join(root, dir, 'tsconfig.json'), 'utf8')); } catch { return {}; }
+    })();
+    const isComposite = Boolean(tsconfigJson.references?.length);
+    const tscCmd = isComposite
+      ? `npx --prefix ${dir} --no-install tsc -b --watch --preserveWatchOutput --pretty false ${dir}`
+      : `npx --prefix ${dir} --no-install tsc --noEmit --watch --preserveWatchOutput --pretty false -p ${dir}`;
+    const tsc = spawn(tscCmd, { cwd: root, shell: true, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(tsc);
     tscFindings[dir] = [];
     let current = [];
@@ -213,7 +220,7 @@ if (config.staticAnalysis?.tsc) {
         buf = buf.slice(i + 1);
         const m = /^(.+?)\((\d+),(\d+)\): (error|warning) (TS\d+): (.*)$/.exec(line);
         if (m) {
-          const file = resolve(root, dir, m[1]);
+          const file = resolve(root, m[1].startsWith(dir + '/') || m[1].startsWith(dir + '\\') ? m[1] : join(dir, m[1]));
           current.push({ source: 'tsc', file: file.startsWith(root) ? file.slice(root.length + 1).replaceAll('\\', '/') : m[1], line: Number(m[2]), column: Number(m[3]), severity: m[4], rule: m[5], message: redact(m[6]) });
         } else if (/Starting (incremental )?compilation|File change detected/.test(line)) current = [];
         else if (/Watching for file changes/.test(line)) {

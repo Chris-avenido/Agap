@@ -3,7 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSy
 import type { IncomingMessage } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
-import { fingerprintOf, sanitizePayload, sanitizeString, setRuntimeSecrets } from './sanitize';
+import { fingerprintOf, sanitizePayload, sanitizeString, setRuntimeSecrets } from './sanitize.ts';
 
 const MAX_BODY = 1024 * 1024;
 const SECRET_ENV_KEY = /secret|token|pass|key|dsn|credential|url/i;

@@ -6,6 +6,13 @@ import * as jwt from 'jsonwebtoken';
 import { sendPasswordResetEmail } from '../utils/mailer';
 import { uploadToAzure, uploadToReclassAzure } from '../utils/azureStorage';
 import { compressPdf } from '../utils/pdfCompressor';
+import { withDeadlockRetry } from '../utils/pgRetry';
+
+/** Strict whitelist of applications columns that document replacement may write. */
+const APPLICATION_DOC_COLUMNS = {
+  'Letter of Intent': 'letter_of_intent',
+  'Sworn Declaration': 'sworn_document',
+} as const;
 
 export interface ReclassRegisterDto {
   item_number?: string;
@@ -1187,6 +1194,23 @@ class ApplicantsServiceClass {
     newBlobUrl: string,
     targetApplicationIds?: string[],
   ) {
+    // The whole transaction is retried on deadlock (40P01) / serialization (40001).
+    return withDeadlockRetry(() =>
+      this.replaceApplicantDocumentOnce(
+        applicantId,
+        docType,
+        newBlobUrl,
+        targetApplicationIds,
+      ),
+    );
+  }
+
+  private async replaceApplicantDocumentOnce(
+    applicantId: number,
+    docType: 'Letter of Intent' | 'Sworn Declaration',
+    newBlobUrl: string,
+    targetApplicationIds?: string[],
+  ) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -1220,8 +1244,10 @@ class ApplicantsServiceClass {
 
       // 3. Conditionally update applications: ONLY update if the job cluster is OPEN in the vacancies table
       // If the vacancy/cluster is closed/expired, retain the original blob ID
-      const columnToUpdate =
-        docType === 'Letter of Intent' ? 'letter_of_intent' : 'sworn_document';
+      const columnToUpdate = APPLICATION_DOC_COLUMNS[docType];
+      if (!columnToUpdate) {
+        throw new Error(`Unsupported document type: ${String(docType)}`);
+      }
 
       let updateRes;
       if (
@@ -1436,6 +1462,16 @@ class ApplicantsServiceClass {
   }
 
   async saveApplicantDocuments(
+    applicantId: number,
+    uploadedDocs: Array<{ docName: string; url: string }>,
+  ) {
+    // Retried on deadlock (40P01) / serialization (40001) failures.
+    return withDeadlockRetry(() =>
+      this.saveApplicantDocumentsOnce(applicantId, uploadedDocs),
+    );
+  }
+
+  private async saveApplicantDocumentsOnce(
     applicantId: number,
     uploadedDocs: Array<{ docName: string; url: string }>,
   ) {
@@ -1952,9 +1988,11 @@ class ApplicantsServiceClass {
 
     if (!incumbent) return null;
 
-    const fullName = incumbent
+    const fullName = (incumbent?.first_name || incumbent?.last_name)
       ? `${incumbent.first_name || ''} ${incumbent.last_name || ''}`.trim()
-      : null;
+      : (appRow?.first_name || appRow?.surname)
+        ? `${appRow.first_name || ''} ${appRow.surname || ''}`.trim()
+        : null;
 
     const currentPosition =
       reclassApp?.current_position ||
@@ -2063,6 +2101,33 @@ class ApplicantsServiceClass {
       ? String(incumbent.stage_of_reclassification).trim().toUpperCase()
       : (docCount >= 8 ? 'FOR REVIEW' : (!initialPosition && incumbent?.new_application !== true ? 'PENDING APPLICATION' : 'UPDATING OF DOCUMENTS'));
 
+    // Determine categorical current_stage
+    let derivedCurrentStage = 'UPDATING_DOCUMENTS';
+    if (
+      incumbent?.nosca_serial_no ||
+      (incumbent?.new_item_no && String(incumbent.new_item_no).trim() !== '' && String(incumbent.new_item_no).trim().toUpperCase() !== 'NULL') ||
+      (stageOfReclass && ['APPOINTMENT', 'RECLASS PROPER', 'APPROVED', 'COMPLETED'].includes(stageOfReclass))
+    ) {
+      derivedCurrentStage = 'COMPLETED';
+    } else if (stageOfReclass && stageOfReclass.includes('DBM')) {
+      derivedCurrentStage = 'DBM_NOSCA';
+    } else if (stageOfReclass && (stageOfReclass.includes('RO') || stageOfReclass.includes('REGIONAL'))) {
+      derivedCurrentStage = 'RO_ENDORSEMENT';
+    } else if (
+      stageOfReclass === 'FOR REVIEW' ||
+      incumbent?.document_status === 'DOCUMENTS SUBMITTED' ||
+      incumbent?.document_status === 'ALL DOCUMENT REVIEWED' ||
+      docCount >= 8
+    ) {
+      derivedCurrentStage = 'SDO_EVALUATION';
+    } else {
+      derivedCurrentStage = 'UPDATING_DOCUMENTS';
+    }
+
+    const currentStage = (incumbent?.current_stage && String(incumbent.current_stage).trim())
+      ? String(incumbent.current_stage).trim().toUpperCase()
+      : derivedCurrentStage;
+
     const documentStatus = (incumbent?.document_status && String(incumbent.document_status).trim())
       ? String(incumbent.document_status).trim().toUpperCase()
       : (docCount >= 8 ? 'DOCUMENTS SUBMITTED' : (docCount > 0 ? 'PARTIAL SUBMISSION' : (incumbent?.new_application ? 'DOCUMENTS SUBMITTED' : 'PENDING APPLICATION')));
@@ -2122,6 +2187,7 @@ class ApplicantsServiceClass {
         stageOfReclass,
       stage_of_reclassification: stageOfReclass,
       staging_of_reclassification: stageOfReclass,
+      current_stage: currentStage,
       initial_assessment: initialPosition,
       initial_assessment_position: initialPosition,
       initial_assessment_salary_grade: initialSalaryGrade,
@@ -4320,14 +4386,15 @@ class ApplicantsServiceClass {
 
     const updatedDocs = await this.getReclassDocuments(applicantId);
 
-    // If all 8 required documents are submitted, advance stage from UPDATING OF DOCUMENTS to FOR REVIEW
+    // If all 8 required documents are submitted, advance stage from UPDATING OF DOCUMENTS to FOR REVIEW (SDO_EVALUATION)
     if (updatedDocs.length >= 8) {
       if (folderGcId) {
         await pool.query(
           `UPDATE reclass_gc
            SET stage_of_reclassification = 'FOR REVIEW',
+               current_stage = 'SDO_EVALUATION',
                updated_at = NOW()
-           WHERE id = $1 AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS')`,
+           WHERE id = $1 AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS' OR current_stage IS NULL OR current_stage = 'UPDATING_DOCUMENTS')`,
           [folderGcId],
         );
       }
@@ -4335,8 +4402,9 @@ class ApplicantsServiceClass {
         await pool.query(
           `UPDATE reclass_gc
            SET stage_of_reclassification = 'FOR REVIEW',
+               current_stage = 'SDO_EVALUATION',
                updated_at = NOW()
-           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS')`,
+           WHERE UPPER(TRIM(item_no)) = UPPER(TRIM($1)) AND (stage_of_reclassification IS NULL OR stage_of_reclassification = 'UPDATING OF DOCUMENTS' OR current_stage IS NULL OR current_stage = 'UPDATING_DOCUMENTS')`,
           [plantillaItemNumber],
         );
       }

@@ -44,6 +44,21 @@ function expandWorkspaces() {
       }
     } else if (existsSync(join(root, pattern, 'package.json'))) dirs.push(join(root, pattern));
   }
+  if (!dirs.length) {
+    for (const sub of ['frontend', 'backend', 'client', 'server', 'apps/*', 'packages/*']) {
+      if (sub.endsWith('/*')) {
+        const parent = join(root, sub.replace(/\/\*+$/, ''));
+        if (existsSync(parent)) {
+          for (const name of readdirSync(parent)) {
+            const dir = join(parent, name);
+            if (statSync(dir).isDirectory() && existsSync(join(dir, 'package.json'))) dirs.push(dir);
+          }
+        }
+      } else if (existsSync(join(root, sub, 'package.json'))) {
+        dirs.push(join(root, sub));
+      }
+    }
+  }
   return dirs;
 }
 
@@ -135,7 +150,7 @@ console.log(
     {
       root,
       packageManager: packageManager(),
-      isMonorepo: workspaceDirs.length > 0,
+      isMonorepo: Boolean(rootPkg?.workspaces || existsSync(join(root, 'pnpm-workspace.yaml'))),
       packages,
       frontendDir: frontends.length === 1 ? frontends[0].dir : null,
       backendDir: backends.length === 1 ? backends[0].dir : null,

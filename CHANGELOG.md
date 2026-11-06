@@ -1,5 +1,17 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-06] [DB] Reliability hardening
+- **Pool**: `statement_timeout=15000`, `idle_in_transaction_session_timeout=30000` in `backend/src/database.ts`.
+- **Migrations no longer run at boot**: `runSchemaMigrations` moved to `backend/src/database-migrations.ts`; run `npm run migrate:schema` as a pre-deploy step (advisory-locked, no statement timeout). `dev`/`start:dev` run it first; `start`/`start:prod` do not.
+- **applicants.service**: document-column whitelist (`APPLICATION_DOC_COLUMNS`); `replaceApplicantDocument` and `saveApplicantDocuments` retry on 40P01/40001 via `utils/pgRetry.ts`.
+- **SQL**: `target_position` no longer dropped (expand/contract); `current_stage` index is `CONCURRENTLY` (run with `psql -f`, not in a transaction); boolean indexes are partial (`WHERE ... = TRUE`); `activity_logs.log_id` is BigInt (migration: `activity_logs_bigint_migration.sql`).
+
+## [2026-11-06] [Architecture] Audit quick wins + modularization
+- **CI**: root `npm run ci` = `lint` + `typecheck` (backend ESLint `lint:check`, frontend oxlint, both `tsc --noEmit`). Backend ESLint now enforces `import/no-cycle` and `eslint-plugin-boundaries` (routes may not import routes; controllers/services may not import routes/controllers). Pre-existing type-safety/prettier lint debt was demoted to warnings.
+- **Backend**: auth endpoints (`/login`, `/reclass-login`, `/reclass-register`, `/forgot-password`, `/reset-password`, `/sso-login`, `/api/register-hr`) moved to `backend/src/features/auth/`; reclassification endpoints moved to `backend/src/features/reclass/`; address SQL moved to `backend/src/address/address.service.ts`. URLs are unchanged. Feature routers are mounted before `applicantsRouter` so `GET /reclass-positions-qs` is no longer shadowed by `GET /:id`.
+- **Frontend**: `ApplicationModal.tsx` steps C1-C10 extracted to `frontend/src/features/application/components/*Step.tsx`; address cascade and progress/validation logic extracted to `features/application/hooks/`. Steps receive parent state via a typed `ctx` prop.
+- **Docs**: guidelines consolidated into root `AGENTS.md` (`.agents/agents.md` now points to it).
+
 ## [2026-11-06] [Reclass] Incumbent Plantilla Registration: `initial_assessment IS NOT NULL` & `f_pos = 'FILLED'` Validation
 - **Validation Criteria Updated (`backend/src/applicants/applicants.service.ts`)**:
   - In `verifyReclassItemNumber`, `registerReclassAccount`, and `verifyPlantillaItem`, updated the validation query and checks against `gmis_gc_items` to enforce:

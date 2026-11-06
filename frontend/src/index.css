@@ -3,6 +3,7 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
   
   /* Brand/Nav Color (Navy from landing page) */
   --color-brand-50: #EBF1F7;
@@ -39,6 +40,51 @@
   --color-accent-700: #B37700;
   --color-accent-800: #8C5D00;
   --color-accent-900: #664400;
+
+  /* Semantic Status Colors from insighted-tokens.json */
+  --color-success-50: #E2F3EB;
+  --color-success-100: #B6E8D0;
+  --color-success-200: #8BDEB5;
+  --color-success-300: #5FD39A;
+  --color-success-400: #4CB683;
+  --color-success-500: #3A9A6D;
+  --color-success-600: #277D56;
+  --color-success-700: #14603F;
+  --color-success-800: #0F4D33;
+  --color-success-900: #0A3A26;
+
+  --color-warning-50: #FDF0D8;
+  --color-warning-100: #F9DCAB;
+  --color-warning-200: #F6C97F;
+  --color-warning-300: #F2B552;
+  --color-warning-400: #D89D3F;
+  --color-warning-500: #BE862C;
+  --color-warning-600: #A46E18;
+  --color-warning-700: #8A5605;
+  --color-warning-800: #6D4304;
+  --color-warning-900: #4F3003;
+
+  --color-danger-50: #FBE6E9;
+  --color-danger-100: #FCC2C9;
+  --color-danger-200: #FE9EAA;
+  --color-danger-300: #FF7A8A;
+  --color-danger-400: #F1596C;
+  --color-danger-500: #E2394D;
+  --color-danger-600: #D4182F;
+  --color-danger-700: #9B1022;
+  --color-danger-800: #7D0D1C;
+  --color-danger-900: #5E0A15;
+
+  --color-info-50: #D3E1F0;
+  --color-info-100: #B1C9E2;
+  --color-info-200: #8FB0D3;
+  --color-info-300: #4D8FD1;
+  --color-info-400: #347AC0;
+  --color-info-500: #1B64AE;
+  --color-info-600: #0F4C8A;
+  --color-info-700: #0B3868;
+  --color-info-800: #092E58;
+  --color-info-900: #05233F;
 }
 
 body {

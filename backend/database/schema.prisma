@@ -11,7 +11,7 @@ datasource db {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model activity_logs {
-  log_id        Int       @id @default(autoincrement())
+  log_id        BigInt    @id @default(autoincrement())
   user_uid      String?
   user_name     String?
   role          String?
@@ -4120,6 +4120,7 @@ model reclass_gc {
   school_name               String?   @db.VarChar(255)
   qs_status                 String?   @db.VarChar(100)
   stage_of_reclassification String?   @default("UPDATING OF DOCUMENTS") @db.VarChar(100)
+  current_stage             String?   @default("UPDATING_DOCUMENTS") @db.VarChar(50)
   desired_position          String?   @db.VarChar(255)
   reclass_position          String?   @db.VarChar(255)
   new_item_no               String?   @db.VarChar(150)
@@ -4136,6 +4137,7 @@ model reclass_gc {
   @@index([region])
   @@index([division])
   @@index([school_id])
+  @@index([current_stage])
 }
 
 model gmis_gc_items {

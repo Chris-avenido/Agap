@@ -1,0 +1,33 @@
+{
+  "devCommands": [
+    "npm run dev:raw"
+  ],
+  "frontendDir": "frontend",
+  "backendDir": "backend",
+  "tsconfigDirs": [
+    "frontend",
+    "backend"
+  ],
+  "linter": "oxlint",
+  "packageManager": "npm",
+  "playwright": false,
+  "has": {
+    "vite": true,
+    "react": true,
+    "react19": true,
+    "express": true,
+    "drizzle": false,
+    "pg": true,
+    "pino": false,
+    "tanstackQuery": false,
+    "eslint": true,
+    "oxlint": true,
+    "typescript": true,
+    "vitest": false,
+    "playwright": false
+  },
+  "notes": [
+    "vitest not found: the logger test template was not installed",
+    "root dev already starts the backend: the runner wraps the original script unchanged"
+  ]
+}

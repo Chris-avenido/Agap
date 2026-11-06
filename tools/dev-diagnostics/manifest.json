@@ -1,0 +1,16 @@
+{
+  "files": {
+    "frontend/src/devtools/sanitize.ts": "3a945feb555319da405b18a6f1b9e316134b101d3d8a61f13d57e073874aa131",
+    "frontend/src/devtools/dev-logger.ts": "8e28dd7676c1c34875e239b862912477a8adb5a861f6e0eb84df9d3177cce108",
+    "frontend/src/devtools/vite-plugin-dev-log-sink.ts": "4e6b44cecfa1403ac8fb7bd46390ee7b07e458c6d239736baca9c2b1134e6596",
+    "frontend/src/devtools/DevErrorBoundary.tsx": "de901d9de75699c9e79a1b3934bb3a37a5fc1c46949ed2a02b1d3fa8475ccd8f",
+    "frontend/src/devtools/DevProfiler.tsx": "9ba8ff69afc0e4e41e30b4d8f297992936358a1b6dd76b52f90799063c09d2b8",
+    "backend/src/devtools/sanitize.ts": "3a945feb555319da405b18a6f1b9e316134b101d3d8a61f13d57e073874aa131",
+    "backend/src/devtools/dev-diagnostics.ts": "a54da3c0863a191cedf66fce7c76f12121671a52d8d275565ce28c32a90e9600",
+    "backend/src/devtools/express-dev-error-middleware.ts": "6bed34362a93c0617330fbb395808a95bbadd12c9aae6d1ed70b41ec8eed099c",
+    "backend/src/devtools/pg-pool-instrument.ts": "8e5b695390877ca71e810b6d6797cc03fde200d41bac1c79b4cb64b053d144c7",
+    "tools/dev-diagnostics/dev-runner.mjs": "605d3a78ed89ec890554bc2f2ce27406355ba5cdc397ec06872f53e0212adb58",
+    "tools/dev-diagnostics/summarize-logs.mjs": "249011439ecac8753a76adc3a0ade5977387448a1b3a340c9e4d2585faaf4494",
+    "tools/dev-diagnostics/stack.json": "8db8e687298926f3a5dd35bf553c60af1af1dffc1b217519441ff3f6d76ca5db"
+  }
+}

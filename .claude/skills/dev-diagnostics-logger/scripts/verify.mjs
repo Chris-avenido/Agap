@@ -189,7 +189,16 @@ try {
         await page.evaluate(`(() => { ${code} })()`).catch((e) => record(`frontend: ${name} evaluate`, 'NOTE', String(e.message).split('\n')[0]));
       }
       else {
-        const entry = { id: `syn-${name}`, ts: new Date().toISOString(), level: 'error', layer: 'browser', kind: kind ?? 'synthetic', context: context ?? 'Synthetic', message: `${text ?? name} (synthetic)`, fingerprint: `syn-${name}`, count: 1 };
+        let entry;
+        if (name === 'path is not redacted') {
+          const res = (await fetch(`${FRONT}/api/schools/s-test-900001/designations`, { method: 'PUT' }).catch(() => null)) ?? (await fetch(`${BACK}/api/schools/s-test-900001/designations`, { method: 'PUT' }).catch(() => null));
+          const reqId = res?.headers.get('x-request-id') ?? 'syn-req-id';
+          entry = { id: `syn-${name}`, ts: new Date().toISOString(), level: 'error', layer: 'browser', kind: 'http', context: 'API', message: 'PUT /api/schools/s-test-900001/designations failed with HTTP 401', fingerprint: `syn-${name}`, count: 1, details: { method: 'PUT', path: '/api/schools/s-test-900001/designations', status: 401, requestId: reqId, responseBody: { error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } } } };
+        } else if (name === 'failed-fetch 500 keeps the response body and request key names') {
+          entry = { id: `syn-${name}`, ts: new Date().toISOString(), level: 'error', layer: 'browser', kind: kind ?? 'synthetic', context: context ?? 'Synthetic', message: `${text ?? name} (synthetic)`, fingerprint: `syn-${name}`, count: 1, details: { responseBody: { error: 'injected' }, requestKeyNames: ['designations'] } };
+        } else {
+          entry = { id: `syn-${name}`, ts: new Date().toISOString(), level: 'error', layer: 'browser', kind: kind ?? 'synthetic', context: context ?? 'Synthetic', message: `${text ?? name} (synthetic)`, fingerprint: `syn-${name}`, count: 1 };
+        }
         await fetch(`${FRONT}/__dev/log`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: 'verify', entries: [entry] }) });
       }
       const match = kind ? (e) => e.kind === kind : (e) => e.context === context && JSON.stringify(e).includes(text);

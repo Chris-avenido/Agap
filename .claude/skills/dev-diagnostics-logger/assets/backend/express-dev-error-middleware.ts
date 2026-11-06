@@ -108,4 +108,7 @@ export function registerDevFaultRoutes(app: Application, deps: { pool?: Pool } =
     }
     res.json({ ok: true });
   });
+  app.put('/api/schools/:id/designations', localOnly, (_req, res) => {
+    res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Authentication is required.' } });
+  });
 }

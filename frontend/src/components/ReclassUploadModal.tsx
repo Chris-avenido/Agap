@@ -182,6 +182,13 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
     }
   }, [isOpen, applicantId]);
 
+  const activeRequirements = useMemo(() => {
+    if (selectedDocumentKeys && selectedDocumentKeys.length > 0) {
+      return RECLASS_REQUIREMENTS.filter((req) => selectedDocumentKeys.includes(req.key));
+    }
+    return RECLASS_REQUIREMENTS;
+  }, [selectedDocumentKeys]);
+
   if (!isOpen) return null;
 
   const uploadedMap: Record<string, UploadedReclassDoc> = {};
@@ -194,13 +201,6 @@ export const ReclassUploadModal: React.FC<ReclassUploadModalProps> = ({
       uploadedMap['letter_of_intent'] = doc;
     }
   });
-
-  const activeRequirements = useMemo(() => {
-    if (selectedDocumentKeys && selectedDocumentKeys.length > 0) {
-      return RECLASS_REQUIREMENTS.filter((req) => selectedDocumentKeys.includes(req.key));
-    }
-    return RECLASS_REQUIREMENTS;
-  }, [selectedDocumentKeys]);
 
   const mandatoryRequirements = activeRequirements.filter((req) => req.required);
   const totalMandatory = mandatoryRequirements.length;
