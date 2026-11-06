@@ -2140,6 +2140,28 @@ class ApplicantsServiceClass {
         incumbent?.indicative_salary_grade ||
         reclassApp?.indicative_salary_grade ||
         null,
+      indicative_reclassification: initialPosition || incumbent?.initial_assessment || indicativePosition || null,
+      hrmo_assessment_result: incumbent?.qs_eval_result || incumbent?.qs_status || 'PENDING QS EVALUATION',
+      hrmo_updated_at: incumbent?.updated_at || null,
+      ro_endorsement_status: (stageOfReclass || '').toUpperCase().includes('DBM')
+        ? 'Endorsed to DBM RO'
+        : ((stageOfReclass || '').toUpperCase().includes('RO') || (stageOfReclass || '').toUpperCase().includes('REGIONAL'))
+          ? 'Endorsed to Regional Office'
+          : 'Pending Regional Office Endorsement',
+      is_endorsed_to_ro: Boolean(
+        stageOfReclass &&
+        (stageOfReclass.includes('RO') || stageOfReclass.includes('REGIONAL') || stageOfReclass.includes('DBM') || stageOfReclass === 'APPOINTMENT' || stageOfReclass === 'RECLASS PROPER' || stageOfReclass === 'APPROVED')
+      ),
+      is_endorsed_to_dbm: Boolean(
+        stageOfReclass &&
+        (stageOfReclass.includes('DBM') || stageOfReclass === 'APPOINTMENT' || stageOfReclass === 'RECLASS PROPER' || stageOfReclass === 'APPROVED')
+      ),
+      nosca_serial_no: incumbent?.nosca_serial_no || null,
+      is_reclass_successful: Boolean(
+        incumbent?.nosca_serial_no ||
+        (incumbent?.new_item_no && String(incumbent.new_item_no).trim() !== '') ||
+        (stageOfReclass && (stageOfReclass === 'APPOINTMENT' || stageOfReclass === 'RECLASS PROPER' || stageOfReclass === 'APPROVED'))
+      ),
       update_application:
         (() => {
           const raw = incumbent?.update_application !== undefined ? incumbent?.update_application : reclassApp?.update_application;
@@ -2556,107 +2578,7 @@ class ApplicantsServiceClass {
       };
     }
 
-    if (category === 'new') {
-      // 1. New Reclassification Application:
-      // The Plantilla Item Number should exist in reclass_gc where:
-      // first_name is empty or null, last_name is empty or null, and email is empty or null
-      const reclassRes = await pool.query(
-        `SELECT r.*
-         FROM reclass_gc r
-         WHERE (UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM($1))
-            OR UPPER(TRIM(COALESCE(r.new_item_no, ''))) = UPPER(TRIM($1)))
-           AND (r.first_name IS NULL OR TRIM(r.first_name) = '')
-           AND (r.last_name IS NULL OR TRIM(r.last_name) = '')
-           AND (r.email IS NULL OR TRIM(r.email) = '')
-         LIMIT 1`,
-        [normalized],
-      );
-
-      if (reclassRes.rows.length === 0) {
-        // Check if item exists in reclass_gc but has already registered credentials or assigned personnel
-        const existingAny = await pool.query(
-          `SELECT r.*
-           FROM reclass_gc r
-           WHERE UPPER(TRIM(COALESCE(r.item_no, ''))) = UPPER(TRIM($1))
-              OR UPPER(TRIM(COALESCE(r.new_item_no, ''))) = UPPER(TRIM($1))
-           LIMIT 1`,
-          [normalized],
-        );
-
-        if (existingAny.rows.length > 0) {
-          const row = existingAny.rows[0];
-          const hasEmail = Boolean(row.email && row.email.trim());
-          const hasName = Boolean(
-            (row.first_name && row.first_name.trim()) ||
-            (row.last_name && row.last_name.trim()),
-          );
-          if (hasEmail) {
-            return {
-              status: 'already_registered',
-              message: 'This Plantilla Item Number is already registered. Please sign in.',
-            };
-          }
-          if (hasName) {
-            return {
-              status: 'incumbent_record',
-              message: 'This Plantilla Item Number belongs to an existing GMIS incumbent record. Please proceed to Incumbent Plantilla Registration.',
-            };
-          }
-        }
-
-        return {
-          status: 'not_found',
-          message: 'No records found',
-        };
-      }
-
-      const reclassItem = reclassRes.rows[0];
-
-      // Check if already registered in applicants table
-      const appRes = await pool.query(
-        `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
-         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
-         LIMIT 1`,
-        [normalized],
-      );
-
-      if (appRes.rows.length > 0) {
-        const appRow = appRes.rows[0];
-        const hasRealEmail =
-          (appRow.email && appRow.email.trim()) ||
-          (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
-        const hasPassword = appRow.password_hash || appRow.passcode_hash;
-
-        if (hasRealEmail && hasPassword) {
-          return {
-            status: 'already_registered',
-            message: 'This Plantilla Item Number is already registered. Please sign in.',
-          };
-        }
-      }
-
-      return {
-        status: 'valid',
-        data: {
-          item_number: (reclassItem.item_no || normalized).toUpperCase(),
-          current_position: (reclassItem.current_position || 'GUIDANCE COUNSELOR').toUpperCase(),
-          region: (reclassItem.region || '').toUpperCase(),
-          division: (reclassItem.division || '').toUpperCase(),
-          school_name: (reclassItem.school_name || '').toUpperCase(),
-          first_name: (reclassItem.first_name || '').trim().toUpperCase(),
-          last_name: (reclassItem.last_name || '').trim().toUpperCase(),
-          email: '',
-          mobile_number: '',
-          education: (reclassItem.education || '').toUpperCase(),
-          years_experience: reclassItem.years_experience !== undefined && reclassItem.years_experience !== null ? String(reclassItem.years_experience) : '',
-          hours_of_training: reclassItem.hours_of_training !== undefined && reclassItem.hours_of_training !== null ? String(reclassItem.hours_of_training) : '',
-          eligibility: (reclassItem.eligibility || '').toUpperCase(),
-        },
-      };
-    }
-
-    // Incumbent GMIS Plantilla Record:
-    // 1. Verify existence in gmis_gc_items: If not found in gmis_gc_items -> No records found
+    // 1. Verify existence in gmis_gc_items
     const gmisRes = await pool.query(
       `SELECT * FROM gmis_gc_items 
        WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
@@ -2668,36 +2590,70 @@ class ApplicantsServiceClass {
     if (gmisRes.rows.length === 0) {
       return {
         status: 'not_found',
-        message: 'No records found.',
+        message: 'No records found for this Plantilla Item Number in GMIS.',
       };
     }
 
     const gmisItem = gmisRes.rows[0];
 
-    // Validation: Only filled positions (f_pos = 'FILLED') and non-null initial assessment are eligible for Incumbent Plantilla Registration
+    // Strict Validation: Only filled guidance counselor items with an existing indicative reclassification are allowed to register
     const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
-    const initialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
-    const hasInitialAssessment = Boolean(
-      initialAssessment &&
-      initialAssessment.toUpperCase() !== 'NULL' &&
-      initialAssessment.toUpperCase() !== 'N/A'
-    );
-
     if (fPos !== 'FILLED') {
       return {
         status: 'invalid',
-        message: 'This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration.',
+        message: 'Registration is restricted to filled guidance counselor positions only. This plantilla item is currently unfilled/vacant.',
       };
     }
+
+    const posTitle = String(gmisItem.pos_dsc || gmisItem.current_position || '').trim().toUpperCase();
+    if (!posTitle.includes('GUIDANCE')) {
+      return {
+        status: 'invalid',
+        message: 'Registration is restricted to Guidance Counselor plantilla positions only.',
+      };
+    }
+
+    const rawInitialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
+    const hasInitialAssessment = Boolean(
+      rawInitialAssessment &&
+      rawInitialAssessment.toUpperCase() !== 'NULL' &&
+      rawInitialAssessment.toUpperCase() !== 'N/A' &&
+      rawInitialAssessment.toUpperCase() !== '#N/A' &&
+      rawInitialAssessment.toUpperCase() !== 'UNASSIGNED' &&
+      rawInitialAssessment.toUpperCase() !== '—'
+    );
 
     if (!hasInitialAssessment) {
       return {
         status: 'invalid',
-        message: 'This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration.',
+        message: 'Registration is restricted to guidance counselor items with an existing indicative reclassification. This plantilla item has no indicative reclassification on record.',
       };
     }
 
-    // 2. If existing Plantilla Item Number in gmis_gc_items, register / find in reclass_gc
+    // Check if already registered in applicants table
+    const appRes = await pool.query(
+      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
+       WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+       LIMIT 1`,
+      [normalized],
+    );
+
+    if (appRes.rows.length > 0) {
+      const appRow = appRes.rows[0];
+      const hasRealEmail =
+        (appRow.email && appRow.email.trim()) ||
+        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+      const hasPassword = appRow.password_hash || appRow.passcode_hash;
+
+      if (hasRealEmail && hasPassword) {
+        return {
+          status: 'already_registered',
+          message: 'This Plantilla Item Number is already registered. Please sign in.',
+        };
+      }
+    }
+
+    // Check if already registered in reclass_gc
     const gcRes = await pool.query(
       `SELECT * FROM reclass_gc
        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
@@ -2707,6 +2663,13 @@ class ApplicantsServiceClass {
     );
 
     let inc = gcRes.rows[0] || null;
+
+    if (inc && inc.email && String(inc.email).trim() !== '') {
+      return {
+        status: 'already_registered',
+        message: 'This Plantilla Item Number is already registered. Please sign in.',
+      };
+    }
 
     if (!inc) {
       const insertGcRes = await pool.query(
@@ -2745,53 +2708,25 @@ class ApplicantsServiceClass {
       inc = insertGcRes.rows[0];
     }
 
-    // 2. Check if already registered with real credentials in reclass_gc and applicants
-    const hasReclassEmail = Boolean(inc.email && inc.email.trim());
-    if (hasReclassEmail) {
-      const appRes = await pool.query(
-        `SELECT id, password_hash, passcode_hash, email_address, email, registrant_type FROM applicants 
-         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
-         LIMIT 1`,
-        [normalized],
-      );
-
-      if (appRes.rows.length > 0) {
-        const appRow = appRes.rows[0];
-        const hasRealEmail =
-          (appRow.email && appRow.email.trim()) ||
-          (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
-        const hasPassword =
-          appRow.password_hash ||
-          appRow.passcode_hash ||
-          inc.password_hash ||
-          inc.passcode;
-
-        if (hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
-          return {
-            status: 'already_registered',
-            message: 'This Plantilla Item Number is already registered. Please sign in.',
-          };
-        }
-      } else if (inc.password_hash || inc.passcode) {
-        return {
-          status: 'already_registered',
-          message: 'This Plantilla Item Number is already registered. Please sign in.',
-        };
-      }
-    }
-
     return {
       status: 'valid',
       data: {
-        item_number: inc.item_no || normalized,
-        current_position: inc.current_position || 'Guidance Counselor',
-        region: inc.region || '',
-        division: inc.division || '',
-        school_name: inc.school_name || '',
-        first_name: (inc.first_name || '').trim(),
-        last_name: (inc.last_name || '').trim(),
-        email: inc.email || '',
+        item_number: (inc.item_no || normalized).toUpperCase(),
+        current_position: (inc.current_position || gmisItem.pos_dsc || 'GUIDANCE COUNSELOR').toUpperCase(),
+        region: (inc.region || gmisItem.region || '').toUpperCase(),
+        division: (inc.division || gmisItem.division || '').toUpperCase(),
+        school_name: (inc.school_name || gmisItem.school_name || '').toUpperCase(),
+        school_id: inc.school_id || gmisItem.school_id || '',
+        first_name: (inc.first_name || gmisItem.first_name || '').trim().toUpperCase(),
+        last_name: (inc.last_name || gmisItem.last_name || '').trim().toUpperCase(),
+        email: (inc.email || gmisItem.email || '').trim().toLowerCase(),
         mobile_number: inc.mobile_number || '',
+        initial_assessment: rawInitialAssessment,
+        indicative_reclassification: rawInitialAssessment,
+        education: (inc.education || '').toUpperCase(),
+        years_experience: inc.years_experience !== undefined && inc.years_experience !== null ? String(inc.years_experience) : '',
+        hours_of_training: inc.hours_of_training !== undefined && inc.hours_of_training !== null ? String(inc.hours_of_training) : '',
+        eligibility: (inc.eligibility || '').toUpperCase(),
       },
     };
   }
@@ -2835,125 +2770,109 @@ class ApplicantsServiceClass {
       throw new Error('Passcode must be exactly 6 numeric digits.');
     }
 
-    // 1. Verify against GMIS records in reclass_gc or gmis_gc_items
+    // 1. Verify against GMIS records in gmis_gc_items
     let inc: any = null;
 
-    if (isNewApp) {
-      // For New Reclassification Application:
-      // Must exist in reclass_gc where first_name is empty or null, last_name is empty or null, and email is empty or null
-      const reclassRes = await pool.query(
-        `SELECT *
-         FROM reclass_gc
-         WHERE (UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
-            OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1)))
-           AND (first_name IS NULL OR TRIM(first_name) = '')
-           AND (last_name IS NULL OR TRIM(last_name) = '')
-           AND (email IS NULL OR TRIM(email) = '')
-         LIMIT 1`,
-        [normalizedItemNo],
+    // Strict validation: Only filled guidance counselor items with an existing indicative reclassification are allowed to register
+    const gmisRes = await pool.query(
+      `SELECT * FROM gmis_gc_items
+       WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
+       ORDER BY id ASC
+       LIMIT 1`,
+      [normalizedItemNo],
+    );
+
+    if (gmisRes.rows.length === 0) {
+      const err: any = new Error('No records found for this Plantilla Item Number in GMIS.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const gmisItem = gmisRes.rows[0];
+
+    const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
+    if (fPos !== 'FILLED') {
+      const err: any = new Error(
+        'Registration is restricted to filled guidance counselor positions only. This plantilla item is currently unfilled/vacant.',
       );
+      err.statusCode = 400;
+      throw err;
+    }
 
-      if (reclassRes.rows.length === 0) {
-        const err: any = new Error(
-          'No records found'
-        );
-        err.statusCode = 404;
-        throw err;
-      }
-
-      inc = reclassRes.rows[0];
-    } else {
-      // For Incumbent GMIS Plantilla Record:
-      // 1. Verify existence in gmis_gc_items
-      const gmisRes = await pool.query(
-        `SELECT * FROM gmis_gc_items
-         WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
-         ORDER BY id ASC
-         LIMIT 1`,
-        [normalizedItemNo],
+    const posTitle = String(gmisItem.pos_dsc || gmisItem.current_position || '').trim().toUpperCase();
+    if (!posTitle.includes('GUIDANCE')) {
+      const err: any = new Error(
+        'Registration is restricted to Guidance Counselor plantilla positions only.',
       );
+      err.statusCode = 400;
+      throw err;
+    }
 
-      if (gmisRes.rows.length === 0) {
-        const err: any = new Error('No records found.');
-        err.statusCode = 404;
-        throw err;
-      }
+    const rawInitialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
+    const hasInitialAssessment = Boolean(
+      rawInitialAssessment &&
+      rawInitialAssessment.toUpperCase() !== 'NULL' &&
+      rawInitialAssessment.toUpperCase() !== 'N/A' &&
+      rawInitialAssessment.toUpperCase() !== '#N/A' &&
+      rawInitialAssessment.toUpperCase() !== 'UNASSIGNED' &&
+      rawInitialAssessment.toUpperCase() !== '—'
+    );
 
-      const gmisItem = gmisRes.rows[0];
-
-      // Validation: Only filled positions (f_pos = 'FILLED') and non-null initial assessment are eligible for Incumbent Plantilla Registration
-      const fPos = String(gmisItem.f_pos || '').trim().toUpperCase();
-      const initialAssessment = gmisItem.initial_assessment ? String(gmisItem.initial_assessment).trim() : '';
-      const hasInitialAssessment = Boolean(
-        initialAssessment &&
-        initialAssessment.toUpperCase() !== 'NULL' &&
-        initialAssessment.toUpperCase() !== 'N/A'
+    if (!hasInitialAssessment) {
+      const err: any = new Error(
+        'Registration is restricted to guidance counselor items with an existing indicative reclassification. This plantilla item has no indicative reclassification on record.',
       );
+      err.statusCode = 400;
+      throw err;
+    }
 
-      if (fPos !== 'FILLED') {
-        const err: any = new Error(
-          'This Plantilla Item Number is currently unfilled. Only filled positions can be registered for Incumbent Plantilla Registration.',
-        );
-        err.statusCode = 400;
-        throw err;
-      }
+    // 2. Check if already in reclass_gc
+    const gcRes = await pool.query(
+      `SELECT * FROM reclass_gc
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
+       LIMIT 1`,
+      [normalizedItemNo],
+    );
 
-      if (!hasInitialAssessment) {
-        const err: any = new Error(
-          'This Plantilla Item Number has no initial assessment. Only filled positions with an initial assessment can be registered for Incumbent Plantilla Registration.',
-        );
-        err.statusCode = 400;
-        throw err;
-      }
+    inc = gcRes.rows[0] || null;
 
-      // 2. Check if already in reclass_gc
-      const gcRes = await pool.query(
-        `SELECT * FROM reclass_gc
-         WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
-            OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
-         LIMIT 1`,
-        [normalizedItemNo],
+    if (!inc) {
+      // Register in the table of reclass_gc
+      const insertGcRes = await pool.query(
+        `INSERT INTO reclass_gc (
+          item_no,
+          current_position,
+          first_name,
+          last_name,
+          region,
+          division,
+          school_id,
+          school_name,
+          stage_of_reclassification,
+          desired_position,
+          reclass_position,
+          gmis_id,
+          is_test,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', $9, $10, $11, false, NOW(), NOW())
+        RETURNING *`,
+        [
+          normalizedItemNo,
+          gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
+          (cleanFirstName || gmisItem.first_name || '').trim(),
+          (cleanLastName || gmisItem.last_name || '').trim(),
+          gmisItem.region || null,
+          gmisItem.division || null,
+          gmisItem.school_id || null,
+          gmisItem.school_name || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.initial_assessment || null,
+          gmisItem.id || null,
+        ],
       );
-
-      inc = gcRes.rows[0] || null;
-
-      if (!inc) {
-        // Register in the table of reclass_gc
-        const insertGcRes = await pool.query(
-          `INSERT INTO reclass_gc (
-            item_no,
-            current_position,
-            first_name,
-            last_name,
-            region,
-            division,
-            school_id,
-            school_name,
-            stage_of_reclassification,
-            desired_position,
-            reclass_position,
-            gmis_id,
-            is_test,
-            created_at,
-            updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UPDATING OF DOCUMENTS', $9, $10, $11, false, NOW(), NOW())
-          RETURNING *`,
-          [
-            normalizedItemNo,
-            gmisItem.pos_dsc || gmisItem.current_position || 'Guidance Counselor',
-            (cleanFirstName || gmisItem.first_name || '').trim(),
-            (cleanLastName || gmisItem.last_name || '').trim(),
-            gmisItem.region || null,
-            gmisItem.division || null,
-            gmisItem.school_id || null,
-            gmisItem.school_name || null,
-            gmisItem.initial_assessment || null,
-            gmisItem.initial_assessment || null,
-            gmisItem.id || null,
-          ],
-        );
-        inc = insertGcRes.rows[0];
-      }
+      inc = insertGcRes.rows[0];
     }
 
     const finalFirstName = isNewApp

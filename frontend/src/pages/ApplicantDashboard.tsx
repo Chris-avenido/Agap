@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark, HelpCircle, BookOpen, GraduationCap, Loader2 } from 'lucide-react';
+import { Briefcase, CheckCircle2, History, ArrowRight, ArrowLeft, Users, ChevronRight, Bookmark, Lock, Award, Upload, FileCheck, FileCheck2, Building2, Clock, Edit2, Check, X, Sparkles, MapPin, TrendingUp, AlertTriangle, AlertCircle, Calendar, FileText, Info, Send, Landmark, HelpCircle, BookOpen, GraduationCap, Loader2, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { calculateProfileProgress, parseProfileToState } from '../utils/profileProgress';
 import Swal from 'sweetalert2';
@@ -782,16 +782,8 @@ export default function ApplicantDashboard() {
                   reclassRes.data.update_application === true ||
                   reclassRes.data.update_application === false;
 
-                if (!isSCIV && isInitialNull) {
-                  setShowInitialPrompt(true);
-                  setInitialPromptType('apply');
-                  setReclassApplyStep('prompt');
-                } else if (hasInitialAssessment && !isUpdateAppAnswered) {
-                  setShowInitialPrompt(true);
-                  setInitialPromptType('update');
-                } else {
-                  setShowInitialPrompt(false);
-                }
+                // Read-only dashboard: do not prompt for re-application
+                setShowInitialPrompt(false);
               }
             }
           }
@@ -1596,8 +1588,8 @@ export default function ApplicantDashboard() {
                         </div>
                       </div>
 
-                      {/* Desired Position (Editable with Dropdown and Register Track) */}
-                      <div className={`border rounded-xl p-3.5 shadow-xs transition-all flex flex-col justify-between ${isEditingTargetPosition ? 'bg-sky-50/70 border-[#0284c7] ring-2 ring-[#0284c7]/20' : 'bg-white border-slate-200/90'}`}>
+                      {/* Desired Position (Editable with Dropdown and Register Track) - Hidden in read-only monitoring view */}
+                      <div style={{ display: 'none' }} className={`border rounded-xl p-3.5 shadow-xs transition-all flex flex-col justify-between ${isEditingTargetPosition ? 'bg-sky-50/70 border-[#0284c7] ring-2 ring-[#0284c7]/20' : 'bg-white border-slate-200/90'}`}>
                         <div>
                           <div className="flex items-start justify-between gap-1.5 mb-1.5">
                             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
@@ -1777,6 +1769,114 @@ export default function ApplicantDashboard() {
                           </p>
                         </div>
                         <div className="mt-1 min-h-[18px]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2b. Reclassification Monitoring Status Card (Read-Only) */}
+                  <div className="bg-white border-2 border-sky-500/30 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-sky-600/10 flex items-center justify-center text-sky-600">
+                          <Activity className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-extrabold text-[#022851] tracking-wider uppercase">
+                            Reclassification Monitoring Status
+                          </h3>
+                          <p className="text-[11px] text-gray-500">Official step-by-step stages, timestamps, and endorsement status</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 text-[#0284c7]">
+                        Read-Only Monitoring
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* 1. HRMO Assessment Result + Exact Timestamp */}
+                      <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">1. HRMO Assessment Result</p>
+                          <p className={`text-[15px] font-extrabold mt-1 ${isQsExcluded ? 'text-rose-700' : 'text-[#022851]'}`}>
+                            {reclassData.hrmo_assessment_result || qsStatus || (isAllDocReviewed ? 'Reviewed' : 'Pending Evaluation')}
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/80">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Updated by HRMO</p>
+                          <p className="text-[12px] font-semibold text-gray-700 font-mono mt-0.5">
+                            {reclassData.hrmo_updated_at || reclassData.updated_at
+                              ? new Date(reclassData.hrmo_updated_at || reclassData.updated_at).toLocaleString('en-US', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short'
+                                })
+                              : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 2. Regional Office Endorsement Status */}
+                      <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">2. Regional Office Endorsement</p>
+                          <p className="text-[15px] font-extrabold text-[#022851] mt-1">
+                            {reclassData.ro_endorsement_status || (isEndorsedToDbm ? 'Endorsed to DBM RO' : (isEndorsedToRo ? 'Endorsed to Regional Office' : 'Pending Endorsement'))}
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/80 flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                            isEndorsedToDbm
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : isEndorsedToRo
+                                ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                                : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {isEndorsedToDbm ? 'Endorsed to DBM RO' : (isEndorsedToRo ? 'Endorsed to RO' : 'RO Endorsement Pending')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. Final Success Status following NOSCA */}
+                      <div className={`border rounded-xl p-4 flex flex-col justify-between ${
+                        (isReclassProper || reclassData.nosca_serial_no || reclassData.is_reclass_successful)
+                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 ring-1 ring-emerald-400/30'
+                          : 'bg-slate-50/90 border-slate-200/90 text-slate-700'
+                      }`}>
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">3. Final NOSCA / Appointment</p>
+                            {(isReclassProper || reclassData.nosca_serial_no || reclassData.is_reclass_successful) && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-2xs">
+                                <Check className="w-2.5 h-2.5" /> Successful
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-[15px] font-extrabold mt-1 ${
+                            (isReclassProper || reclassData.nosca_serial_no || reclassData.is_reclass_successful)
+                              ? 'text-emerald-900'
+                              : 'text-gray-500'
+                          }`}>
+                            {(isReclassProper || reclassData.nosca_serial_no || reclassData.is_reclass_successful)
+                              ? 'Reclassification Successfully Appointed'
+                              : 'Awaiting DBM NOSCA Issuance'}
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/80 space-y-1 text-[11px]">
+                          {reclassData.nosca_serial_no ? (
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-gray-500 uppercase text-[10px]">NOSCA Serial:</span>
+                              <span className="font-mono font-black text-[#022851] bg-white px-1.5 py-0.5 rounded border border-slate-200">{reclassData.nosca_serial_no}</span>
+                            </div>
+                          ) : null}
+                          {newItemNo ? (
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-gray-500 uppercase text-[10px]">New Item No:</span>
+                              <span className="font-mono font-black text-[#022851] bg-white px-1.5 py-0.5 rounded border border-slate-200">{newItemNo}</span>
+                            </div>
+                          ) : null}
+                          {!reclassData.nosca_serial_no && !newItemNo && (
+                            <p className="text-[11px] text-gray-400 italic">NOSCA serial and new item will display upon DBM RO issuance.</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2760,19 +2860,13 @@ export default function ApplicantDashboard() {
               incumbentRecord?.update_application === true ||
               incumbentRecord?.update_application === false;
 
-            if (!isSCIV && isInitialNull) {
-              setShowInitialPrompt(true);
-              setInitialPromptType('apply');
-              setReclassApplyStep('prompt');
-            } else if (hasInitialAssessment && !isUpdateAppAnswered) {
-              setShowInitialPrompt(true);
-              setInitialPromptType('update');
-            }
+            // Read-only dashboard: do not prompt for re-application
+            setShowInitialPrompt(false);
           }}
         />
       )}
 
-      {isReclassUploadModalOpen && (
+      {false && isReclassUploadModalOpen && (
         <ReclassUploadModal
           isOpen={isReclassUploadModalOpen}
           applicantId={profile?.id || JSON.parse(localStorage.getItem('session_data') || '{}').id}
@@ -2793,8 +2887,8 @@ export default function ApplicantDashboard() {
         />
       )}
 
-      {/* "Do you want to apply for reclassification?" Prompt & Application Modal */}
-      {showInitialPrompt && (
+      {/* "Do you want to apply for reclassification?" Prompt & Application Modal - Hidden in read-only view */}
+      {false && showInitialPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
@@ -3249,8 +3343,8 @@ export default function ApplicantDashboard() {
         </div>
       )}
 
-      {/* Reclass Update Modal (Register or Not, Target Position & QS) */}
-      {isUpdateModalOpen && (
+      {/* Reclass Update Modal (Register or Not, Target Position & QS) - Hidden in read-only view */}
+      {false && isUpdateModalOpen && (
         <ReclassUpdateModal
           isOpen={isUpdateModalOpen}
           onClose={() => setIsUpdateModalOpen(false)}
