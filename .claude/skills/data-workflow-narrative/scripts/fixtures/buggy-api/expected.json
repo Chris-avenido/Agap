@@ -1,0 +1,10 @@
+[
+  { "rule": "R01", "endpoint": "POST /api/schools" },
+  { "rule": "R02", "endpoint": "POST /api/staff" },
+  { "rule": "R03", "endpoint": "POST /api/audit" },
+  { "rule": "R04", "endpoint": "POST /api/staff/draft" },
+  { "rule": "R05", "endpoint": "POST /api/schools/quick" },
+  { "rule": "R06", "endpoint": "DELETE /api/staff/:id" },
+  { "rule": "R07", "endpoint": "POST /api/schools/with-staff" },
+  { "rule": "R08", "endpoint": "POST /api/events" }
+]

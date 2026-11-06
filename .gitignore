@@ -17,3 +17,6 @@ __pycache__/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Dependencies
+node_modules/

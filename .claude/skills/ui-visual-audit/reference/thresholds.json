@@ -1,0 +1,22 @@
+{
+  "minBodyFontPx": 16,
+  "minAnyFontPx": 12,
+  "maxFontFamilies": 2,
+  "maxFontWeights": 3,
+  "lineHeightBody": [1.4, 1.6],
+  "lineLengthChars": [45, 75],
+  "contrastText": 4.5,
+  "contrastLargeText": 3.0,
+  "contrastUi": 3.0,
+  "spacingBasePx": 4,
+  "spacingScalePx": [0, 4, 8, 12, 16, 24, 32, 48, 64],
+  "maxDistinctRadii": 5,
+  "maxDistinctShadows": 5,
+  "maxDistinctColorsHardcoded": 20,
+  "minTargetPxAA": 24,
+  "minTargetPxRecommended": 44,
+  "transitionMsRange": [100, 500],
+  "maxFlashesPerSecond": 3,
+  "viewports": [375, 768, 1280],
+  "maxContentWidthPx": 1200
+}

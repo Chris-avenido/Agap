@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./**/.env.*)"],
+    "ask": [
+      "Bash(ssh:*)", "PowerShell(ssh:*)", "Bash(scp:*)", "PowerShell(scp:*)",
+      "Bash(psql:*)", "PowerShell(psql:*)", "Bash(pg_dump:*)", "Bash(pg_restore:*)",
+      "Bash(pm2 delete:*)", "PowerShell(pm2 delete:*)",
+      "Bash(*DROP *)", "PowerShell(*DROP *)", "Bash(*TRUNCATE *)", "PowerShell(*TRUNCATE *)",
+      "Bash(*FLUSH*)", "PowerShell(*FLUSH*)", "Bash(redis-cli:*)", "PowerShell(redis-cli:*)"
+    ]
+  }
+}

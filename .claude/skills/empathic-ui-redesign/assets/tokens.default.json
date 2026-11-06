@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "note": "Defaults, provisional. Override per project by creating design-tokens.json in the repo root, or ask the user for brand values. The primary brand color must visibly carry the navigation, header and primary actions so the brand is present in the chrome. Token files that still use surface.card work: the scripts treat card as an alias for panel."
+  },
+  "font": {
+    "family": "Plus Jakarta Sans",
+    "fallback": "system-ui, -apple-system, 'Segoe UI', sans-serif"
+  },
+  "type": {
+    "scale": [
+      12,
+      14,
+      16,
+      18,
+      24,
+      32
+    ],
+    "weights": [
+      400,
+      500,
+      600,
+      700
+    ]
+  },
+  "brand": {
+    "primary": "#1F4E8C",
+    "tint": "#EAF0F7"
+  },
+  "semantic": {
+    "critical": "#C62F3B",
+    "attention": "#F2B705",
+    "success": "#1E8E5A",
+    "interactive": "brand.primary"
+  },
+  "gray": {
+    "50": "#F5F7FA",
+    "100": "#EDF1F6",
+    "200": "#DDE3EC",
+    "300": "#C5CED9",
+    "400": "#9AA7B8",
+    "500": "#6B7A8F",
+    "600": "#4F5D70",
+    "700": "#3A4556",
+    "800": "#252E3B",
+    "900": "#151B25"
+  },
+  "surface": {
+    "light": {
+      "page": "#EAF0F7",
+      "panel": "#FFFFFF",
+      "raised": "#FFFFFF",
+      "selected": "#E1ECFA",
+      "text": "#151B25",
+      "mutedText": "#4F5D70",
+      "border": "#DDE3EC"
+    },
+    "dark": {
+      "page": "#0E1A2B",
+      "panel": "#142238",
+      "raised": "#1A2B45",
+      "selected": "#1B3358",
+      "text": "#EAF0F8",
+      "mutedText": "#9AA7B8",
+      "border": "#24344D"
+    }
+  },
+  "radius": {
+    "control": 8,
+    "panel": 14,
+    "table": 6
+  },
+  "contrastPairs": [
+    [
+      "light.text",
+      "light.panel",
+      4.5
+    ],
+    [
+      "light.mutedText",
+      "light.panel",
+      4.5
+    ],
+    [
+      "light.mutedText",
+      "light.page",
+      4.5
+    ],
+    [
+      "light.text",
+      "light.page",
+      4.5
+    ],
+    [
+      "dark.text",
+      "dark.panel",
+      4.5
+    ],
+    [
+      "dark.mutedText",
+      "dark.panel",
+      4.5
+    ],
+    [
+      "white",
+      "brand.primary",
+      4.5
+    ]
+  ],
+  "audit": {
+    "allowedHex": [
+      "#FFFFFF",
+      "#000000"
+    ]
+  },
+  "guidance": [
+    "When a project has its own logo or brand colors, derive brand, semantic.critical and semantic.attention from them.",
+    "Keep the primary color carrying most of the interface. Keep accent colors small, each with a single job.",
+    "Yellow-like colors are fills, indicators or chart colors with dark text on top. Never use them as text on white.",
+    "A project may rename or add brand keys. The scripts read whatever keys exist, following the same structure: font, brand, semantic, gray, surface, radius, contrastPairs, audit.",
+    "generatedScales is written by scripts/build-theme.mjs. Do not edit it by hand."
+  ]
+}

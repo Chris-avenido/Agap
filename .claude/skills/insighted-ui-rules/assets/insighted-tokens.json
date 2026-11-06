@@ -1,0 +1,169 @@
+{
+  "name": "InsightED official palette",
+  "version": "1.0.0",
+  "provenance": {
+    "exact": "brand, surface, text and accent colors were sampled from the approved screenshot",
+    "proposed": "status colors and all dark-mode values are proposals derived from the palette; confirm or change them with the owner",
+    "derived": "mantine.colors steps that are not anchored on a palette value are linear interpolations between anchors, needed only because Mantine requires 10 shades per color"
+  },
+  "light": {
+    "brand": { "primary": "#0F4C8A", "mid": "#8FB0D3", "pale": "#D3E1F0" },
+    "sidebar": {
+      "gradient": ["#0F4B88", "#0B3868", "#092E58"],
+      "activeOverlay": "rgba(255, 255, 255, 0.14)",
+      "activeMarker": "#FFC629",
+      "text": "#FFFFFF",
+      "textMuted": "#D3E1F0"
+    },
+    "surface": { "page": "#E8EFF7", "card": "#FFFFFF", "topbar": "#FFFFFF" },
+    "accentLine": { "left": "#D4182F", "right": "#FFC629" },
+    "text": { "heading": "#0F172A", "secondary": "#586679", "onPrimary": "#FFFFFF", "link": "#0F4C8A" },
+    "neutral": { "muted": "#CBD5E1" },
+    "status": {
+      "success": { "tint": "#E2F3EB", "text": "#14603F", "dot": "#14603F" },
+      "warning": { "tint": "#FDF0D8", "text": "#8A5605", "dot": "#8A5605" },
+      "danger": { "tint": "#FBE6E9", "text": "#9B1022", "dot": "#9B1022", "solid": "#D4182F", "onSolid": "#FFFFFF" },
+      "info": { "tint": "#D3E1F0", "text": "#0F4C8A", "dot": "#0F4C8A" }
+    }
+  },
+  "dark": {
+    "surface": { "page": "#0B1727", "card": "#11233A", "raised": "#172E4A" },
+    "border": "#24405F",
+    "text": { "primary": "#E8EFF7", "secondary": "#9DB0C6", "accent": "#8FB0D3" },
+    "primary": { "fill": "#1B64AE", "onFill": "#FFFFFF", "graphic": "#4D8FD1" },
+    "status": {
+      "success": { "text": "#5FD39A", "tintAlpha": 0.16 },
+      "warning": { "text": "#F2B552", "tintAlpha": 0.16 },
+      "danger": { "text": "#FF7A8A", "tintAlpha": 0.16 },
+      "info": { "text": "#8FB0D3", "tintAlpha": 0.16 }
+    },
+    "sidebar": "same gradient as light"
+  },
+  "mantine": {
+    "primaryColor": "brand",
+    "primaryShade": { "light": 7, "dark": 6 },
+    "colors": {
+      "brand": ["#E8EFF7", "#D3E1F0", "#B1C9E2", "#8FB0D3", "#4D8FD1", "#347AC0", "#1B64AE", "#0F4C8A", "#0B3868", "#092E58"],
+      "success": ["#E2F3EB", "#B6E8D0", "#8BDEB5", "#5FD39A", "#4CB683", "#3A9A6D", "#277D56", "#14603F", "#0F4D33", "#0A3A26"],
+      "warning": ["#FDF0D8", "#F9DCAB", "#F6C97F", "#F2B552", "#D89D3F", "#BE862C", "#A46E18", "#8A5605", "#6D4304", "#4F3003"],
+      "danger": ["#FBE6E9", "#FCC2C9", "#FE9EAA", "#FF7A8A", "#F1596C", "#E2394D", "#D4182F", "#9B1022", "#7D0D1C", "#5E0A15"]
+    },
+    "note": "info reuses the brand scale: tint = brand[1], text = brand[7]"
+  },
+  "font": {
+    "family": "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    "name": "Plus Jakarta Sans",
+    "also": ["Source Serif 4", "Public Sans", "IBM Plex Mono", "Inter"],
+    "roles": { "title": "Source Serif 4", "header": "Plus Jakarta Sans", "body": "Public Sans", "data": "IBM Plex Mono" },
+    "note": "Inter is allowed only for the legacy print/voucher views that already name it",
+    "weights": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700, "extrabold": 800 }
+  },
+  "typeScale": {
+    "body": { "size": "15px", "sizeMobile": "16px", "lineHeight": 1.55, "weight": 400 },
+    "small": { "size": "13px", "lineHeight": 1.45, "weight": 500 },
+    "h1": { "size": "32px", "lineHeight": 1.25, "weight": 800 },
+    "h2": { "size": "24px", "lineHeight": 1.3, "weight": 700 },
+    "h3": { "size": "20px", "lineHeight": 1.35, "weight": 700 },
+    "h4": { "size": "17px", "lineHeight": 1.4, "weight": 700 },
+    "h5": { "size": "15px", "lineHeight": 1.4, "weight": 700 },
+    "h6": { "size": "14px", "lineHeight": 1.4, "weight": 700 }
+  },
+  "radius": {
+    "minPx": 4,
+    "maxPx": 6,
+    "xs": "4px",
+    "sm": "4px",
+    "md": "6px",
+    "lg": "6px",
+    "xl": "6px",
+    "default": "md",
+    "nestedInner": "4px",
+    "nestedOuter": "6px",
+    "pill": "9999px",
+    "circle": "50%"
+  },
+  "shadows": {
+    "xs": "0 1px 2px rgba(15, 23, 42, 0.06)",
+    "sm": "0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08)",
+    "md": "0 2px 4px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.08)",
+    "lg": "0 4px 8px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.12)",
+    "xl": "0 8px 16px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(15, 23, 42, 0.16)",
+    "dark": {
+      "sm": "0 1px 3px rgba(11, 23, 39, 0.5)",
+      "md": "0 4px 12px rgba(11, 23, 39, 0.55)",
+      "lg": "0 8px 24px rgba(11, 23, 39, 0.6)"
+    }
+  },
+  "spacing": { "xs": "4px", "sm": "8px", "md": "16px", "lg": "24px", "xl": "32px" },
+  "breakpoints": { "xs": "576px", "sm": "768px", "md": "1024px", "lg": "1280px", "xl": "1536px" },
+  "layout": {
+    "topbarHeight": "56px",
+    "sidebarWidth": "248px",
+    "sidebarCollapsesBelow": "md",
+    "accentLineHeight": "3px",
+    "controlHeight": "40px",
+    "controlHeightMobile": "44px",
+    "tableRowPadding": "14px 16px",
+    "tableDivider": "1px solid neutral.muted (hairline)"
+  },
+  "motion": {
+    "maxDurationMs": 200,
+    "durations": { "fast": "120ms", "base": "160ms", "slow": "200ms" },
+    "easing": "cubic-bezier(0.2, 0, 0, 1)",
+    "forbidden": ["spring", "bounce", "elastic", "overshoot", "animation libraries"],
+    "spinnerException": "a continuous linear rotation named spin/rotate/loader may exceed 200ms"
+  },
+  "components": {
+    "floatingLabel": "FloatingLabelInput",
+    "errorSummary": "FormErrorSummary",
+    "confirmDestructive": "ConfirmDestructiveDialog",
+    "icon": "approved set Phosphor, weight duotone, set once via a global provider or shared wrapper"
+  },
+  "contrastPairs": [
+    { "id": "light.heading-on-page", "fg": "light.text.heading", "bg": "light.surface.page", "kind": "text" },
+    { "id": "light.heading-on-card", "fg": "light.text.heading", "bg": "light.surface.card", "kind": "text" },
+    { "id": "light.secondary-on-card", "fg": "light.text.secondary", "bg": "light.surface.card", "kind": "text" },
+    { "id": "light.secondary-on-page", "fg": "light.text.secondary", "bg": "light.surface.page", "kind": "text" },
+    { "id": "light.link-on-card", "fg": "light.text.link", "bg": "light.surface.card", "kind": "text" },
+    { "id": "light.link-on-page", "fg": "light.text.link", "bg": "light.surface.page", "kind": "text" },
+    { "id": "light.onPrimary-on-primary", "fg": "light.text.onPrimary", "bg": "light.brand.primary", "kind": "text" },
+    { "id": "light.sidebar-text-on-top", "fg": "light.sidebar.text", "bg": "light.sidebar.gradient.0", "kind": "text" },
+    { "id": "light.sidebar-text-on-mid", "fg": "light.sidebar.text", "bg": "light.sidebar.gradient.1", "kind": "text" },
+    { "id": "light.sidebar-text-on-bottom", "fg": "light.sidebar.text", "bg": "light.sidebar.gradient.2", "kind": "text" },
+    { "id": "light.sidebar-muted-on-mid", "fg": "light.sidebar.textMuted", "bg": "light.sidebar.gradient.1", "kind": "text" },
+    { "id": "light.sidebar-muted-on-top", "fg": "light.sidebar.textMuted", "bg": "light.sidebar.gradient.0", "kind": "text" },
+    { "id": "light.sidebar-active-text", "fg": "light.sidebar.text", "bg": { "color": "#FFFFFF", "alpha": 0.14, "over": "light.sidebar.gradient.0" }, "kind": "text" },
+    { "id": "light.success-text-on-tint", "fg": "light.status.success.text", "bg": "light.status.success.tint", "kind": "text" },
+    { "id": "light.warning-text-on-tint", "fg": "light.status.warning.text", "bg": "light.status.warning.tint", "kind": "text" },
+    { "id": "light.danger-text-on-tint", "fg": "light.status.danger.text", "bg": "light.status.danger.tint", "kind": "text" },
+    { "id": "light.info-text-on-tint", "fg": "light.status.info.text", "bg": "light.status.info.tint", "kind": "text" },
+    { "id": "light.onSolid-on-danger", "fg": "light.status.danger.onSolid", "bg": "light.status.danger.solid", "kind": "text" },
+    { "id": "light.primary-graphic-on-card", "fg": "light.brand.primary", "bg": "light.surface.card", "kind": "graphic" },
+    { "id": "light.primary-graphic-on-page", "fg": "light.brand.primary", "bg": "light.surface.page", "kind": "graphic" },
+    { "id": "light.success-dot-on-card", "fg": "light.status.success.dot", "bg": "light.surface.card", "kind": "graphic" },
+    { "id": "light.warning-dot-on-card", "fg": "light.status.warning.dot", "bg": "light.surface.card", "kind": "graphic" },
+    { "id": "light.danger-dot-on-card", "fg": "light.status.danger.dot", "bg": "light.surface.card", "kind": "graphic" },
+    { "id": "light.danger-solid-on-card", "fg": "light.status.danger.solid", "bg": "light.surface.card", "kind": "graphic" },
+    { "id": "light.active-marker-on-sidebar", "fg": "light.sidebar.activeMarker", "bg": "light.sidebar.gradient.1", "kind": "graphic" },
+    { "id": "light.mid-blue-on-card", "fg": "light.brand.mid", "bg": "light.surface.card", "kind": "decorative", "note": "second chart series: always pair with a legend or value label" },
+    { "id": "light.pale-blue-on-card", "fg": "light.brand.pale", "bg": "light.surface.card", "kind": "decorative", "note": "empty bars and third series: never the only carrier of meaning" },
+    { "id": "light.muted-on-card", "fg": "light.neutral.muted", "bg": "light.surface.card", "kind": "decorative", "note": "hairline dividers and disabled borders only" },
+    { "id": "light.accent-gold-on-card", "fg": "light.accentLine.right", "bg": "light.surface.card", "kind": "decorative", "note": "top accent line only" },
+    { "id": "dark.primary-on-page", "fg": "dark.text.primary", "bg": "dark.surface.page", "kind": "text" },
+    { "id": "dark.primary-on-card", "fg": "dark.text.primary", "bg": "dark.surface.card", "kind": "text" },
+    { "id": "dark.primary-on-raised", "fg": "dark.text.primary", "bg": "dark.surface.raised", "kind": "text" },
+    { "id": "dark.secondary-on-card", "fg": "dark.text.secondary", "bg": "dark.surface.card", "kind": "text" },
+    { "id": "dark.secondary-on-raised", "fg": "dark.text.secondary", "bg": "dark.surface.raised", "kind": "text" },
+    { "id": "dark.accent-on-card", "fg": "dark.text.accent", "bg": "dark.surface.card", "kind": "text" },
+    { "id": "dark.onFill-on-primary-fill", "fg": "dark.primary.onFill", "bg": "dark.primary.fill", "kind": "text" },
+    { "id": "dark.link-on-page", "fg": "dark.primary.graphic", "bg": "dark.surface.page", "kind": "text" },
+    { "id": "dark.link-on-card", "fg": "dark.primary.graphic", "bg": "dark.surface.card", "kind": "text" },
+    { "id": "dark.success-text-on-tint", "fg": "dark.status.success.text", "bg": { "color": "dark.status.success.text", "alpha": 0.16, "over": "dark.surface.card" }, "kind": "text" },
+    { "id": "dark.warning-text-on-tint", "fg": "dark.status.warning.text", "bg": { "color": "dark.status.warning.text", "alpha": 0.16, "over": "dark.surface.card" }, "kind": "text" },
+    { "id": "dark.danger-text-on-tint", "fg": "dark.status.danger.text", "bg": { "color": "dark.status.danger.text", "alpha": 0.16, "over": "dark.surface.card" }, "kind": "text" },
+    { "id": "dark.info-text-on-tint", "fg": "dark.status.info.text", "bg": { "color": "dark.status.info.text", "alpha": 0.16, "over": "dark.surface.card" }, "kind": "text" },
+    { "id": "dark.primary-graphic-on-card", "fg": "dark.primary.graphic", "bg": "dark.surface.card", "kind": "graphic" },
+    { "id": "dark.primary-graphic-on-page", "fg": "dark.primary.graphic", "bg": "dark.surface.page", "kind": "graphic" },
+    { "id": "dark.border-on-card", "fg": "dark.border", "bg": "dark.surface.card", "kind": "decorative", "note": "hairline borders only" }
+  ]
+}
