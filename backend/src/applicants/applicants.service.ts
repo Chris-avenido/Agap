@@ -2107,8 +2107,8 @@ class ApplicantsServiceClass {
       ? String(incumbent.stage_of_reclassification).trim().toUpperCase()
       : (docCount >= 8 ? 'FOR REVIEW' : (!initialPosition && incumbent?.new_application !== true ? 'PENDING APPLICATION' : 'UPDATING OF DOCUMENTS'));
 
-    // Determine categorical current_stage
-    let derivedCurrentStage = 'UPDATING_DOCUMENTS';
+    // Determine categorical current_stage (4-step workflow: SDO_EVALUATION -> RO_ENDORSEMENT -> DBM_NOSCA -> COMPLETED)
+    let derivedCurrentStage = 'SDO_EVALUATION';
     if (
       incumbent?.nosca_serial_no ||
       (incumbent?.new_item_no && String(incumbent.new_item_no).trim() !== '' && String(incumbent.new_item_no).trim().toUpperCase() !== 'NULL') ||
@@ -2119,18 +2119,11 @@ class ApplicantsServiceClass {
       derivedCurrentStage = 'DBM_NOSCA';
     } else if (stageOfReclass && (stageOfReclass.includes('RO') || stageOfReclass.includes('REGIONAL'))) {
       derivedCurrentStage = 'RO_ENDORSEMENT';
-    } else if (
-      stageOfReclass === 'FOR REVIEW' ||
-      incumbent?.document_status === 'DOCUMENTS SUBMITTED' ||
-      incumbent?.document_status === 'ALL DOCUMENT REVIEWED' ||
-      docCount >= 8
-    ) {
-      derivedCurrentStage = 'SDO_EVALUATION';
     } else {
-      derivedCurrentStage = 'UPDATING_DOCUMENTS';
+      derivedCurrentStage = 'SDO_EVALUATION';
     }
 
-    const currentStage = (incumbent?.current_stage && String(incumbent.current_stage).trim())
+    const currentStage = (incumbent?.current_stage && String(incumbent.current_stage).trim() && String(incumbent.current_stage).trim().toUpperCase() !== 'UPDATING_DOCUMENTS')
       ? String(incumbent.current_stage).trim().toUpperCase()
       : derivedCurrentStage;
 
@@ -2405,8 +2398,8 @@ class ApplicantsServiceClass {
     const cleanPos = desired_position
       ? (desired_position || '').trim()
       : (target_position
-          ? (target_position || '').trim()
-          : (desire_position ? (desire_position || '').trim() : null));
+        ? (target_position || '').trim()
+        : (desire_position ? (desire_position || '').trim() : null));
 
     const reclassDetails = await this.getReclassDetails(applicantId);
     const initialPos = reclassDetails?.initial_assessment || reclassDetails?.desired_position;
@@ -3364,8 +3357,8 @@ class ApplicantsServiceClass {
                 gc.password_hash,
                 gc.passcode
                   ? (gc.passcode.startsWith('$2')
-                      ? gc.passcode
-                      : await bcrypt.hash(gc.passcode, 10))
+                    ? gc.passcode
+                    : await bcrypt.hash(gc.passcode, 10))
                   : null,
                 gc.passcode,
                 gc.mobile_number,

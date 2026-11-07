@@ -1,18 +1,17 @@
 -- =====================================================================
--- RECLASSIFICATION CURRENT_STAGE UNIFIED TRACKING MIGRATION
+-- RECLASSIFICATION CURRENT_STAGE UNIFIED TRACKING MIGRATION (4-STEP FLOW)
 -- =====================================================================
 -- Consolidates multi-column stage tracking into a single categorical
 -- column named current_stage on reclass_gc.
 -- Allowed categorical values:
---   'UPDATING_DOCUMENTS' : Step 1 - Applicant Updating of Documents
---   'SDO_EVALUATION'     : Step 2 - Schools Division Office HRMO Review & QS Evaluation
---   'RO_ENDORSEMENT'     : Step 3 - Endorsed to DepEd Regional Office (RO)
---   'DBM_NOSCA'          : Step 4 - Endorsed to Department of Budget and Management (DBM)
---   'COMPLETED'          : Step 5 - Reclassified & Officially Appointed / NOSCA Issued
+--   'SDO_EVALUATION' : Step 1 of 4 - Schools Division Office HRMO Review & QS Evaluation
+--   'RO_ENDORSEMENT' : Step 2 of 4 - Endorsed to DepEd Regional Office (RO)
+--   'DBM_NOSCA'      : Step 3 of 4 - Endorsed to Department of Budget and Management (DBM)
+--   'COMPLETED'      : Step 4 of 4 - Reclassified & Officially Appointed / NOSCA Issued
 -- =====================================================================
 
 -- 1. Add current_stage column if it doesn't exist
-ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS current_stage VARCHAR(50) DEFAULT 'UPDATING_DOCUMENTS';
+ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS current_stage VARCHAR(50) DEFAULT 'SDO_EVALUATION';
 
 -- 2. Safely backfill current_stage based on existing records
 UPDATE reclass_gc
@@ -23,9 +22,7 @@ SET current_stage = CASE
   WHEN UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%DBM%' THEN 'DBM_NOSCA'
   WHEN UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%RO%' 
        OR UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%REGIONAL%' THEN 'RO_ENDORSEMENT'
-  WHEN UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) = 'FOR REVIEW' 
-       OR UPPER(TRIM(COALESCE(document_status, ''))) IN ('DOCUMENTS SUBMITTED', 'ALL DOCUMENT REVIEWED') THEN 'SDO_EVALUATION'
-  ELSE 'UPDATING_DOCUMENTS'
+  ELSE 'SDO_EVALUATION'
 END
 WHERE current_stage IS NULL OR current_stage = 'UPDATING_DOCUMENTS';
 

@@ -1459,8 +1459,7 @@ export default function ApplicantDashboard() {
                 if (activeCurrentStage === 'COMPLETED' || isReclassProper) return 'COMPLETED';
                 if (activeCurrentStage === 'DBM_NOSCA' || isEndorsedToDbm) return 'DBM_NOSCA';
                 if (activeCurrentStage === 'RO_ENDORSEMENT' || isEndorsedToRo) return 'RO_ENDORSEMENT';
-                if (activeCurrentStage === 'SDO_EVALUATION' || isHrmoReview) return 'SDO_EVALUATION';
-                return 'UPDATING_DOCUMENTS';
+                return 'SDO_EVALUATION';
               })();
 
               // Stage Card & Sticker Configuration mapped strictly to semantic color tokens
@@ -1538,12 +1537,20 @@ export default function ApplicantDashboard() {
                       cardBgClass: 'bg-warning-50 border-2 border-warning-200/90 text-warning-900',
                       headingClass: 'text-warning-900',
                       iconBg: 'bg-warning-600/10 text-warning-700',
-                      Icon: FileCheck2,
-                      stageTitle: 'Updating of Documents',
-                      stageSubtitle: 'Applicant submission & credential updates',
-                      stageDescription: uploadedDocsCount === 0
-                        ? 'No updated documents have been submitted yet. Non-submission means reclassification proceeds under your current plantilla record.'
-                        : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Non-submission of further documents means reclassification proceeds under current plantilla record.`,
+                      Icon: Building2,
+                      stageTitle: isAllDocReviewed
+                        ? (qsStatus || 'ALL DOCUMENT REVIEWED')
+                        : (isRevision ? 'Revision Required' : 'HRMO Review & Evaluation'),
+                      stageSubtitle: 'Schools Division Office credentials verification',
+                      stageDescription: isRevision
+                        ? 'Division HRMO has requested document revisions. Please review evaluator remarks and re-upload revised copies.'
+                        : (isAllDocReviewed
+                            ? (isQsExcluded
+                                ? 'All qualification documents evaluated by Division HRMO. QS evaluation status is EXCLUDED.'
+                                : (isQsQualified
+                                    ? 'All qualification documents evaluated by Division HRMO. Evaluated as QUALIFIED for reclassification.'
+                                    : 'All qualification documents evaluated by Division HRMO. QS evaluation has concluded.'))
+                            : 'All mandatory qualification documents submitted. Your reclassification credentials are being reviewed by Division HRMO.'),
                       locationTag: 'Schools Division Office (SDO)'
                     };
                 }
@@ -1551,45 +1558,43 @@ export default function ApplicantDashboard() {
 
               const currentStageInfo = getStageCardInfo(normalizedCurrentStage);
 
-              // Step Calculation & Display Mapping derived from normalizedCurrentStage
+              // Step Calculation & Display Mapping derived from normalizedCurrentStage (4-step workflow)
               let currentStep = 1;
-              let currentLabel = 'Updating of Documents';
-              let stepBadge = 'Step 1 of 5: Updating of Documents';
+              let currentLabel = 'HRMO Review & Evaluation';
+              let stepBadge = `Step 1 of 4`;
               let defaultRemarks =
-                'Submit updated qualification documents if seeking re-assessment. Non-submission means your reclassification proceeds under your current plantilla record.';
+                'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
 
               if (normalizedCurrentStage === 'COMPLETED') {
-                currentStep = 5;
+                currentStep = 4;
                 currentLabel = 'Appointment / Reclass Proper';
-                stepBadge = 'Step 5 of 5: Appointment / Reclass Proper';
+                stepBadge = 'Step 4 of 4';
                 defaultRemarks = hasNewItemNo
                   ? `Your plantilla position has been officially reclassified and appointed under Item No. ${newItemNo}.`
                   : 'Your plantilla position has been officially reclassified and appointed with NOSCA allocation and salary adjustment.';
               } else if (normalizedCurrentStage === 'DBM_NOSCA') {
-                currentStep = 4;
+                currentStep = 3;
                 currentLabel = 'Endorsed to DBM RO';
-                stepBadge = 'Step 4 of 5: Endorsed to DBM RO';
+                stepBadge = 'Step 3 of 4';
                 defaultRemarks =
                   'Your reclassification application has been endorsed to the Department of Budget and Management (DBM) Regional Office for NOSCA issuance.';
               } else if (normalizedCurrentStage === 'RO_ENDORSEMENT') {
-                currentStep = 3;
+                currentStep = 2;
                 currentLabel = 'RO Evaluation';
-                stepBadge = 'Step 3 of 5: RO Evaluation';
+                stepBadge = 'Step 2 of 4';
                 defaultRemarks =
                   'Your reclassification documents have been verified and endorsed to the DepEd Regional Office for final evaluation and regional consolidation.';
-              } else if (normalizedCurrentStage === 'SDO_EVALUATION') {
-                currentStep = 2;
+              } else {
+                // SDO_EVALUATION (Step 1 of 4)
+                currentStep = 1;
+                stepBadge = 'Step 1 of 4';
                 if (isRevision) {
                   currentLabel = 'HRMO Review & Evaluation';
-                  stepBadge = 'Step 2 of 5: Revision Required';
                   defaultRemarks = revisionDocuments.length > 0
                     ? `The Division HRMO has requested revisions on ${revisionDocuments.length} requirement(s). Please review the evaluator remarks below and re-upload the updated documents.`
                     : 'The Division HRMO has requested document revisions. Please review the evaluator remarks and re-upload the updated documents.';
                 } else if (isAllDocReviewed) {
                   currentLabel = qsStatus ? `${qsStatus}` : 'ALL DOCUMENT REVIEWED';
-                  stepBadge = isQsExcluded
-                    ? `Step 2 of 5: ${qsStatus || 'EXCLUDED'}`
-                    : `Step 2 of 5: ${qsStatus || 'ALL DOCUMENT REVIEWED'}`;
                   defaultRemarks = isQsExcluded
                     ? 'All qualification documents have been evaluated by Division HRMO. Based on the Qualification Standards (QS) evaluation, the evaluation status is EXCLUDED.'
                     : isQsQualified
@@ -1597,19 +1602,9 @@ export default function ApplicantDashboard() {
                       : 'All qualification documents have been evaluated by Division HRMO. Qualification Standards (QS) evaluation has concluded.';
                 } else {
                   currentLabel = 'HRMO Review & Evaluation';
-                  stepBadge = hasSubmittedStatus
-                    ? 'Step 2 of 5: Resubmit'
-                    : 'Step 2 of 5: HRMO Review & Evaluation';
                   defaultRemarks =
                     'All mandatory qualification documents have been submitted. Your reclassification credentials and documents are currently being reviewed by your Division HRMO.';
                 }
-              } else {
-                currentStep = 1;
-                currentLabel = 'Updating of Documents';
-                stepBadge = 'Step 1 of 5: Updating of Documents';
-                defaultRemarks = uploadedDocsCount === 0
-                  ? 'No updated documents have been submitted yet. Non-submission of updated documents means your reclassification proceeds under your current plantilla record.'
-                  : `${uploadedDocsCount} of 8 requirements uploaded (${Math.min(uploadedDocsCount, 7)}/7 mandatory). Your reclassification will proceed under your current plantilla record if no additional documents are submitted.`;
               }
 
               return (
