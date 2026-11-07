@@ -2005,11 +2005,17 @@ class ApplicantsServiceClass {
       incumbent?.reclass_position ||
       null;
     const targetPosition = desiredPosition;
+    const newPosition =
+      incumbent?.new_position ||
+      reclassApp?.new_position ||
+      null;
     const reclassPosition =
+      newPosition ||
       incumbent?.reclass_position ||
       reclassApp?.reclass_position ||
       null;
     const indicativePosition =
+      newPosition ||
       incumbent?.indicative_position ||
       reclassApp?.indicative_position ||
       targetPosition ||
@@ -2155,6 +2161,7 @@ class ApplicantsServiceClass {
 
     return {
       ...(incumbent || {}),
+      new_position: newPosition,
       full_name: fullName,
       plantilla_item_number: incumbent?.item_no || plantillaItemNumber || null,
       position_title: posTitle,

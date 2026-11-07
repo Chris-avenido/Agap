@@ -5,7 +5,7 @@ import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Cloc
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 const RECLASS_LOGIN_TOUR_STEPS = [
   {

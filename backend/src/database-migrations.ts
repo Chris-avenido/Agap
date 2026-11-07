@@ -130,7 +130,7 @@ export async function runSchemaMigrations(client: any) {
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       DROP INDEX IF EXISTS idx_reclass_gc_update_app;
-      CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application) WHERE update_application = TRUE;
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application) WHERE update_application IN ('Yes', 'true');
       DROP INDEX IF EXISTS idx_reclass_gc_is_registered;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc(is_registered) WHERE is_registered = TRUE;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_desired_position ON reclass_gc(desired_position);

@@ -24,6 +24,14 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiProxyTarget,
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              if (res && !('headersSent' in res && (res as any).headersSent)) {
+                (res as any).writeHead(503, { 'Content-Type': 'application/json' });
+                (res as any).end(JSON.stringify({ success: false, message: 'Backend service starting up...' }));
+              }
+            });
+          },
         },
       },
     },

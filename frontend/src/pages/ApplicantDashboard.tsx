@@ -82,6 +82,26 @@ function getPositionSalaryGrade(posName?: string | null): string {
   return '—';
 }
 
+async function safeFetchJson(url: string, fallback: any = { success: false }, retries = 3, delayMs = 1000): Promise<any> {
+  try {
+    const res = await fetch(url);
+    if ((res.status === 502 || res.status === 503 || res.status === 504) && retries > 0) {
+      await new Promise(r => setTimeout(r, delayMs));
+      return safeFetchJson(url, fallback, retries - 1, delayMs * 1.5);
+    }
+    if (!res.ok) return fallback;
+    const text = await res.text();
+    if (!text || !text.trim()) return fallback;
+    return JSON.parse(text);
+  } catch (_err) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, delayMs));
+      return safeFetchJson(url, fallback, retries - 1, delayMs * 1.5);
+    }
+    return fallback;
+  }
+}
+
 export interface ChecklistDocumentItem {
   id?: string;
   key?: string;
@@ -344,8 +364,8 @@ export default function ApplicantDashboard() {
 
     try {
       const [reclassRes, docsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${targetId}/reclass-details`).then(res => res.json()).catch(() => ({ success: false })),
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${targetId}/reclass-documents`).then(res => res.json()).catch(() => ({ success: false, data: [] })),
+        safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${targetId}/reclass-details`, { success: false }),
+        safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${targetId}/reclass-documents`, { success: false, data: [] }),
       ]);
       if (reclassRes && reclassRes.success && reclassRes.data) {
         setReclassData(reclassRes.data);
@@ -386,7 +406,7 @@ export default function ApplicantDashboard() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-target-position`,
+        `${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-target-position`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -459,7 +479,7 @@ export default function ApplicantDashboard() {
     setIsSavingPreference(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
+        `${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-update-preference`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -505,7 +525,7 @@ export default function ApplicantDashboard() {
     try {
       if (answer === 'yes') {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -525,7 +545,7 @@ export default function ApplicantDashboard() {
         setUpdateModalInitialStep(1);
       } else {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${session.id}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -687,7 +707,7 @@ export default function ApplicantDashboard() {
 
     if (passcode) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/passcode`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/passcode`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ passcode })
@@ -713,11 +733,11 @@ export default function ApplicantDashboard() {
     const session = JSON.parse(sessionStr);
 
     Promise.all([
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/saved-jobs`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`).then(res => res.json()),
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/reclass-details`).then(res => res.json()).catch(() => ({ success: false })),
-      fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/reclass-documents`).then(res => res.json()).catch(() => ({ success: false, data: [] })),
+      safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/applications`, { success: false, data: [] }),
+      safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/saved-jobs`, { success: false, data: [] }),
+      safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}`, { success: false }),
+      safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-details`, { success: false }),
+      safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/reclass-documents`, { success: false, data: [] }),
     ])
       .then(([appsData, savedData, profileData, reclassRes, reclassDocsRes]) => {
         if (appsData.success && appsData.data) {
@@ -798,7 +818,7 @@ export default function ApplicantDashboard() {
     if (!sessionStr) {
       if (defaultUrl) {
         const sasUrl = defaultUrl.startsWith('http')
-          ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
+          ? `${import.meta.env.VITE_API_URL || ''}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
           : defaultUrl;
         window.open(sasUrl, '_blank');
       }
@@ -815,8 +835,7 @@ export default function ApplicantDashboard() {
 
     let userApplications: any[] = [];
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`);
-      const data = await res.json();
+      const data = await safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/applications`, { success: false, data: [] });
       if (data.success && Array.isArray(data.data)) {
         userApplications = data.data;
       }
@@ -830,7 +849,7 @@ export default function ApplicantDashboard() {
     if (appsWithDoc.length === 0) {
       if (defaultUrl) {
         const sasUrl = defaultUrl.startsWith('http')
-          ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
+          ? `${import.meta.env.VITE_API_URL || ''}/api/applicants/get-sas-url?url=${encodeURIComponent(defaultUrl)}`
           : defaultUrl;
         window.open(sasUrl, '_blank');
         Swal.close();
@@ -895,7 +914,7 @@ export default function ApplicantDashboard() {
     if (!selectedDocUrl) return;
 
     const sasUrl = selectedDocUrl.startsWith('http')
-      ? `${import.meta.env.VITE_API_URL}/api/applicants/get-sas-url?url=${encodeURIComponent(selectedDocUrl)}`
+      ? `${import.meta.env.VITE_API_URL || ''}/api/applicants/get-sas-url?url=${encodeURIComponent(selectedDocUrl)}`
       : selectedDocUrl;
     window.open(sasUrl, '_blank');
   };
@@ -914,8 +933,7 @@ export default function ApplicantDashboard() {
 
     let userApplications: any[] = [];
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`);
-      const data = await res.json();
+      const data = await safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/applications`, { success: false, data: [] });
       if (data.success && Array.isArray(data.data)) {
         userApplications = data.data;
       }
@@ -1088,7 +1106,7 @@ export default function ApplicantDashboard() {
       formData.append('docType', docType);
       formData.append('applicationIds', JSON.stringify(selectedIds));
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/replace-document`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/replace-document`, {
         method: 'POST',
         body: formData
       });
@@ -1096,8 +1114,8 @@ export default function ApplicantDashboard() {
       const data = await res.json();
       if (res.ok && data.success) {
         const [appsRes, profileRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}/applications`).then(r => r.json()),
-          fetch(`${import.meta.env.VITE_API_URL}/api/applicants/${session.id}`).then(r => r.json())
+          safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}/applications`, { success: false, data: [] }),
+          safeFetchJson(`${import.meta.env.VITE_API_URL || ''}/api/applicants/${session.id}`, { success: false })
         ]);
 
         if (appsRes.success && appsRes.data) {
@@ -1178,7 +1196,7 @@ export default function ApplicantDashboard() {
       <ApplicantHeader
         firstName={profile?.first_name || ''}
         lastName={profile?.surname || ''}
-        photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null}
+        photoUrl={photoUrl ? `${import.meta.env.VITE_API_URL || ''}/api/applicants/proxy-blob?url=${encodeURIComponent(photoUrl)}` : null}
         isReclass={isReclass}
       />
 
@@ -1308,6 +1326,28 @@ export default function ApplicantDashboard() {
                       : `SG-${reclassData.initial_assessment_salary_grade}`)
                     : getPositionSalaryGrade(initialAssessment))
                   : '';
+
+              const rawNewPos = reclassData.new_position;
+              const hasNewPosition = Boolean(
+                rawNewPos &&
+                String(rawNewPos).trim() !== '' &&
+                String(rawNewPos).toUpperCase() !== 'NULL' &&
+                String(rawNewPos).toUpperCase() !== '#N/A'
+              );
+              const newPosition = hasNewPosition ? String(rawNewPos).trim() : null;
+
+              const displayPosition = newPosition || initialAssessment || '—';
+              const newSalaryGrade = newPosition
+                ? (reclassData.indicative_salary_grade && reclassData.indicative_salary_grade !== 'N/A'
+                  ? (reclassData.indicative_salary_grade.startsWith('SG-')
+                    ? reclassData.indicative_salary_grade
+                    : `SG-${reclassData.indicative_salary_grade}`)
+                  : getPositionSalaryGrade(newPosition))
+                : '';
+
+              const displaySalaryGrade = newPosition
+                ? (newSalaryGrade && newSalaryGrade !== '—' ? newSalaryGrade : getPositionSalaryGrade(newPosition))
+                : initialSalaryGrade;
 
               const uploadedDocsCount = reclassDocs.length;
               const TOTAL_MANDATORY_DOCS = 7;
@@ -1647,44 +1687,66 @@ export default function ApplicantDashboard() {
                       </div>
                     </div>
 
-                    {/* 2. Highlighted Assessment Bento Card: Initial Assessment */}
-                    <div className="bg-primary-50 border-2 border-primary-200/90 rounded-2xl p-5 md:p-6 shadow-xs flex flex-col justify-between transition-all">
+                    {/* 2. Highlighted Assessment Bento Card: Initial Assessment or New Position */}
+                    <div className={`${hasNewPosition ? 'bg-gradient-to-br from-emerald-50/70 via-sky-50/50 to-primary-50/60 border-2 border-emerald-300/90' : 'bg-primary-50 border-2 border-primary-200/90'} rounded-2xl p-5 md:p-6 shadow-xs flex flex-col justify-between transition-all`}>
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-primary-200/70">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-primary-600/10 flex items-center justify-center text-primary-600">
-                              <Award className="w-4.5 h-4.5" />
+                            <div className={`w-8 h-8 rounded-xl ${hasNewPosition ? 'bg-emerald-600/10 text-emerald-600' : 'bg-primary-600/10 text-primary-600'} flex items-center justify-center`}>
+                              {hasNewPosition ? <Sparkles className="w-4.5 h-4.5" /> : <Award className="w-4.5 h-4.5" />}
                             </div>
                             <div>
-                              <h3 className="text-xs font-black uppercase tracking-wider text-primary-900">
-                                Initial Assessment
-                              </h3>
-                              <p className="text-[11px] text-primary-700/80">Previous evaluation baseline</p>
+                              <div className="flex items-center gap-2">
+                                <h3 className={`text-xs font-black uppercase tracking-wider ${hasNewPosition ? 'text-emerald-950' : 'text-primary-900'}`}>
+                                  {hasNewPosition ? 'Approved Reclass Position' : 'Initial Assessment'}
+                                </h3>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-2xs ${
+                                  hasNewPosition 
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                                    : 'bg-primary-100 text-primary-800 border-primary-200'
+                                }`}>
+                                  {hasNewPosition ? 'Approved' : 'Initial'}
+                                </span>
+                              </div>
+                              <p className={`text-[11px] ${hasNewPosition ? 'text-emerald-700/90 font-medium' : 'text-primary-700/80'}`}>
+                                {hasNewPosition ? 'Endorsed evaluation & designated career track role' : 'Previous evaluation baseline'}
+                              </p>
                             </div>
                           </div>
-                          {initialSalaryGrade && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-primary-100 text-primary-800 border border-primary-200 shadow-2xs">
-                              {initialSalaryGrade}
+                          {displaySalaryGrade && displaySalaryGrade !== '—' && (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${
+                              hasNewPosition 
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
+                                : 'bg-primary-100 text-primary-800 border-primary-200'
+                            }`}>
+                              {displaySalaryGrade}
                             </span>
                           )}
                         </div>
 
                         <div className="py-2">
-                          <p className="text-xs font-bold text-primary-700 uppercase tracking-wider mb-1">
-                            Assessed Position
-                          </p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className={`text-xs font-bold uppercase tracking-wider ${hasNewPosition ? 'text-emerald-800' : 'text-primary-700'}`}>
+                              {hasNewPosition ? 'Approved Reclass Position' : 'Assessed Position'}
+                            </p>
+                            <span className={`text-[10px] font-bold ${hasNewPosition ? 'text-emerald-700' : 'text-primary-600'}`}>
+                              {hasNewPosition ? '● Endorsed Reclassification' : '● Baseline Assessment'}
+                            </span>
+                          </div>
                           <p className="text-2xl lg:text-3xl font-extrabold text-[#022851] tracking-tight break-words leading-tight">
-                            {initialAssessment || '—'}
+                            {displayPosition || '—'}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-primary-200/70 flex items-center justify-between text-[11px] text-primary-800">
+                      <div className={`mt-4 pt-3 border-t ${hasNewPosition ? 'border-emerald-200/70' : 'border-primary-200/70'} flex items-center justify-between text-[11px] ${hasNewPosition ? 'text-emerald-900' : 'text-primary-800'}`}>
                         <span className="font-semibold flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-primary-600" />
-                          <span>{initialSalaryGrade ? `SG Grade: ${initialSalaryGrade}` : 'Baseline Record'}</span>
+                          <CheckCircle2 className={`w-3.5 h-3.5 ${hasNewPosition ? 'text-emerald-600' : 'text-primary-600'}`} />
+                          <span>{displaySalaryGrade && displaySalaryGrade !== '—' ? `SG Grade: ${displaySalaryGrade}` : (hasNewPosition ? 'Designated Record' : 'Baseline Record')}</span>
                         </span>
-                        <span className="text-[10px] text-primary-600 font-medium">• Base on Previous evaluation</span>
+                        <span className={`text-[10px] font-medium ${hasNewPosition ? 'text-emerald-700' : 'text-primary-600'}`}>
+                          {hasNewPosition ? '• Base on Reclassification Evaluation' : '• Base on Previous evaluation'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1960,65 +2022,7 @@ export default function ApplicantDashboard() {
                       </div>
                     </div>
                   </div>
-
-                  {/* 3. Indicative Reclassification Results Bento Card — Available when endorsed to RO */}
-                  {isEndorsedToRegional && (
-                    <div className="col-span-1 lg:col-span-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#022851] via-[#034478] to-[#0284c7] p-5 md:p-6 text-white shadow-md border-2 border-sky-400/40">
-                      {/* Background decorative glow */}
-                      <div className="absolute -top-12 -right-12 w-48 h-48 bg-sky-400/20 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-
-                      <div className="relative z-10">
-                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-white/15">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-xs">
-                              <Sparkles className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <h3 className="text-xs font-black uppercase tracking-wider text-amber-300">
-                                Indicative Reclassification Results
-                              </h3>
-                              <p className="text-[11px] text-sky-100">Evaluated role & proposed plantilla placement</p>
-                            </div>
-                          </div>
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-400 text-amber-950 border border-amber-300 shadow-xs">
-                            Endorsed to RO
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3.5 border border-white/15 shadow-2xs">
-                            <p className="text-[11px] font-bold text-sky-200 uppercase tracking-wider mb-1">
-                              Indicative Position
-                            </p>
-                            <p className="text-xl md:text-2xl font-black text-white tracking-tight break-words">
-                              {reclassData.indicative_position || reclassData.target_position || (initialAssessment !== 'N/A' ? initialAssessment : '—')}
-                            </p>
-                            <p className="text-[11px] text-sky-100/75 mt-1.5 leading-snug">
-                              Designated reclassification career track role
-                            </p>
-                          </div>
-
-                          <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3.5 border border-white/15 shadow-2xs">
-                            <p className="text-[11px] font-bold text-sky-200 uppercase tracking-wider mb-1">
-                              Indicative Salary Grade
-                            </p>
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                                {reclassData.indicative_salary_grade ? `SG-${reclassData.indicative_salary_grade}` : getPositionSalaryGrade(reclassData.indicative_position || reclassData.target_position || 'SCHOOL COUNSELOR II')}
-                              </p>
-                              <span className="text-xs font-semibold text-sky-200">
-                                (National Plantilla Scale)
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-sky-100/75 mt-1.5 leading-snug">
-                              Compensation grade corresponding to indicative reclass position
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}</div>
+                </div>
               );
             })() : (
               <div className="p-8 text-center text-gray-500 text-sm">

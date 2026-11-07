@@ -199,7 +199,7 @@ export default function ReclassUpdateModal({
 
   // Fetch dynamic Qualification Standards from backend API
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/reclass-positions-qs`)
+    fetch(`${import.meta.env.VITE_API_URL || ''}/api/applicants/reclass-positions-qs`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -253,7 +253,7 @@ export default function ReclassUpdateModal({
         setIsAutoSavingTrack(true);
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${applicantId}/reclass-update-preference`,
+            `${import.meta.env.VITE_API_URL || ''}/api/applicants/${applicantId}/reclass-update-preference`,
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -287,7 +287,7 @@ export default function ReclassUpdateModal({
       setIsAutoSavingTrack(true);
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${applicantId}/reclass-update-preference`,
+          `${import.meta.env.VITE_API_URL || ''}/api/applicants/${applicantId}/reclass-update-preference`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -319,7 +319,7 @@ export default function ReclassUpdateModal({
     setIsSaving(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${applicantId}/reclass-update-preference`,
+        `${import.meta.env.VITE_API_URL || ''}/api/applicants/${applicantId}/reclass-update-preference`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -379,7 +379,7 @@ export default function ReclassUpdateModal({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/applicants/${applicantId}/reclass-update-preference`,
+        `${import.meta.env.VITE_API_URL || ''}/api/applicants/${applicantId}/reclass-update-preference`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
