@@ -4132,6 +4132,7 @@ model reclass_gc {
   is_registered             Boolean?  @default(false)
   created_at                DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                DateTime? @default(now()) @db.Timestamptz(6)
+  stage_updated_at          DateTime? @default(now()) @db.Timestamptz(6)
 
   @@index([item_no])
   @@index([region])

@@ -123,6 +123,8 @@ export async function runSchemaMigrations(client: any) {
         END IF;
       END $$;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS stage_updated_at TIMESTAMP WITH TIME ZONE;
+      UPDATE reclass_gc SET stage_updated_at = COALESCE(updated_at, created_at, NOW()) WHERE stage_updated_at IS NULL;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
@@ -245,6 +247,29 @@ export async function runSchemaMigrations(client: any) {
         RETURN NEW;
       END;
       $function$;
+
+      CREATE OR REPLACE FUNCTION public.trg_reclass_gc_stage_updated_at()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF (TG_OP = 'UPDATE') THEN
+          IF (OLD.stage_of_reclassification IS DISTINCT FROM NEW.stage_of_reclassification)
+             OR (OLD.current_stage IS DISTINCT FROM NEW.current_stage) THEN
+            NEW.stage_updated_at := NOW();
+          END IF;
+        ELSIF (TG_OP = 'INSERT') THEN
+          IF NEW.stage_updated_at IS NULL THEN
+            NEW.stage_updated_at := NOW();
+          END IF;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER IF EXISTS trg_reclass_gc_stage_timestamp ON public.reclass_gc;
+      CREATE TRIGGER trg_reclass_gc_stage_timestamp
+      BEFORE INSERT OR UPDATE ON public.reclass_gc
+      FOR EACH ROW
+      EXECUTE FUNCTION public.trg_reclass_gc_stage_updated_at();
     `);
 
     // Ensure gmis_gc_items table exists matching GMIS production schema

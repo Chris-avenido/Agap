@@ -1677,13 +1677,13 @@ export default function ApplicantDashboard() {
                             <span className="w-2 h-2 rounded-full bg-current animate-ping" />
                             <span>{currentStageInfo.locationTag}</span>
                           </span>
-                          {(reclassData.updated_at || reclassData.hrmo_updated_at || reclassData.last_modified) && (
+                          {(reclassData.stage_updated_at || reclassData.hrmo_updated_at) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium opacity-75 border-l border-black/15 pl-3">
                               <Clock className="w-3 h-3 shrink-0" />
                               <span>
                                 Last updated:{' '}
                                 {new Date(
-                                  reclassData.updated_at || reclassData.hrmo_updated_at || reclassData.last_modified
+                                  reclassData.stage_updated_at || reclassData.hrmo_updated_at
                                 ).toLocaleDateString('en-US', {
                                   month: 'short',
                                   day: '2-digit',
