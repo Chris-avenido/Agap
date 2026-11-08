@@ -2209,6 +2209,8 @@ class ApplicantsServiceClass {
       indicative_reclassification: initialPosition || incumbent?.initial_assessment || indicativePosition || null,
       hrmo_assessment_result: incumbent?.qs_eval_result || incumbent?.qs_status || 'PENDING QS EVALUATION',
       hrmo_updated_at: incumbent?.updated_at || null,
+      updated_at: incumbent?.updated_at || null,
+      last_modified: incumbent?.updated_at || null,
       ro_endorsement_status: (stageOfReclass || '').toUpperCase().includes('DBM')
         ? 'Endorsed to DBM RO'
         : ((stageOfReclass || '').toUpperCase().includes('RO') || (stageOfReclass || '').toUpperCase().includes('REGIONAL'))
