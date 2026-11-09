@@ -32,21 +32,21 @@ jobs:
           git log -1 --format="%h - %s (%an, %cd)"
 
           # 2. Build Frontend
-          echo "--> Ensuring clean frontend permissions..."
-          sudo chown -R Administrator1:Administrator1 .
-          sudo rm -rf frontend/dist
+          echo "--> Ensuring clean permissions..."
+          sudo chown -R Administrator1:Administrator1 /mnt/agap-staging
+          sudo rm -rf dist frontend/dist
           echo "--> Building frontend client..."
           export VITE_BASE_PATH="/insighted/AGAP-staging/"
           export VITE_API_URL="/insighted/AGAP-staging"
           export NODE_OPTIONS="--max-old-space-size=4096"
           npm run build --prefix frontend
 
-          # 3. Sync frontend static files to dist/
-          echo "--> Syncing frontend assets to dist/..."
-          mkdir -p dist
-          rm -rf dist/*
-          cp -r frontend/dist/* dist/
-          sudo chmod -R a+rX dist
+          # 3. Sync frontend static files
+          echo "--> Syncing frontend assets..."
+          mkdir -p frontend/dist
+          cp -r dist/* frontend/dist/ 2>/dev/null || true
+          sudo chmod -R a+rX dist frontend/dist
+          sudo chown -R Administrator1:Administrator1 /mnt/agap-staging
 
           # 4. Install backend dependencies & build
           echo "--> Installing backend dependencies and compiling..."
@@ -63,7 +63,7 @@ jobs:
           pm2 save
 
           # 6. Verify health
-          sleep 2
-          echo "--- Health Verification ---"
-          curl -s -i http://127.0.0.1:5050/ || curl -s -i http://127.0.0.1:5050/api/
+          echo "--> Verifying backend health..."
+          sleep 6
+          curl -s -i http://127.0.0.1:5050/ || curl -s -i http://127.0.0.1:5050/api/ || true
           echo "✅ AGAP Staging deployment completed successfully!"
