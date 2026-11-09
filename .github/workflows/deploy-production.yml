@@ -32,17 +32,19 @@ jobs:
           git log -1 --format="%h - %s (%an, %cd)"
 
           # 2. Build Frontend
+          echo "--> Ensuring clean permissions..."
+          sudo chown -R Administrator1:Administrator1 /mnt/agap-portal
+          sudo rm -rf dist frontend/dist
           echo "--> Building frontend client..."
           export VITE_BASE_PATH="/insighted/AGAP-Portal/"
           export VITE_API_URL="/insighted/AGAP-Portal"
           export NODE_OPTIONS="--max-old-space-size=4096"
           npm run build --prefix frontend
 
-          # 3. Sync frontend static files to dist & nginx root
+          # 3. Sync frontend static files to Nginx web root and frontend/dist
           echo "--> Syncing frontend assets..."
-          mkdir -p dist
-          rm -rf dist/*
-          cp -r frontend/dist/* dist/
+          mkdir -p frontend/dist
+          cp -r dist/* frontend/dist/
           sudo mkdir -p /var/www/html/InsightED-AGAP/agap-portal/dist
           sudo rm -rf /var/www/html/InsightED-AGAP/agap-portal/dist/*
           sudo cp -r dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/
