@@ -41,14 +41,14 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           npm run build --prefix frontend
 
-          # 3. Sync frontend static files to Nginx web root and frontend/dist
+          # 3. Sync frontend static files to Nginx web root and dist
           echo "--> Syncing frontend assets..."
-          mkdir -p frontend/dist
-          cp -r dist/* frontend/dist/
+          mkdir -p dist
+          cp -r frontend/dist/* dist/ 2>/dev/null || true
           sudo mkdir -p /var/www/html/InsightED-AGAP/agap-portal/dist
-          sudo cp -r dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/ 2>/dev/null || true
-          sudo chmod -R a+rX /mnt/agap-portal/frontend/dist /mnt/agap-portal/dist
-          sudo chown -R Administrator1:Administrator1 /mnt/agap-portal
+          sudo cp -r frontend/dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/ 2>/dev/null || true
+          sudo chmod -R a+rX /mnt/agap-portal/frontend/dist /mnt/agap-portal/dist /var/www/html/InsightED-AGAP/agap-portal/dist
+          sudo chown -R Administrator1:Administrator1 /mnt/agap-portal /var/www/html/InsightED-AGAP/agap-portal
 
           # 4. Install backend dependencies & build
           echo "--> Installing backend dependencies and compiling..."

@@ -41,10 +41,10 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           npm run build --prefix frontend
 
-          # 3. Sync frontend static files
+          # 3. Sync frontend static files to dist
           echo "--> Syncing frontend assets..."
-          mkdir -p frontend/dist
-          cp -r dist/* frontend/dist/ 2>/dev/null || true
+          mkdir -p dist
+          cp -r frontend/dist/* dist/ 2>/dev/null || true
           sudo chmod -R a+rX dist frontend/dist
           sudo chown -R Administrator1:Administrator1 /mnt/agap-staging
 
