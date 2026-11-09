@@ -1,0 +1,67 @@
+name: Deploy Agap Staging
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-agap-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Agap Staging VM
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy Agap Staging Environment
+        run: |
+          set -e
+          echo "===================================================="
+          echo "🚀 Deploying AGAP to Staging (Self-Hosted)..."
+          echo "===================================================="
+          cd /mnt/agap-staging
+
+          # 1. Pull latest staging branch
+          git fetch origin
+          git checkout -B staging -f origin/staging
+          echo "Current commit:"
+          git log -1 --format="%h - %s (%an, %cd)"
+
+          # 2. Build Frontend
+          echo "--> Building frontend client..."
+          export VITE_BASE_PATH="/insighted/AGAP-staging/"
+          export VITE_API_URL="/insighted/AGAP-staging"
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          npm run build --prefix frontend
+
+          # 3. Sync frontend static files to dist/
+          echo "--> Syncing frontend assets to dist/..."
+          mkdir -p dist
+          rm -rf dist/*
+          cp -r frontend/dist/* dist/
+          sudo chmod -R a+rX dist
+
+          # 4. Install backend dependencies & build
+          echo "--> Installing backend dependencies and compiling..."
+          cd backend
+          mkdir -p logs
+          npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          npx prisma generate --schema=database/schema.prisma
+          npm run build
+
+          # 5. Restart PM2
+          echo "--> Restarting PM2 service..."
+          cd /mnt/agap-staging
+          pm2 restart ecosystem.agap-staging.config.cjs --update-env || pm2 start ecosystem.agap-staging.config.cjs
+          pm2 save
+
+          # 6. Verify health
+          echo "--> Verifying backend health..."
+          sleep 5
+          curl -s -i http://127.0.0.1:5050/ || curl -s -i http://127.0.0.1:5050/api/ || true
+          echo "✅ AGAP Staging deployment completed successfully!"
+
