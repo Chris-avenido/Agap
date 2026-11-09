@@ -1299,18 +1299,18 @@ export default function Login() {
                             }}
                             disabled={newAppStep === 1}
                             className={`flex items-center gap-2 text-left transition-all ${newAppStep === 1
-                                ? 'cursor-default'
-                                : newAppStep > 1
-                                  ? 'cursor-pointer group'
-                                  : 'cursor-not-allowed opacity-60'
+                              ? 'cursor-default'
+                              : newAppStep > 1
+                                ? 'cursor-pointer group'
+                                : 'cursor-not-allowed opacity-60'
                               }`}
                           >
                             <div
                               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 1
-                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
-                                  : newAppStep > 1
-                                    ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
-                                    : 'bg-slate-200 text-slate-500'
+                                ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                : newAppStep > 1
+                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                  : 'bg-slate-200 text-slate-500'
                                 }`}
                             >
                               {newAppStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
@@ -1319,10 +1319,10 @@ export default function Login() {
                               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 1</p>
                               <p
                                 className={`text-xs font-bold leading-tight ${newAppStep === 1
-                                    ? 'text-indigo-950'
-                                    : newAppStep > 1
-                                      ? 'text-slate-700 group-hover:text-indigo-600'
-                                      : 'text-slate-400'
+                                  ? 'text-indigo-950'
+                                  : newAppStep > 1
+                                    ? 'text-slate-700 group-hover:text-indigo-600'
+                                    : 'text-slate-400'
                                   }`}
                               >
                                 Plantilla & Identity
@@ -1347,18 +1347,18 @@ export default function Login() {
                             }}
                             disabled={newAppStep <= 2}
                             className={`flex items-center gap-2 text-left transition-all ${newAppStep === 2
-                                ? 'cursor-default'
-                                : newAppStep > 2
-                                  ? 'cursor-pointer group'
-                                  : 'cursor-not-allowed opacity-60'
+                              ? 'cursor-default'
+                              : newAppStep > 2
+                                ? 'cursor-pointer group'
+                                : 'cursor-not-allowed opacity-60'
                               }`}
                           >
                             <div
                               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 2
-                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
-                                  : newAppStep > 2
-                                    ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
-                                    : 'bg-slate-200 text-slate-500'
+                                ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                : newAppStep > 2
+                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                  : 'bg-slate-200 text-slate-500'
                                 }`}
                             >
                               {newAppStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
@@ -1367,10 +1367,10 @@ export default function Login() {
                               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 2</p>
                               <p
                                 className={`text-xs font-bold leading-tight ${newAppStep === 2
-                                    ? 'text-indigo-950'
-                                    : newAppStep > 2
-                                      ? 'text-slate-700 group-hover:text-indigo-600'
-                                      : 'text-slate-400'
+                                  ? 'text-indigo-950'
+                                  : newAppStep > 2
+                                    ? 'text-slate-700 group-hover:text-indigo-600'
+                                    : 'text-slate-400'
                                   }`}
                               >
                                 Station & Qualifications
@@ -1391,8 +1391,8 @@ export default function Login() {
                           >
                             <div
                               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 3
-                                  ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
-                                  : 'bg-slate-200 text-slate-500'
+                                ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
+                                : 'bg-slate-200 text-slate-500'
                                 }`}
                             >
                               3
@@ -2367,8 +2367,8 @@ export default function Login() {
                       type="button"
                       onClick={() => { setLoginMethod('password'); setPassword(''); }}
                       className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${loginMethod === 'password'
-                          ? 'bg-[#062c54] text-white shadow-xs'
-                          : 'text-[#082B4C] hover:text-[#062c54]'
+                        ? 'bg-[#062c54] text-white shadow-xs'
+                        : 'text-[#082B4C] hover:text-[#062c54]'
                         }`}
                     >
                       Password
@@ -2377,8 +2377,8 @@ export default function Login() {
                       type="button"
                       onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
                       className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${loginMethod === 'passcode'
-                          ? 'bg-[#062c54] text-white shadow-xs'
-                          : 'text-[#082B4C] hover:text-[#062c54]'
+                        ? 'bg-[#062c54] text-white shadow-xs'
+                        : 'text-[#082B4C] hover:text-[#062c54]'
                         }`}
                     >
                       6-Digit Passcode
@@ -2468,7 +2468,7 @@ export default function Login() {
             <Building2 className="w-12 h-12 text-[#fbbf24]" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            Streamlining Public Service Recruitment Astig
+            Streamlining Public Service Recruitment
           </h1>
           <p className="text-lg text-blue-100/90 max-w-xl leading-relaxed">
             A modern, efficient, and transparent platform for managing the entire hiring lifecycle.
