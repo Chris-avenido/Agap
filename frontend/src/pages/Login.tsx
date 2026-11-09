@@ -1065,8 +1065,8 @@ export default function Login() {
 
       <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 h-full overflow-y-auto">
         <div className={`mx-auto my-auto w-full transition-all duration-300 ${portalType === 'reclass' && reclassView === 'register'
-            ? 'max-w-md sm:max-w-xl lg:w-[520px]'
-            : 'max-w-sm lg:w-[410px]'
+          ? 'max-w-md sm:max-w-xl lg:w-[520px]'
+          : 'max-w-sm lg:w-[410px]'
           }`}>
           <div className="flex items-center gap-3.5">
             <div className="w-13 h-13 bg-white border-2 border-[#0A6FA6] rounded-xl flex items-center justify-center shadow-xs overflow-hidden p-1.5 shrink-0">
@@ -1084,8 +1084,8 @@ export default function Login() {
               ? 'Create an Account'
               : portalType === 'reclass'
                 ? (reclassView === 'register'
-                    ? (reclassRegType === 'new' ? 'New Reclassification Application' : 'Incumbent Plantilla Registration')
-                    : 'Reclassification Login')
+                  ? (reclassRegType === 'new' ? 'New Reclassification Application' : 'Incumbent Plantilla Registration')
+                  : 'Reclassification Login')
                 : 'Welcome back!'}
           </h2>
           <p className="mt-2 text-[15px] font-medium text-[#667A91]">
@@ -1095,10 +1095,10 @@ export default function Login() {
                 ? (reclassView === 'register'
                   ? (reclassRegType === 'new'
                     ? (newAppStep === 1
-                        ? 'Step 1 of 3: Enter Plantilla Item Number, applicant name, and contact details'
-                        : newAppStep === 2
-                          ? 'Step 2 of 3: Provide your current station assignment and professional qualifications'
-                          : 'Step 3 of 3: Set up your account password and 6-digit security passcode')
+                      ? 'Step 1 of 3: Enter Plantilla Item Number, applicant name, and contact details'
+                      : newAppStep === 2
+                        ? 'Step 2 of 3: Provide your current station assignment and professional qualifications'
+                        : 'Step 3 of 3: Set up your account password and 6-digit security passcode')
                     : 'Enter your Plantilla Item Number, DepEd email, and password to set up your account')
                   : 'Sign in using your Plantilla Item Number or DepEd email')
                 : 'Sign in to access your account'}
@@ -1298,35 +1298,32 @@ export default function Login() {
                               }
                             }}
                             disabled={newAppStep === 1}
-                            className={`flex items-center gap-2 text-left transition-all ${
-                              newAppStep === 1
+                            className={`flex items-center gap-2 text-left transition-all ${newAppStep === 1
                                 ? 'cursor-default'
                                 : newAppStep > 1
-                                ? 'cursor-pointer group'
-                                : 'cursor-not-allowed opacity-60'
-                            }`}
+                                  ? 'cursor-pointer group'
+                                  : 'cursor-not-allowed opacity-60'
+                              }`}
                           >
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
-                                newAppStep === 1
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 1
                                   ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
                                   : newAppStep > 1
-                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
-                                  : 'bg-slate-200 text-slate-500'
-                              }`}
+                                    ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                    : 'bg-slate-200 text-slate-500'
+                                }`}
                             >
                               {newAppStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
                             </div>
                             <div className="hidden sm:block">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 1</p>
                               <p
-                                className={`text-xs font-bold leading-tight ${
-                                  newAppStep === 1
+                                className={`text-xs font-bold leading-tight ${newAppStep === 1
                                     ? 'text-indigo-950'
                                     : newAppStep > 1
-                                    ? 'text-slate-700 group-hover:text-indigo-600'
-                                    : 'text-slate-400'
-                                }`}
+                                      ? 'text-slate-700 group-hover:text-indigo-600'
+                                      : 'text-slate-400'
+                                  }`}
                               >
                                 Plantilla & Identity
                               </p>
@@ -1335,9 +1332,8 @@ export default function Login() {
 
                           {/* Connector Line 1-2 */}
                           <div
-                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${
-                              newAppStep > 1 ? 'bg-emerald-500' : 'bg-slate-200'
-                            }`}
+                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${newAppStep > 1 ? 'bg-emerald-500' : 'bg-slate-200'
+                              }`}
                           />
 
                           {/* Step 2 Indicator */}
@@ -1350,35 +1346,32 @@ export default function Login() {
                               }
                             }}
                             disabled={newAppStep <= 2}
-                            className={`flex items-center gap-2 text-left transition-all ${
-                              newAppStep === 2
+                            className={`flex items-center gap-2 text-left transition-all ${newAppStep === 2
                                 ? 'cursor-default'
                                 : newAppStep > 2
-                                ? 'cursor-pointer group'
-                                : 'cursor-not-allowed opacity-60'
-                            }`}
+                                  ? 'cursor-pointer group'
+                                  : 'cursor-not-allowed opacity-60'
+                              }`}
                           >
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
-                                newAppStep === 2
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 2
                                   ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
                                   : newAppStep > 2
-                                  ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
-                                  : 'bg-slate-200 text-slate-500'
-                              }`}
+                                    ? 'bg-emerald-600 text-white group-hover:bg-emerald-700'
+                                    : 'bg-slate-200 text-slate-500'
+                                }`}
                             >
                               {newAppStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
                             </div>
                             <div className="hidden sm:block">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 2</p>
                               <p
-                                className={`text-xs font-bold leading-tight ${
-                                  newAppStep === 2
+                                className={`text-xs font-bold leading-tight ${newAppStep === 2
                                     ? 'text-indigo-950'
                                     : newAppStep > 2
-                                    ? 'text-slate-700 group-hover:text-indigo-600'
-                                    : 'text-slate-400'
-                                }`}
+                                      ? 'text-slate-700 group-hover:text-indigo-600'
+                                      : 'text-slate-400'
+                                  }`}
                               >
                                 Station & Qualifications
                               </p>
@@ -1387,32 +1380,28 @@ export default function Login() {
 
                           {/* Connector Line 2-3 */}
                           <div
-                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${
-                              newAppStep > 2 ? 'bg-emerald-500' : 'bg-slate-200'
-                            }`}
+                            className={`flex-1 mx-2 sm:mx-3 h-0.5 rounded-full transition-all ${newAppStep > 2 ? 'bg-emerald-500' : 'bg-slate-200'
+                              }`}
                           />
 
                           {/* Step 3 Indicator */}
                           <div
-                            className={`flex items-center gap-2 text-left ${
-                              newAppStep === 3 ? 'cursor-default' : 'cursor-not-allowed opacity-60'
-                            }`}
+                            className={`flex items-center gap-2 text-left ${newAppStep === 3 ? 'cursor-default' : 'cursor-not-allowed opacity-60'
+                              }`}
                           >
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${
-                                newAppStep === 3
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all shadow-2xs ${newAppStep === 3
                                   ? 'bg-indigo-600 text-white ring-2 ring-indigo-200'
                                   : 'bg-slate-200 text-slate-500'
-                              }`}
+                                }`}
                             >
                               3
                             </div>
                             <div className="hidden sm:block">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 3</p>
                               <p
-                                className={`text-xs font-bold leading-tight ${
-                                  newAppStep === 3 ? 'text-indigo-950' : 'text-slate-400'
-                                }`}
+                                className={`text-xs font-bold leading-tight ${newAppStep === 3 ? 'text-indigo-950' : 'text-slate-400'
+                                  }`}
                               >
                                 Security & Submit
                               </p>
@@ -1928,293 +1917,293 @@ export default function Login() {
                   ) : (
                     /* RECLASSIFICATION INLINE REGISTRATION FORM (EXISTING INCUMBENT) */
                     <form onSubmit={handleReclassRegisterInline} className="space-y-4">
-                  {/* Error Alert */}
-                  {(stepBError || stepAError) && (
-                    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                        <span className="font-medium">{stepBError || stepAError}</span>
+                      {/* Error Alert */}
+                      {(stepBError || stepAError) && (
+                        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                            <span className="font-medium">{stepBError || stepAError}</span>
+                          </div>
+                          {stepAIsAlreadyRegistered && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReclassView('login');
+                                setStepAError(null);
+                                setStepBError(null);
+                                setStepAIsAlreadyRegistered(false);
+                              }}
+                              className="self-start text-xs font-bold text-[#0369a1] hover:underline cursor-pointer ml-6"
+                            >
+                              Proceed to Sign in &rarr;
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Plantilla Item Number */}
+                      <div id="tour-reg-plantilla">
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Plantilla Item Number <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="relative rounded-lg shadow-sm flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Award className="h-4 w-4 text-[#0369a1]" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={stepAPlantilla}
+                              onChange={e => {
+                                setStepAPlantilla(e.target.value.toUpperCase());
+                                setStepAError(null);
+                                setStepBError(null);
+                                setStepAIsAlreadyRegistered(false);
+                                setStepAVerified(false);
+                              }}
+                              className="block w-full pl-9 pr-3 text-xs border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
+                              placeholder="XXXX-XXXXX-XXXX-XXXXXXX-XXXX"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyPlantillaInline()}
+                            disabled={stepAVerifying || !stepAPlantilla.trim()}
+                            className="px-3.5 py-2 text-xs font-bold text-white bg-[#0369a1] hover:bg-[#02527e] disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+                          >
+                            {stepAVerifying ? (
+                              <span>Checking...</span>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Verify</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {stepAVerified && (
+                          <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              <strong>GMIS Match:</strong> {gmisDetails.designation || 'Incumbent'} ({gmisDetails.division || 'DepEd'})
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      {stepAIsAlreadyRegistered && (
+
+                      {/* Incumbent First Name & Last Name */}
+                      <div id="tour-reg-name" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            First Name <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-3.5 w-3.5 text-gray-400" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={stepBFirstName}
+                              onChange={e => {
+                                setStepBFirstName(e.target.value);
+                                setStepBError(null);
+                              }}
+                              className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
+                              placeholder="Juan"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Last Name <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-3.5 w-3.5 text-gray-400" />
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={stepBLastName}
+                              onChange={e => {
+                                setStepBLastName(e.target.value);
+                                setStepBError(null);
+                              }}
+                              className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
+                              placeholder="Dela Cruz"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DepEd Email & Mobile Number */}
+                      <div id="tour-reg-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            DepEd Email Address <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <User className="h-3.5 w-3.5 text-gray-400" />
+                            </div>
+                            <input
+                              type="email"
+                              required
+                              value={stepBEmail}
+                              onChange={e => {
+                                setStepBEmail(e.target.value);
+                                setStepBError(null);
+                              }}
+                              className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                              placeholder="firstname.lastname@deped.gov.ph"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Mobile Number <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative rounded-lg shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Phone className="h-3.5 w-3.5 text-gray-400" />
+                            </div>
+                            <input
+                              type="tel"
+                              required
+                              maxLength={11}
+                              value={stepBMobile}
+                              onChange={e => setStepBMobile(e.target.value.replace(/\D/g, ''))}
+                              className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none font-mono"
+                              placeholder="09XXXXXXXXX"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Password, Confirm Password & 6-Digit Passcode */}
+                      <div id="tour-reg-security" className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">
+                              Password <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative rounded-lg shadow-sm">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Lock className="h-3.5 w-3.5 text-gray-400" />
+                              </div>
+                              <input
+                                type={showStepBPassword ? 'text' : 'password'}
+                                required
+                                value={stepBPassword}
+                                onChange={e => setStepBPassword(e.target.value)}
+                                className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                                placeholder="••••••••"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowStepBPassword(!showStepBPassword)}
+                                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                {showStepBPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">
+                              Confirm Password <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative rounded-lg shadow-sm">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Lock className="h-3.5 w-3.5 text-gray-400" />
+                              </div>
+                              <input
+                                type={showStepBConfirmPassword ? 'text' : 'password'}
+                                required
+                                value={stepBConfirmPassword}
+                                onChange={e => setStepBConfirmPassword(e.target.value)}
+                                className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
+                                placeholder="••••••••"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowStepBConfirmPassword(!showStepBConfirmPassword)}
+                                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                {showStepBConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 6-Digit Passcode */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-gray-700">
+                              6-Digit Passcode <span className="text-red-500">*</span>
+                            </label>
+                            <span className="text-[10px] text-gray-400">Used for quick passcode login</span>
+                          </div>
+                          <div className="relative rounded-lg shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Lock className="h-3.5 w-3.5 text-gray-400" />
+                            </div>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={6}
+                              required
+                              value={stepBPasscode}
+                              onChange={e => setStepBPasscode(e.target.value.replace(/\D/g, ''))}
+                              className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none tracking-widest font-mono text-center font-bold"
+                              placeholder="••••••"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div id="tour-reg-submit" className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={stepBRegistering || !stepAVerified}
+                          className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          {stepBRegistering ? 'Registering Account...' : !stepAVerified ? 'Verify Plantilla Item First' : 'Register Account'}
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
+                        <div>
+                          Already have an account?{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReclassView('login');
+                              setStepBError(null);
+                              setStepAError(null);
+                              setStepAIsAlreadyRegistered(false);
+                            }}
+                            className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
+                          >
+                            Sign in here
+                          </button>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            setReclassView('login');
-                            setStepAError(null);
-                            setStepBError(null);
-                            setStepAIsAlreadyRegistered(false);
-                          }}
-                          className="self-start text-xs font-bold text-[#0369a1] hover:underline cursor-pointer ml-6"
+                          onClick={() => setShowCategoryModal(true)}
+                          className="text-xs text-[#0369a1] hover:text-[#02527e] underline transition-colors cursor-pointer"
                         >
-                          Proceed to Sign in &rarr;
+                          &larr; Back to category selection
                         </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Plantilla Item Number */}
-                  <div id="tour-reg-plantilla">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                      Plantilla Item Number <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="relative rounded-lg shadow-sm flex-1">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Award className="h-4 w-4 text-[#0369a1]" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={stepAPlantilla}
-                          onChange={e => {
-                            setStepAPlantilla(e.target.value.toUpperCase());
-                            setStepAError(null);
-                            setStepBError(null);
-                            setStepAIsAlreadyRegistered(false);
-                            setStepAVerified(false);
-                          }}
-                          className="block w-full pl-9 pr-3 text-xs border-gray-300 rounded-lg border py-2.5 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none transition-colors font-mono uppercase bg-white text-[var(--ink)] tracking-wider"
-                          placeholder="XXXX-XXXXX-XXXX-XXXXXXX-XXXX"
-                        />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleVerifyPlantillaInline()}
-                        disabled={stepAVerifying || !stepAPlantilla.trim()}
-                        className="px-3.5 py-2 text-xs font-bold text-white bg-[#0369a1] hover:bg-[#02527e] disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
-                      >
-                        {stepAVerifying ? (
-                          <span>Checking...</span>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Verify</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {stepAVerified && (
-                      <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>
-                          <strong>GMIS Match:</strong> {gmisDetails.designation || 'Incumbent'} ({gmisDetails.division || 'DepEd'})
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Incumbent First Name & Last Name */}
-                  <div id="tour-reg-name" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        First Name <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={stepBFirstName}
-                          onChange={e => {
-                            setStepBFirstName(e.target.value);
-                            setStepBError(null);
-                          }}
-                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
-                          placeholder="Juan"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Last Name <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          value={stepBLastName}
-                          onChange={e => {
-                            setStepBLastName(e.target.value);
-                            setStepBError(null);
-                          }}
-                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none capitalize"
-                          placeholder="Dela Cruz"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* DepEd Email & Mobile Number */}
-                  <div id="tour-reg-contact" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        DepEd Email Address <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type="email"
-                          required
-                          value={stepBEmail}
-                          onChange={e => {
-                            setStepBEmail(e.target.value);
-                            setStepBError(null);
-                          }}
-                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
-                          placeholder="firstname.lastname@deped.gov.ph"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Mobile Number <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Phone className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type="tel"
-                          required
-                          maxLength={11}
-                          value={stepBMobile}
-                          onChange={e => setStepBMobile(e.target.value.replace(/\D/g, ''))}
-                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none font-mono"
-                          placeholder="09XXXXXXXXX"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Password, Confirm Password & 6-Digit Passcode */}
-                  <div id="tour-reg-security" className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                          Password <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative rounded-lg shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Lock className="h-3.5 w-3.5 text-gray-400" />
-                          </div>
-                          <input
-                            type={showStepBPassword ? 'text' : 'password'}
-                            required
-                            value={stepBPassword}
-                            onChange={e => setStepBPassword(e.target.value)}
-                            className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
-                            placeholder="••••••••"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowStepBPassword(!showStepBPassword)}
-                            className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            {showStepBPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                          Confirm Password <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative rounded-lg shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Lock className="h-3.5 w-3.5 text-gray-400" />
-                          </div>
-                          <input
-                            type={showStepBConfirmPassword ? 'text' : 'password'}
-                            required
-                            value={stepBConfirmPassword}
-                            onChange={e => setStepBConfirmPassword(e.target.value)}
-                            className="block w-full pl-9 pr-8 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none"
-                            placeholder="••••••••"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowStepBConfirmPassword(!showStepBConfirmPassword)}
-                            className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            {showStepBConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 6-Digit Passcode */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-gray-700">
-                          6-Digit Passcode <span className="text-red-500">*</span>
-                        </label>
-                        <span className="text-[10px] text-gray-400">Used for quick passcode login</span>
-                      </div>
-                      <div className="relative rounded-lg shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 text-gray-400" />
-                        </div>
-                        <input
-                          type="password"
-                          inputMode="numeric"
-                          maxLength={6}
-                          required
-                          value={stepBPasscode}
-                          onChange={e => setStepBPasscode(e.target.value.replace(/\D/g, ''))}
-                          className="block w-full pl-9 text-xs border-gray-300 rounded-lg border py-2 px-3 focus:ring-[#0369a1] focus:border-[#0369a1] outline-none tracking-widest font-mono text-center font-bold"
-                          placeholder="••••••"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div id="tour-reg-submit" className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={stepBRegistering || !stepAVerified}
-                      className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#0369a1] hover:bg-[#02527e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0369a1] transition-colors disabled:opacity-60 cursor-pointer"
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                      {stepBRegistering ? 'Registering Account...' : !stepAVerified ? 'Verify Plantilla Item First' : 'Register Account'}
-                    </button>
-                  </div>
-
-                  <div className="mt-4 flex flex-col items-center gap-2 text-sm text-[var(--muted)]">
-                    <div>
-                      Already have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReclassView('login');
-                          setStepBError(null);
-                          setStepAError(null);
-                          setStepAIsAlreadyRegistered(false);
-                        }}
-                        className="font-bold text-[#0369a1] hover:underline transition-colors focus:outline-none cursor-pointer"
-                      >
-                        Sign in here
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCategoryModal(true)}
-                      className="text-xs text-[#0369a1] hover:text-[#02527e] underline transition-colors cursor-pointer"
-                    >
-                      &larr; Back to category selection
-                    </button>
-                  </div>
-                </form>
+                    </form>
                   )}
                 </div>
               ) : (
@@ -2257,8 +2246,8 @@ export default function Login() {
                           setReclassLoginError(null);
                         }}
                         className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${reclassLoginMethod === 'password'
-                            ? 'bg-[#062c54] text-white shadow-xs'
-                            : 'text-[#082B4C] hover:text-[#062c54]'
+                          ? 'bg-[#062c54] text-white shadow-xs'
+                          : 'text-[#082B4C] hover:text-[#062c54]'
                           }`}
                       >
                         Password
@@ -2270,8 +2259,8 @@ export default function Login() {
                           setReclassLoginError(null);
                         }}
                         className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer ${reclassLoginMethod === 'passcode'
-                            ? 'bg-[#062c54] text-white shadow-xs'
-                            : 'text-[#082B4C] hover:text-[#062c54]'
+                          ? 'bg-[#062c54] text-white shadow-xs'
+                          : 'text-[#082B4C] hover:text-[#062c54]'
                           }`}
                       >
                         6-Digit Passcode
@@ -2377,22 +2366,20 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('password'); setPassword(''); }}
-                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${
-                        loginMethod === 'password'
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${loginMethod === 'password'
                           ? 'bg-[#062c54] text-white shadow-xs'
                           : 'text-[#082B4C] hover:text-[#062c54]'
-                      }`}
+                        }`}
                     >
                       Password
                     </button>
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('passcode'); setPassword(''); }}
-                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${
-                        loginMethod === 'passcode'
+                      className={`flex-1 text-sm font-bold py-2 rounded-md transition-all cursor-pointer ${loginMethod === 'passcode'
                           ? 'bg-[#062c54] text-white shadow-xs'
                           : 'text-[#082B4C] hover:text-[#062c54]'
-                      }`}
+                        }`}
                     >
                       6-Digit Passcode
                     </button>
@@ -2481,7 +2468,7 @@ export default function Login() {
             <Building2 className="w-12 h-12 text-[#fbbf24]" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            Streamlining Public Service Recruitment
+            Streamlining Public Service Recruitment Astig
           </h1>
           <p className="text-lg text-blue-100/90 max-w-xl leading-relaxed">
             A modern, efficient, and transparent platform for managing the entire hiring lifecycle.
@@ -2660,8 +2647,8 @@ export default function Login() {
             <p>
               {reclassView === 'register'
                 ? (reclassRegType === 'new'
-                    ? 'Register your candidate profile, station, qualifications, and credentials to file a new reclassification application.'
-                    : 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.')
+                  ? 'Register your candidate profile, station, qualifications, and credentials to file a new reclassification application.'
+                  : 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.')
                 : 'Seamlessly access your portal, submit documentary requirements, and track your evaluation progress from verification through to appointment.'}
             </p>
             <div className="welcome-highlights">
