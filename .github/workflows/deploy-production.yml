@@ -33,8 +33,8 @@ jobs:
 
           # 2. Build Frontend
           echo "--> Building frontend client..."
-          export VITE_BASE_PATH="/insighted/AGAP/"
-          export VITE_API_URL="/insighted/AGAP"
+          export VITE_BASE_PATH="/insighted/AGAP-Portal/"
+          export VITE_API_URL="/insighted/AGAP-Portal"
           export NODE_OPTIONS="--max-old-space-size=4096"
           npm run build --prefix frontend
 
@@ -47,6 +47,10 @@ jobs:
           sudo rm -rf /var/www/html/InsightED-AGAP/agap-portal/dist/*
           sudo cp -r dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/
           sudo chown -R Administrator1:Administrator1 /var/www/html/InsightED-AGAP/agap-portal
+          test -s dist/index.html
+          test -s /var/www/html/InsightED-AGAP/agap-portal/dist/index.html
+          sudo chmod a+rx /mnt/agap-portal /var/www/html/InsightED-AGAP /var/www/html/InsightED-AGAP/agap-portal
+          sudo chmod -R a+rX dist /var/www/html/InsightED-AGAP/agap-portal/dist
 
           # 4. Install backend dependencies & build
           echo "--> Installing backend dependencies and compiling..."
@@ -66,4 +70,6 @@ jobs:
           sleep 2
           echo "--- Health Verification ---"
           curl -s -i http://127.0.0.1:5070/ || curl -s -i http://127.0.0.1:5070/api/
+          echo "--- Portal Verification ---"
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 --output /dev/null https://stride.deped.gov.ph/insighted/AGAP-Portal/
           echo "✅ AGAP Production deployment completed successfully!"

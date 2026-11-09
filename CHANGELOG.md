@@ -1,5 +1,9 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-09] [Deploy] Restore production portal path and static file access
+- Build the production frontend with the `/insighted/AGAP-Portal/` base and matching API URL.
+- Check the published `index.html`, give Nginx read and directory traversal access, and fail deployment if the public portal does not return a successful response.
+
 ## [2026-11-06] [DB] Reliability hardening
 - **Pool**: `statement_timeout=15000`, `idle_in_transaction_session_timeout=30000` in `backend/src/database.ts`.
 - **Migrations no longer run at boot**: `runSchemaMigrations` moved to `backend/src/database-migrations.ts`; run `npm run migrate:schema` as a pre-deploy step (advisory-locked, no statement timeout). `dev`/`start:dev` run it first; `start`/`start:prod` do not.
