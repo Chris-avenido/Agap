@@ -47,8 +47,11 @@ jobs:
           cp -r frontend/dist/* dist/ 2>/dev/null || true
           sudo mkdir -p /var/www/html/InsightED-AGAP/agap-portal/dist
           sudo cp -r frontend/dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/ 2>/dev/null || true
-          sudo chmod -R a+rX /mnt/agap-portal/frontend/dist /mnt/agap-portal/dist /var/www/html/InsightED-AGAP/agap-portal/dist
           sudo chown -R Administrator1:Administrator1 /mnt/agap-portal /var/www/html/InsightED-AGAP/agap-portal
+          test -s dist/index.html || cp -r frontend/dist/* dist/
+          test -s /var/www/html/InsightED-AGAP/agap-portal/dist/index.html || sudo cp -r frontend/dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/
+          sudo chmod a+rx /mnt/agap-portal /var/www/html/InsightED-AGAP /var/www/html/InsightED-AGAP/agap-portal
+          sudo chmod -R a+rX dist frontend/dist /var/www/html/InsightED-AGAP/agap-portal/dist
 
           # 4. Install backend dependencies & build
           echo "--> Installing backend dependencies and compiling..."
