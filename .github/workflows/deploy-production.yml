@@ -1,0 +1,69 @@
+name: Deploy Agap Production
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-agap-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Agap Production VM
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy Agap Production Environment
+        run: |
+          set -e
+          echo "===================================================="
+          echo "🚀 Deploying AGAP to Production (Self-Hosted)..."
+          echo "===================================================="
+          cd /mnt/agap-portal
+
+          # 1. Pull latest production branch
+          git fetch origin
+          git checkout -B production -f origin/production
+          echo "Current commit:"
+          git log -1 --format="%h - %s (%an, %cd)"
+
+          # 2. Build Frontend
+          echo "--> Building frontend client..."
+          export VITE_BASE_PATH="/insighted/AGAP/"
+          export VITE_API_URL="/insighted/AGAP"
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          npm run build --prefix frontend
+
+          # 3. Sync frontend static files to dist & nginx root
+          echo "--> Syncing frontend assets..."
+          mkdir -p dist
+          rm -rf dist/*
+          cp -r frontend/dist/* dist/
+          sudo mkdir -p /var/www/html/InsightED-AGAP/agap-portal/dist
+          sudo rm -rf /var/www/html/InsightED-AGAP/agap-portal/dist/*
+          sudo cp -r dist/* /var/www/html/InsightED-AGAP/agap-portal/dist/
+          sudo chown -R Administrator1:Administrator1 /var/www/html/InsightED-AGAP/agap-portal
+
+          # 4. Install backend dependencies & build
+          echo "--> Installing backend dependencies and compiling..."
+          cd backend
+          mkdir -p logs
+          npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          npx prisma generate --schema=database/schema.prisma
+          npm run build
+
+          # 5. Restart PM2
+          echo "--> Restarting PM2 service..."
+          cd /mnt/agap-portal
+          pm2 restart ecosystem.agap-portal.config.cjs --update-env || pm2 start ecosystem.agap-portal.config.cjs
+          pm2 save
+
+          # 6. Verify health
+          sleep 2
+          echo "--- Health Verification ---"
+          curl -s -i http://127.0.0.1:5070/ || curl -s -i http://127.0.0.1:5070/api/
+          echo "✅ AGAP Production deployment completed successfully!"
