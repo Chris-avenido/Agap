@@ -63,8 +63,7 @@ jobs:
           pm2 save
 
           # 6. Verify health
-          echo "--> Verifying backend health..."
-          sleep 6
-          curl -s -i http://127.0.0.1:5070/ || curl -s -i http://127.0.0.1:5070/api/ || true
+          sleep 2
+          echo "--- Health Verification ---"
+          curl -s -i http://127.0.0.1:5070/ || curl -s -i http://127.0.0.1:5070/api/
           echo "✅ AGAP Production deployment completed successfully!"
-
