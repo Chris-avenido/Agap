@@ -125,6 +125,19 @@ export async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS is_registered BOOLEAN DEFAULT FALSE;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS stage_updated_at TIMESTAMP WITH TIME ZONE;
       UPDATE reclass_gc SET stage_updated_at = COALESCE(updated_at, created_at, NOW()) WHERE stage_updated_at IS NULL;
+      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS current_stage VARCHAR(50) DEFAULT 'SDO_EVALUATION';
+      UPDATE reclass_gc
+      SET current_stage = CASE
+        WHEN (new_item_no IS NOT NULL AND TRIM(new_item_no) <> '' AND UPPER(TRIM(new_item_no)) <> 'NULL') 
+             OR UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) IN ('APPOINTMENT', 'RECLASS PROPER', 'APPROVED', 'COMPLETED')
+             OR (nosca_serial_no IS NOT NULL AND TRIM(nosca_serial_no) <> '') THEN 'COMPLETED'
+        WHEN UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%DBM%' THEN 'DBM_NOSCA'
+        WHEN UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%RO%' 
+             OR UPPER(TRIM(COALESCE(stage_of_reclassification, ''))) LIKE '%REGIONAL%' THEN 'RO_ENDORSEMENT'
+        ELSE 'SDO_EVALUATION'
+      END
+      WHERE current_stage IS NULL OR current_stage = 'UPDATING_DOCUMENTS';
+      CREATE INDEX IF NOT EXISTS idx_reclass_gc_current_stage ON reclass_gc(current_stage);
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
