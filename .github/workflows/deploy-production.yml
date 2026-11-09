@@ -32,6 +32,9 @@ jobs:
           git log -1 --format="%h - %s (%an, %cd)"
 
           # 2. Build Frontend
+          echo "--> Ensuring clean frontend permissions..."
+          sudo chown -R Administrator1:Administrator1 .
+          sudo rm -rf frontend/dist
           echo "--> Building frontend client..."
           export VITE_BASE_PATH="/insighted/AGAP/"
           export VITE_API_URL="/insighted/AGAP"
