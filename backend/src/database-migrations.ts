@@ -89,7 +89,12 @@ export async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(50);
       ALTER TABLE reclass_gc ALTER COLUMN email DROP NOT NULL;
       ALTER TABLE reclass_gc ALTER COLUMN password_hash DROP NOT NULL;
+      ALTER TABLE reclass_gc ALTER COLUMN password DROP NOT NULL;
       ALTER TABLE reclass_gc ALTER COLUMN passcode DROP NOT NULL;
+      ALTER TABLE reclass_gc ALTER COLUMN email SET DEFAULT NULL;
+      ALTER TABLE reclass_gc ALTER COLUMN password_hash SET DEFAULT NULL;
+      ALTER TABLE reclass_gc ALTER COLUMN password SET DEFAULT NULL;
+      ALTER TABLE reclass_gc ALTER COLUMN passcode SET DEFAULT NULL;
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS passcode_hash;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
@@ -322,6 +327,13 @@ export async function runSchemaMigrations(client: any) {
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS passcode VARCHAR(255);
       ALTER TABLE gmis_gc_items ALTER COLUMN email DROP NOT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN password DROP NOT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN password_hash DROP NOT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN passcode DROP NOT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN email SET DEFAULT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN password SET DEFAULT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN password_hash SET DEFAULT NULL;
+      ALTER TABLE gmis_gc_items ALTER COLUMN passcode SET DEFAULT NULL;
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_psi_cd ON gmis_gc_items(psi_cd);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_region ON gmis_gc_items(region);
       CREATE INDEX IF NOT EXISTS idx_gmis_gc_items_division ON gmis_gc_items(division);

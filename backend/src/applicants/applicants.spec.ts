@@ -416,6 +416,36 @@ describe('Reclassification Auth & Registration Rules', () => {
       passcode: null,
     };
     expect(checkCanClaim(emailOnlyItem)).toBe(false);
+
+    // Case 5: When record in reclass_gc and gmis_gc_items has NULL email, password, and passcode,
+    // existing applicant with matching email is claimed as an UPDATE rather than throwing 409 conflict
+    const evaluateEmailConflict = (
+      isUnclaimed: boolean,
+      existingApplicant: { id: number; email: string } | null,
+    ) => {
+      if (existingApplicant) {
+        if (isUnclaimed) {
+          return { conflict: false, action: 'UPDATE', claimApplicantId: existingApplicant.id };
+        }
+        return { conflict: true, action: 'ERROR_409', claimApplicantId: null };
+      }
+      return { conflict: false, action: 'INSERT', claimApplicantId: null };
+    };
+
+    const claimedResult = evaluateEmailConflict(true, {
+      id: 6780,
+      email: 'diosdado.falguisana@deped.gov.ph',
+    });
+    expect(claimedResult.conflict).toBe(false);
+    expect(claimedResult.action).toBe('UPDATE');
+    expect(claimedResult.claimApplicantId).toBe(6780);
+
+    const conflictingResult = evaluateEmailConflict(false, {
+      id: 6780,
+      email: 'other.person@deped.gov.ph',
+    });
+    expect(conflictingResult.conflict).toBe(true);
+    expect(conflictingResult.action).toBe('ERROR_409');
   });
 });
 

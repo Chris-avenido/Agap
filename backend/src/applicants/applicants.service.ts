@@ -3054,6 +3054,30 @@ class ApplicantsServiceClass {
       inc = insertGcRes.rows[0];
     }
 
+    const isBlank = (val: any) =>
+      val === null ||
+      val === undefined ||
+      String(val).trim() === '' ||
+      String(val).trim().toUpperCase() === 'NULL';
+
+    const incEmailNull = isBlank(inc?.email);
+    const incPassNull = isBlank(inc?.password_hash) && isBlank(inc?.password);
+    const incPasscodeNull = isBlank(inc?.passcode);
+
+    const gmisEmailNull = isBlank(gmisItem?.email);
+    const gmisPassNull = isBlank(gmisItem?.password) && isBlank(gmisItem?.password_hash);
+    const gmisPasscodeNull = isBlank(gmisItem?.passcode);
+
+    // If existing record's email, password, and passcode are all NULL in reclass_gc and gmis_gc_items,
+    // this plantilla item is unclaimed and available to be claimed by registration.
+    const isUnclaimedItem =
+      incEmailNull &&
+      incPassNull &&
+      incPasscodeNull &&
+      gmisEmailNull &&
+      gmisPassNull &&
+      gmisPasscodeNull;
+
     const finalFirstName = isNewApp
       ? (cleanFirstName || (inc.first_name ? inc.first_name.trim().toUpperCase() : 'APPLICANT'))
       : (cleanFirstName || inc.first_name || 'Applicant');
@@ -3063,7 +3087,7 @@ class ApplicantsServiceClass {
 
     // 2. Check existing applicant for this plantilla item number
     const existingItem = await pool.query(
-      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
+      `SELECT id, password_hash, passcode_hash, email_address, email, registrant_type FROM applicants 
        WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
        LIMIT 1`,
       [normalizedItemNo],
@@ -3073,15 +3097,15 @@ class ApplicantsServiceClass {
     if (existingItem.rows.length > 0) {
       const appRow = existingItem.rows[0];
       const hasRealEmail =
-        (appRow.email && appRow.email.trim()) ||
-        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
+        (appRow.email && appRow.email.trim() && !appRow.email.toLowerCase().startsWith('no-email-')) ||
+        (appRow.email_address && appRow.email_address.trim() && !appRow.email_address.toLowerCase().startsWith('no-email-'));
       const hasPassword =
-        appRow.password_hash ||
-        appRow.passcode_hash ||
-        (inc && (inc.password_hash || inc.passcode));
+        !isBlank(appRow.password_hash) ||
+        !isBlank(appRow.passcode_hash) ||
+        (inc && (!isBlank(inc.password_hash) || !isBlank(inc.passcode)));
 
-      const hasReclassEmail = Boolean(inc && inc.email && inc.email.trim());
-      if (hasReclassEmail && hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
+      const hasReclassEmail = Boolean(inc && !isBlank(inc.email));
+      if (!isUnclaimedItem && hasReclassEmail && hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
         const err: any = new Error(
           'This Plantilla Item Number is already registered. Please sign in.',
         );
@@ -3093,23 +3117,29 @@ class ApplicantsServiceClass {
 
     // Check uniqueness of email in reclass_gc for any other plantilla item number
     const existingReclassEmail = await pool.query(
-      `SELECT item_no, email FROM reclass_gc 
+      `SELECT item_no, email, password_hash, password, passcode FROM reclass_gc 
        WHERE LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1))
          AND UPPER(TRIM(COALESCE(item_no, ''))) <> UPPER(TRIM($2))
        LIMIT 1`,
       [cleanEmail, normalizedItemNo],
     );
     if (existingReclassEmail.rows.length > 0) {
-      const err: any = new Error(
-        'This DepEd email is already registered in GMIS reclassification records.',
-      );
-      err.statusCode = 409;
-      throw err;
+      const otherRow = existingReclassEmail.rows[0];
+      const otherHasCreds =
+        (!isBlank(otherRow.password_hash) || !isBlank(otherRow.password)) &&
+        !isBlank(otherRow.passcode);
+      if (otherHasCreds) {
+        const err: any = new Error(
+          'This DepEd email is already registered in GMIS reclassification records.',
+        );
+        err.statusCode = 409;
+        throw err;
+      }
     }
 
     // Check uniqueness of email across other applicants
     const existingEmail = await pool.query(
-      `SELECT id FROM applicants 
+      `SELECT id, plantilla_item_number, registrant_type, password_hash, passcode_hash FROM applicants 
        WHERE (LOWER(TRIM(COALESCE(email_address, ''))) = LOWER(TRIM($1)) 
           OR LOWER(TRIM(COALESCE(email, ''))) = LOWER(TRIM($1)))
          AND ($2::int IS NULL OR id <> $2)
@@ -3117,11 +3147,20 @@ class ApplicantsServiceClass {
       [cleanEmail, existingApplicantId],
     );
     if (existingEmail.rows.length > 0) {
-      const err: any = new Error(
-        'This DepEd email address is already registered to another account.',
-      );
-      err.statusCode = 409;
-      throw err;
+      const emailAppRow = existingEmail.rows[0];
+      if (isUnclaimedItem) {
+        // If email, password, and passcode are NULL in reclass_gc and gmis_gc_items,
+        // bypass the 409 conflict error and allow registration to proceed as an UPDATE operation to claim the account.
+        if (!existingApplicantId) {
+          existingApplicantId = emailAppRow.id;
+        }
+      } else {
+        const err: any = new Error(
+          'This DepEd email address is already registered to another account.',
+        );
+        err.statusCode = 409;
+        throw err;
+      }
     }
 
     // 3. Hash password and passcode via bcryptjs
@@ -3156,6 +3195,14 @@ class ApplicantsServiceClass {
       let applicant: any;
 
       if (existingApplicantId) {
+        // Clear plantilla_item_number on any other applicant to prevent conflicts
+        await client.query(
+          `UPDATE applicants SET plantilla_item_number = NULL 
+           WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+             AND id <> $2`,
+          [normalizedItemNo, existingApplicantId],
+        );
+
         const updateRes = await client.query(
           `UPDATE applicants SET
             surname = $1,
