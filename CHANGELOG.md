@@ -1,5 +1,19 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-10] [Reclass] Permit Registration & Account Claiming for Records with NULL Credentials (HTTP 409 Resolution)
+- **Database Layer**:
+  - Ensured `email`, `password`, `password_hash`, and `passcode` columns in `reclass_gc` and `gmis_gc_items` safely allow `NULL` (nullable without NOT NULL constraint) via idempotent migration script `backend/database/migrations/allow_null_credentials_reclass_gmis.sql` and `runSchemaMigrations`.
+  - Updated `backend/database/schema.prisma` models `reclass_gc` and `gmis_gc_items` with these optional credential fields.
+- **Backend Layer (`verifyItem` & `ApplicantsService`)**:
+  - In `POST /api/applicants/reclass-verify-item` (`verifyItem` controller and `ApplicantsService.verifyReclassItemNumber`), resolved HTTP 409 (Conflict).
+  - When a plantilla item exists in `reclass_gc` or `gmis_gc_items`, explicitly checks if `email`, `password`/`password_hash`, and `passcode` are `NULL`.
+  - If credentials are `NULL`, bypasses the 409 Conflict error and returns `status: 'valid'` and `can_claim: true`, allowing the user to claim and register the incumbent record without conflict.
+  - Returns `already_registered` (409) only when active credentials already exist on the account.
+- **Frontend Layer (`Login.tsx`)**:
+  - Updated `handleVerifyPlantillaInline` and `handleVerifyNewAppPlantilla` to accept valid response or `can_claim`, smoothly routing the applicant to Step B without triggering errors or error boundaries.
+  - Preserved all visual styling, layout patterns, and form designs without alteration.
+
+
 ## [2026-11-09] [Deploy] Restore production portal path and static file access
 - Build the production frontend with the `/insighted/AGAP-Portal/` base and matching API URL.
 - Check the published `index.html`, give Nginx read and directory traversal access, and fail deployment if the public portal does not return a successful response.

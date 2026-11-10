@@ -10,6 +10,8 @@ export const ReclassService = {
     ApplicantsService.getIncumbentLocations(...a),
   getIncumbentInfoByPlantilla: (...a: Parameters<typeof ApplicantsService.getIncumbentInfoByPlantilla>) =>
     ApplicantsService.getIncumbentInfoByPlantilla(...a),
+  checkCredentialsStatus: (...a: Parameters<typeof ApplicantsService.checkCredentialsStatus>) =>
+    ApplicantsService.checkCredentialsStatus(...a),
   verifyReclassItemNumber: (...a: Parameters<typeof ApplicantsService.verifyReclassItemNumber>) =>
     ApplicantsService.verifyReclassItemNumber(...a),
   verifyPlantillaItem: (...a: Parameters<typeof ApplicantsService.verifyPlantillaItem>) =>
