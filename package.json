@@ -18,7 +18,9 @@
     "logs:summary": "node tools/dev-diagnostics/summarize-logs.mjs",
     "logs:clear": "node -e \"require('node:fs').rmSync('.logs',{recursive:true,force:true})\"",
     "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix frontend",
+    "lint:fast": "npm run lint:check --prefix frontend",
     "lint": "npm run lint:check --prefix backend && npm run lint:check --prefix frontend",
+    "test:unit": "npm run test --prefix backend",
     "ci": "npm run lint && npm run typecheck"
   }
 }

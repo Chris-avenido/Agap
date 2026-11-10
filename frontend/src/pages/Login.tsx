@@ -506,19 +506,20 @@ export default function Login() {
       });
 
       const resData = await response.json();
-      if (response.ok && resData.status === 'valid') {
+      if (response.ok && (resData.status === 'valid' || resData.can_claim)) {
         setStepAVerified(true);
+        const data = resData.data || {};
         setGmisDetails({
-          itemNumber: resData.data.item_number || cleanPlantilla,
-          designation: resData.data.current_position || 'Incumbent',
-          region: resData.data.region || 'N/A',
-          division: resData.data.division || 'N/A',
-          schoolName: resData.data.school_name || '',
+          itemNumber: data.item_number || cleanPlantilla,
+          designation: data.current_position || 'Incumbent',
+          region: data.region || 'N/A',
+          division: data.division || 'N/A',
+          schoolName: data.school_name || '',
         });
-        if (resData.data.first_name) setStepBFirstName(resData.data.first_name);
-        if (resData.data.last_name) setStepBLastName(resData.data.last_name);
-        if (resData.data.email) setStepBEmail(resData.data.email);
-        if (resData.data.mobile_number) setStepBMobile(resData.data.mobile_number);
+        if (data.first_name) setStepBFirstName(data.first_name);
+        if (data.last_name) setStepBLastName(data.last_name);
+        if (data.email) setStepBEmail(data.email);
+        if (data.mobile_number) setStepBMobile(data.mobile_number);
         setStepAError(null);
       } else if (resData.status === 'already_registered' || response.status === 409) {
         setStepAIsAlreadyRegistered(true);
@@ -557,22 +558,23 @@ export default function Login() {
       });
 
       const resData = await response.json();
-      if (response.ok && resData.status === 'valid') {
+      if (response.ok && (resData.status === 'valid' || resData.can_claim)) {
         setNewAppVerified(true);
-        if (resData.data.first_name) setNewAppFirstName(String(resData.data.first_name).toUpperCase());
-        if (resData.data.last_name) setNewAppLastName(String(resData.data.last_name).toUpperCase());
-        if (resData.data.current_position) setNewAppDesignation(String(resData.data.current_position).toUpperCase());
-        if (resData.data.region) setNewAppRegion(String(resData.data.region).toUpperCase());
-        if (resData.data.division) setNewAppDivision(String(resData.data.division).toUpperCase());
-        if (resData.data.school_name) setNewAppSchoolName(String(resData.data.school_name).toUpperCase());
-        if (resData.data.education) setNewAppEducation(String(resData.data.education).toUpperCase());
-        if (resData.data.years_experience !== undefined && resData.data.years_experience !== null && resData.data.years_experience !== '') {
-          setNewAppYearsExperience(String(resData.data.years_experience));
+        const data = resData.data || {};
+        if (data.first_name) setNewAppFirstName(String(data.first_name).toUpperCase());
+        if (data.last_name) setNewAppLastName(String(data.last_name).toUpperCase());
+        if (data.current_position) setNewAppDesignation(String(data.current_position).toUpperCase());
+        if (data.region) setNewAppRegion(String(data.region).toUpperCase());
+        if (data.division) setNewAppDivision(String(data.division).toUpperCase());
+        if (data.school_name) setNewAppSchoolName(String(data.school_name).toUpperCase());
+        if (data.education) setNewAppEducation(String(data.education).toUpperCase());
+        if (data.years_experience !== undefined && data.years_experience !== null && data.years_experience !== '') {
+          setNewAppYearsExperience(String(data.years_experience));
         }
-        if (resData.data.hours_of_training !== undefined && resData.data.hours_of_training !== null && resData.data.hours_of_training !== '') {
-          setNewAppHoursTraining(String(resData.data.hours_of_training));
+        if (data.hours_of_training !== undefined && data.hours_of_training !== null && data.hours_of_training !== '') {
+          setNewAppHoursTraining(String(data.hours_of_training));
         }
-        if (resData.data.eligibility) setNewAppEligibility(String(resData.data.eligibility).toUpperCase());
+        if (data.eligibility) setNewAppEligibility(String(data.eligibility).toUpperCase());
         setNewAppError(null);
       } else if (resData.status === 'incumbent_record') {
         setNewAppIsIncumbentRecord(true);

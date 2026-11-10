@@ -2635,6 +2635,86 @@ class ApplicantsServiceClass {
     }));
   }
 
+  async checkCredentialsStatus(itemNumber: string) {
+    const normalized = (itemNumber || '').trim().toUpperCase();
+    if (!normalized) return null;
+
+    const gcRes = await pool.query(
+      `SELECT * FROM reclass_gc
+       WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
+          OR UPPER(TRIM(COALESCE(new_item_no, ''))) = UPPER(TRIM($1))
+       LIMIT 1`,
+      [normalized],
+    );
+
+    const gmisRes = await pool.query(
+      `SELECT * FROM gmis_gc_items
+       WHERE UPPER(TRIM(COALESCE(psi_cd, ''))) = UPPER(TRIM($1))
+       ORDER BY id ASC
+       LIMIT 1`,
+      [normalized],
+    );
+
+    const inc = gcRes.rows[0] || null;
+    const gmis = gmisRes.rows[0] || null;
+
+    if (!inc && !gmis) return null;
+
+    const isBlank = (val: any) =>
+      val === null ||
+      val === undefined ||
+      String(val).trim() === '' ||
+      String(val).trim().toUpperCase() === 'NULL';
+
+    const incEmailNull = isBlank(inc?.email);
+    const incPassNull = isBlank(inc?.password_hash) && isBlank(inc?.password);
+    const incPasscodeNull = isBlank(inc?.passcode);
+
+    const gmisEmailNull = isBlank(gmis?.email);
+    const gmisPassNull = isBlank(gmis?.password) && isBlank(gmis?.password_hash);
+    const gmisPasscodeNull = isBlank(gmis?.passcode);
+
+    // Permit registration/claim if existing record's email, password, and passcode are all NULL
+    const canClaim =
+      incEmailNull &&
+      incPassNull &&
+      incPasscodeNull &&
+      gmisEmailNull &&
+      gmisPassNull &&
+      gmisPasscodeNull;
+
+    const item = inc || gmis;
+    return {
+      canClaim,
+      data: item
+        ? {
+            item_number: (item.item_no || item.psi_cd || normalized).toUpperCase(),
+            current_position: (item.current_position || item.pos_dsc || 'GUIDANCE COUNSELOR').toUpperCase(),
+            region: (item.region || '').toUpperCase(),
+            division: (item.division || '').toUpperCase(),
+            school_name: (item.school_name || '').toUpperCase(),
+            school_id: item.school_id || '',
+            first_name: (item.first_name || '').trim().toUpperCase(),
+            last_name: (item.last_name || '').trim().toUpperCase(),
+            email: '',
+            mobile_number: item.mobile_number || '',
+            initial_assessment: gmis?.initial_assessment || item.initial_assessment || '',
+            indicative_reclassification: gmis?.initial_assessment || item.initial_assessment || '',
+            education: (item.education || '').toUpperCase(),
+            years_experience:
+              item.years_experience !== undefined && item.years_experience !== null
+                ? String(item.years_experience)
+                : '',
+            hours_of_training:
+              item.hours_of_training !== undefined && item.hours_of_training !== null
+                ? String(item.hours_of_training)
+                : '',
+            eligibility: (item.eligibility || '').toUpperCase(),
+          }
+        : null,
+    };
+  }
+
   async verifyReclassItemNumber(
     itemNumber: string,
     category: 'existing' | 'new' = 'existing',
@@ -2699,30 +2779,7 @@ class ApplicantsServiceClass {
       };
     }
 
-    // Check if already registered in applicants table
-    const appRes = await pool.query(
-      `SELECT id, password_hash, passcode_hash, email_address, email FROM applicants 
-       WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
-       LIMIT 1`,
-      [normalized],
-    );
-
-    if (appRes.rows.length > 0) {
-      const appRow = appRes.rows[0];
-      const hasRealEmail =
-        (appRow.email && appRow.email.trim()) ||
-        (appRow.email_address && !appRow.email_address.startsWith('no-email-'));
-      const hasPassword = appRow.password_hash || appRow.passcode_hash;
-
-      if (hasRealEmail && hasPassword) {
-        return {
-          status: 'already_registered',
-          message: 'This Plantilla Item Number is already registered. Please sign in.',
-        };
-      }
-    }
-
-    // Check if already registered in reclass_gc
+    // Check existing registration status in reclass_gc
     const gcRes = await pool.query(
       `SELECT * FROM reclass_gc
        WHERE UPPER(TRIM(COALESCE(item_no, ''))) = UPPER(TRIM($1))
@@ -2733,11 +2790,64 @@ class ApplicantsServiceClass {
 
     let inc = gcRes.rows[0] || null;
 
-    if (inc && inc.email && String(inc.email).trim() !== '') {
-      return {
-        status: 'already_registered',
-        message: 'This Plantilla Item Number is already registered. Please sign in.',
-      };
+    const isBlank = (val: any) =>
+      val === null ||
+      val === undefined ||
+      String(val).trim() === '' ||
+      String(val).trim().toUpperCase() === 'NULL';
+
+    const incHasEmail = inc && !isBlank(inc.email);
+    const incHasPassword =
+      inc && (!isBlank(inc.password_hash) || !isBlank(inc.password));
+    const incHasPasscode = inc && !isBlank(inc.passcode);
+
+    const gmisHasEmail = !isBlank(gmisItem.email);
+    const gmisHasPassword =
+      !isBlank(gmisItem.password) ||
+      !isBlank(gmisItem.password_hash);
+    const gmisHasPasscode = !isBlank(gmisItem.passcode);
+
+    // If existing record's email, password, and passcode are all NULL,
+    // bypass the HTTP 409 conflict error and permit registration/claiming
+    const credentialsAreNull =
+      !incHasEmail &&
+      !incHasPassword &&
+      !incHasPasscode &&
+      !gmisHasEmail &&
+      !gmisHasPassword &&
+      !gmisHasPasscode;
+
+    if (!credentialsAreNull) {
+      // Check if already registered in applicants table
+      const appRes = await pool.query(
+        `SELECT id, password_hash, passcode_hash, email_address, email, registrant_type FROM applicants 
+         WHERE UPPER(TRIM(COALESCE(plantilla_item_number, ''))) = UPPER(TRIM($1)) 
+         LIMIT 1`,
+        [normalized],
+      );
+
+      if (appRes.rows.length > 0) {
+        const appRow = appRes.rows[0];
+        const hasRealEmail =
+          (appRow.email && appRow.email.trim() && !appRow.email.toLowerCase().startsWith('no-email-')) ||
+          (appRow.email_address && appRow.email_address.trim() && !appRow.email_address.toLowerCase().startsWith('no-email-'));
+        const hasPassword = !isBlank(appRow.password_hash) || !isBlank(appRow.passcode_hash);
+
+        if (hasRealEmail && hasPassword && appRow.registrant_type === 'reclass') {
+          return {
+            status: 'already_registered',
+            message: 'This Plantilla Item Number is already registered. Please sign in.',
+          };
+        }
+      }
+
+      // Check if already registered in reclass_gc with active credentials
+      if (inc && incHasEmail && (incHasPassword || incHasPasscode)) {
+        return {
+          status: 'already_registered',
+          message: 'This Plantilla Item Number is already registered. Please sign in.',
+        };
+      }
     }
 
     if (!inc) {

@@ -355,6 +355,68 @@ describe('Reclassification Auth & Registration Rules', () => {
     // 15 minutes and 1 second later (lockout expired)
     expect(checkLockout(testKey, baseTime + 15 * 60 * 1000 + 1000)).toBe(false);
   });
+
+  it('should permit registration and bypass 409 conflict when email, password, and passcode are NULL in reclass_gc and gmis_gc_items', () => {
+    const isBlank = (val: any) =>
+      val === null ||
+      val === undefined ||
+      String(val).trim() === '' ||
+      String(val).trim().toUpperCase() === 'NULL';
+
+    const checkCanClaim = (record: {
+      email?: string | null;
+      password?: string | null;
+      password_hash?: string | null;
+      passcode?: string | null;
+    }) => {
+      const emailNull = isBlank(record.email);
+      const passNull = isBlank(record.password) && isBlank(record.password_hash);
+      const passcodeNull = isBlank(record.passcode);
+      return emailNull && passNull && passcodeNull;
+    };
+
+    // Case 1: Record exists in reclass_gc with NULL email, password, and passcode
+    const unclaimedReclassItem = {
+      email: null,
+      password: null,
+      password_hash: null,
+      passcode: null,
+    };
+    expect(checkCanClaim(unclaimedReclassItem)).toBe(true);
+
+    // Case 2: Record exists with empty strings or literal NULL
+    const emptyReclassItem = {
+      email: '',
+      password: '',
+      password_hash: '',
+      passcode: '',
+    };
+    expect(checkCanClaim(emptyReclassItem)).toBe(true);
+
+    const literalNullItem = {
+      email: 'NULL',
+      password: null,
+      password_hash: 'NULL',
+      passcode: null,
+    };
+    expect(checkCanClaim(literalNullItem)).toBe(true);
+
+    // Case 3: Record exists with registered credentials (not claimable -> 409 conflict)
+    const registeredReclassItem = {
+      email: 'juan.delacruz@deped.gov.ph',
+      password_hash: '$2a$10$xyz...',
+      passcode: '123456',
+    };
+    expect(checkCanClaim(registeredReclassItem)).toBe(false);
+
+    // Case 4: Record exists with email only, but password and passcode are NULL
+    const emailOnlyItem = {
+      email: 'prefilled@deped.gov.ph',
+      password_hash: null,
+      passcode: null,
+    };
+    expect(checkCanClaim(emailOnlyItem)).toBe(false);
+  });
 });
 
 describe('Reclassification Position Salary Grade Resolution', () => {

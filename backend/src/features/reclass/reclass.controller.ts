@@ -53,6 +53,17 @@ export async function verifyItem(req: Request, res: Response) {
       return res.status(404).json(result);
     }
     if (result.status === 'already_registered') {
+      // Check if email, password, and passcode are NULL in reclass_gc and gmis_gc_items.
+      // If NULL, bypass the 409 Conflict error and allow the registration/claim process to overwrite these fields.
+      const credStatus = await ReclassService.checkCredentialsStatus(item_number);
+      if (credStatus && credStatus.canClaim) {
+        return res.json({
+          status: 'valid',
+          message: 'Plantilla Item Number verified. Account is ready to be claimed.',
+          data: credStatus.data || (result as any).data,
+          can_claim: true,
+        });
+      }
       return res.status(409).json(result);
     }
     if (result.status === 'invalid') {
