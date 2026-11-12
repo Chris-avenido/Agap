@@ -60,20 +60,15 @@ export async function runSchemaMigrations(client: any) {
         id SERIAL PRIMARY KEY,
         item_no VARCHAR(150),
         current_position VARCHAR(255),
-        first_name VARCHAR(150),
-        last_name VARCHAR(150),
         email VARCHAR(255),
         password_hash VARCHAR(255),
         passcode VARCHAR(255),
         mobile_number VARCHAR(50),
-        region VARCHAR(255),
-        division VARCHAR(255),
         school_id VARCHAR(50),
         school_name VARCHAR(255),
         qs_status VARCHAR(100),
         stage_of_reclassification VARCHAR(100) DEFAULT 'For Review',
         desired_position VARCHAR(255),
-        reclass_position VARCHAR(255),
         new_item_no VARCHAR(150),
         nosca_serial_no VARCHAR(150),
         is_test BOOLEAN DEFAULT FALSE,
@@ -106,7 +101,6 @@ export async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS document_status VARCHAR(100);
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS desire_position;
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS desired_position VARCHAR(255);
-      ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS reclass_position VARCHAR(255);
       ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS update_application VARCHAR(20);
       ALTER TABLE reclass_gc ALTER COLUMN update_application DROP DEFAULT;
       DO $$
@@ -149,15 +143,12 @@ export async function runSchemaMigrations(client: any) {
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
-      CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
-      CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       DROP INDEX IF EXISTS idx_reclass_gc_update_app;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_update_app ON reclass_gc(update_application) WHERE update_application IN ('Yes', 'true');
       DROP INDEX IF EXISTS idx_reclass_gc_is_registered;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_is_registered ON reclass_gc(is_registered) WHERE is_registered = TRUE;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_desired_position ON reclass_gc(desired_position);
-      CREATE INDEX IF NOT EXISTS idx_reclass_gc_reclass_position ON reclass_gc(reclass_position);
       DROP INDEX IF EXISTS idx_reclass_gc_registered_or_not;
 
       CREATE OR REPLACE FUNCTION public.trg_uppercase_reclass_gc()
@@ -172,11 +163,7 @@ export async function runSchemaMigrations(client: any) {
           NEW.item_no := NULLIF(UPPER(TRIM(NEW.item_no)), ''); 
         END IF;
         IF NEW.current_position IS NOT NULL THEN NEW.current_position := UPPER(TRIM(NEW.current_position)); END IF;
-        IF NEW.first_name IS NOT NULL THEN NEW.first_name := UPPER(TRIM(NEW.first_name)); END IF;
-        IF NEW.last_name IS NOT NULL THEN NEW.last_name := UPPER(TRIM(NEW.last_name)); END IF;
         IF NEW.email IS NOT NULL THEN NEW.email := LOWER(TRIM(NEW.email)); END IF;
-        IF NEW.region IS NOT NULL THEN NEW.region := UPPER(TRIM(NEW.region)); END IF;
-        IF NEW.division IS NOT NULL THEN NEW.division := UPPER(TRIM(NEW.division)); END IF;
         IF NEW.school_id IS NOT NULL THEN NEW.school_id := UPPER(TRIM(NEW.school_id)); END IF;
         IF NEW.school_name IS NOT NULL THEN NEW.school_name := UPPER(TRIM(NEW.school_name)); END IF;
         IF NEW.education IS NOT NULL THEN NEW.education := UPPER(TRIM(NEW.education)); END IF;
@@ -208,7 +195,6 @@ export async function runSchemaMigrations(client: any) {
             NEW.stage_of_reclassification := 'FOR REVIEW';
           END IF;
         END IF;
-        IF NEW.reclass_position IS NOT NULL THEN NEW.reclass_position := UPPER(TRIM(NEW.reclass_position)); END IF;
         IF NEW.desired_position IS NOT NULL THEN NEW.desired_position := UPPER(TRIM(NEW.desired_position)); END IF;
         IF NEW.new_item_no IS NOT NULL THEN NEW.new_item_no := UPPER(TRIM(NEW.new_item_no)); END IF;
 
@@ -291,6 +277,29 @@ export async function runSchemaMigrations(client: any) {
       BEFORE INSERT OR UPDATE ON public.reclass_gc
       FOR EACH ROW
       EXECUTE FUNCTION public.trg_reclass_gc_stage_updated_at();
+
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'ref'
+            AND table_name = 'initial_reclass'
+        ) THEN
+          IF EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = 'agap_region_divisions'
+          ) THEN
+            INSERT INTO public.agap_region_divisions (region, division)
+            SELECT DISTINCT region, division
+            FROM ref.initial_reclass
+            WHERE region IS NOT NULL AND division IS NOT NULL
+            ON CONFLICT (region, division) DO NOTHING;
+          END IF;
+        END IF;
+      END $$;
     `);
 
     // Ensure gmis_gc_items table exists matching GMIS production schema
@@ -321,6 +330,8 @@ export async function runSchemaMigrations(client: any) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS region VARCHAR(255);
+      ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS division VARCHAR(255);
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS email VARCHAR(255);
       ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS password VARCHAR(255);

@@ -1302,20 +1302,26 @@ export default function ApplicantDashboard() {
             </div>
 
             {reclassData ? (() => {
-              const rawInitial =
-                reclassData.initial_assessment_position ||
-                reclassData.initial_assessment ||
-                reclassData.reclass_position ||
-                '';
-              const initialAssessment =
-                rawInitial && rawInitial.toUpperCase() !== 'N/A' && rawInitial.trim() !== ''
-                  ? rawInitial.trim()
-                  : '';
+              const isValidAssessedPosition = (val?: string | null): val is string => {
+                if (!val) return false;
+                const normalized = String(val).trim().toUpperCase();
+                return (
+                  normalized !== '' &&
+                  !['UNASSIGNED', '#N/A', 'N/A', 'NULL', '—'].includes(normalized)
+                );
+              };
+              const rawInitial = [
+                reclassData.initial_assessment_position,
+                reclassData.initial_assessment,
+                reclassData.reclass_position,
+              ].find((candidate) => isValidAssessedPosition(candidate)) || '';
+              const initialAssessment = isValidAssessedPosition(rawInitial)
+                ? rawInitial.trim()
+                : '';
               const isUserSCIV = isAssessedSCIV(initialAssessment || reclassData.reclass_position);
               const isInitialAssessmentNull =
-                (!reclassData.initial_assessment ||
-                  String(reclassData.initial_assessment).trim() === '' ||
-                  String(reclassData.initial_assessment).toUpperCase() === 'N/A') &&
+                !isValidAssessedPosition(reclassData.initial_assessment) &&
+                !isValidAssessedPosition(reclassData.reclass_position) &&
                 reclassData.new_application !== true;
 
               const initialSalaryGrade =
