@@ -4,6 +4,7 @@
 - **Removed `GET /api/applicants`** (and `ApplicantsService.findAll`): it was unauthenticated and returned every applicant row including password/passcode hashes. The frontend only uses POST/PUT on this path.
 - **Indexes**: `index_cleanup_migration.sql` also drops redundant prefix indexes on `agap_invited`, `applications`, `conversations` (only when the wider index exists); boot DDL no longer recreates `idx_agap_invited_email` when a wider email index exists.
 - **Deploy**: both GitHub workflows now run `npm run migrate:schema` after the backend build and before the PM2 restart (boot no longer migrates).
+- **Login lookup indexes**: expression indexes on `applicants` matching the login query (`LOWER/UPPER(TRIM(COALESCE(...)))`); login miss query 51 ms to 0.05 ms locally.
 - **Docs**: `docs/orm-optimizer/report-2026-11-12.md` re-run on analyzed data with EXPLAIN plans.
 
 ## [2026-11-12] [DB/Perf] ORM optimizer follow-up

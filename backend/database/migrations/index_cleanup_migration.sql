@@ -78,3 +78,29 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- 4. Expression indexes matching the applicant login lookup exactly
+--    (LOWER/UPPER(TRIM(COALESCE(col, ''))) = ...). The planner only uses an expression
+--    index when the query expression is identical, so the existing
+--    idx_applicants_email_lower (no COALESCE) cannot serve it.
+--    Plain CREATE INDEX briefly blocks writes to applicants; it is small and runs at deploy.
+DO $$
+BEGIN
+  IF to_regclass('public.applicants') IS NOT NULL THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'applicants' AND column_name = 'email_address') THEN
+      CREATE INDEX IF NOT EXISTS idx_applicants_login_email_address
+        ON public.applicants (LOWER(TRIM(COALESCE(email_address, ''))));
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'applicants' AND column_name = 'email') THEN
+      CREATE INDEX IF NOT EXISTS idx_applicants_login_email
+        ON public.applicants (LOWER(TRIM(COALESCE(email, ''))));
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'applicants' AND column_name = 'plantilla_item_number') THEN
+      CREATE INDEX IF NOT EXISTS idx_applicants_login_plantilla
+        ON public.applicants (UPPER(TRIM(COALESCE(plantilla_item_number, ''))));
+    END IF;
+  END IF;
+END $$;
