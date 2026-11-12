@@ -5,8 +5,13 @@ import cors from 'cors';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { pool } from './database';
+import healthRouter from './health/health.routes';
 import applicantsRouter from './applicants/applicants.routes';
 import { applicantAuthRouter, hrAuthRouter } from './features/auth/auth.routes';
+import profileRouter from './features/applicant-profile/applicant-profile.routes';
+import applicationsRouter from './features/applications/applications.routes';
+import documentsRouter from './features/documents/documents.routes';
+import pdsRouter from './features/pds/pds.routes';
 import reclassRouter from './features/reclass/reclass.routes';
 import vacanciesRouter from './vacancies/vacancies.routes';
 import addressRouter from './address/address.routes';
@@ -29,15 +34,8 @@ app.use(cors());
 app.use(express.json());
 app.use(devRequestMiddleware());
 
-// Health Check Probe Endpoint for Azure App Service
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Main App Routes
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
+// Health probe (/health) and root (/)
+app.use(healthRouter);
 
 // Auth Feature Routes (HR registration)
 app.use('/api', hrAuthRouter);
@@ -49,6 +47,10 @@ app.use('/api/vacancies', vacanciesRouter);
 // that applicants' '/:id' routes would otherwise shadow)
 app.use('/api/applicants', applicantAuthRouter);
 app.use('/api/applicants', reclassRouter);
+app.use('/api/applicants', applicationsRouter);
+app.use('/api/applicants', documentsRouter);
+app.use('/api/applicants', pdsRouter);
+app.use('/api/applicants', profileRouter);
 app.use('/api/applicants', applicantsRouter);
 
 // Address Module Routes

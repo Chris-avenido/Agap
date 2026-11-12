@@ -1,5 +1,14 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-12] [Architecture] Folder-audit cleanup (phased)
+- **Health routes**: `/health` and `/` moved from `backend/src/index.ts` to `backend/src/health/health.routes.ts` (same URLs).
+- **apply-job**: readiness validation extracted verbatim to `validateApplicationReadiness` in `features/applications/applications.service.ts`; same 400 messages.
+- **Documents**: document and audit methods moved verbatim from `applicants.service.ts` to `features/documents/documents.service.ts`; `ApplicantsService` keeps delegating methods so callers and URLs are unchanged.
+- **Frontend boundaries**: `frontend/eslint.config.mjs` adds `import/no-cycle` and a features-must-not-import-features rule; wired into the frontend `lint`/`lint:check` after oxlint.
+- **Backend features** (routes/controller/service each, same URLs; `ApplicantsService` keeps delegating methods): `features/documents`, `features/pds` (template path depth adjusted for the new folder), `features/applications` (apply-job, applications, saved jobs), `features/applicant-profile` (parse-resume, profile CRUD, passcode, change-password). Routers are mounted before the legacy applicants router in `index.ts`; its `/:id` handler still falls through with `next()` for non-numeric ids.
+- **Frontend pages**: pure constants/helpers extracted to `features/{login,dashboard,job-list}`; Login branding banner, welcome modal and tour overlay, and JobList PDF viewer, Letter of Intent and Sworn Declaration modals extracted to `components/` (markup, classes and behaviour unchanged).
+- **Not yet done**: the page component bodies are still large (Login ~2.5k, Dashboard ~2.5k, JobList ~3.8k lines) and the reclass methods remain in `applicants.service.ts` (~3.5k lines).
+
 ## [2026-11-12] [Security/DB] Follow-ups
 - **Removed `GET /api/applicants`** (and `ApplicantsService.findAll`): it was unauthenticated and returned every applicant row including password/passcode hashes. The frontend only uses POST/PUT on this path.
 - **Indexes**: `index_cleanup_migration.sql` also drops redundant prefix indexes on `agap_invited`, `applications`, `conversations` (only when the wider index exists); boot DDL no longer recreates `idx_agap_invited_email` when a wider email index exists.

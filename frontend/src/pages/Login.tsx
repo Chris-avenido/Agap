@@ -1,110 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, Clock, BarChart3, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText, Check, Landmark } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, ArrowLeft, LogIn, ShieldCheck, CheckCircle2, Briefcase, Award, AlertCircle, Phone, HelpCircle, X, ArrowRight, UserPlus, Sparkles, FileText, Check, Landmark } from 'lucide-react';
 import '../nexus-landing.css';
 import modernLogo from '../assets/modern_logo.png';
+import {
+  RECLASS_LOGIN_TOUR_STEPS,
+  RECLASS_REG_TOUR_STEPS,
+  RECLASS_NEW_APP_TOUR_STEPS,
+} from '../features/login/tourSteps';
+import BrandingBanner from '../features/login/components/BrandingBanner';
+import WelcomeModal from '../features/login/components/WelcomeModal';
+import TourOverlay from '../features/login/components/TourOverlay';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
-const RECLASS_LOGIN_TOUR_STEPS = [
-  {
-    sel: '#tour-login-identifier',
-    label: 'Step 1 of 4: Account Identifier',
-    title: 'Plantilla Item No. or DepEd Email',
-    body: 'Enter your 28-character Plantilla Item Number or your official DepEd email address to identify your account.',
-  },
-  {
-    sel: '#tour-login-credentials',
-    label: 'Step 2 of 4: Authentication Mode',
-    title: 'Password or 6-Digit Passcode',
-    body: 'Choose between standard Password sign-in or use your 6-digit numeric PIN passcode for quick, secure authentication.',
-  },
-  {
-    sel: '#tour-login-submit',
-    label: 'Step 3 of 4: Access Account',
-    title: 'Sign In to Dashboard',
-    body: 'Click "Sign in" to access your applicant dashboard, upload requirements, and monitor real-time evaluation status.',
-  },
-  {
-    sel: '#tour-login-register',
-    label: 'Step 4 of 4: First-Time User',
-    title: 'Register New Account',
-    body: 'First time applicant? Click "Register" to verify your Plantilla Item Number in GMIS and create your profile.',
-  },
-];
-
-const RECLASS_REG_TOUR_STEPS = [
-  {
-    sel: '#tour-reg-plantilla',
-    label: 'Step 1 of 5: Plantilla Verification',
-    title: 'DepEd Plantilla Item Number',
-    body: 'Enter your 28-character GMIS Plantilla Item Number and click "Verify" to validate against official DepEd central records.',
-  },
-  {
-    sel: '#tour-reg-name',
-    label: 'Step 2 of 5: Personal Details',
-    title: 'Incumbent Full Name',
-    body: 'Enter your legal First Name and Last Name as registered in official DepEd personnel records.',
-  },
-  {
-    sel: '#tour-reg-contact',
-    label: 'Step 3 of 5: DepEd Contact Info',
-    title: 'Official DepEd Email & Mobile',
-    body: 'Provide your official DepEd email (deped.gov.ph) for status updates and an 11-digit mobile number for SMS notifications.',
-  },
-  {
-    sel: '#tour-reg-security',
-    label: 'Step 4 of 5: Security Credentials',
-    title: 'Password & 6-Digit Passcode',
-    body: 'Create a secure password and a 6-digit numeric passcode for rapid and convenient sign-in.',
-  },
-  {
-    sel: '#tour-reg-submit',
-    label: 'Step 5 of 5: Account Submission',
-    title: 'Submit Reclassification Account',
-    body: 'Click "Register Account" to complete your registration and proceed directly to uploading your reclassification documents.',
-  },
-];
-
-const RECLASS_NEW_APP_TOUR_STEPS = [
-  {
-    sel: '#tour-newapp-plantilla',
-    label: 'Step 1 of 6: Plantilla Verification',
-    title: 'Plantilla Item Number',
-    body: 'Enter your 28-character Plantilla Item Number and click "Verify" to validate available reclassification slots.',
-  },
-  {
-    sel: '#tour-newapp-name',
-    label: 'Step 2 of 6: Personal Details',
-    title: 'Applicant Full Name',
-    body: 'Enter your legal First Name, Middle Name, and Last Name as registered in official records.',
-  },
-  {
-    sel: '#tour-newapp-contact',
-    label: 'Step 3 of 6: Contact Information',
-    title: 'Official DepEd Email & Mobile',
-    body: 'Provide your official DepEd email (deped.gov.ph) for status updates and an 11-digit mobile number for SMS notifications.',
-  },
-  {
-    sel: '#tour-newapp-station',
-    label: 'Step 4 of 6: Current Position & Station',
-    title: 'Designation, Region & Division',
-    body: 'Specify your current position title, Region, Division, and School/Station name.',
-  },
-  {
-    sel: '#tour-newapp-qualifications',
-    label: 'Step 5 of 6: Qualifications & Experience',
-    title: 'Degree, Eligibility, Experience & Training',
-    body: 'Provide your educational degree, professional eligibility / license, years of experience, and hours of relevant training.',
-  },
-  {
-    sel: '#tour-newapp-security',
-    label: 'Step 6 of 6: Security & Submission',
-    title: 'Password, Passcode & Submit',
-    body: 'Set a secure password and 6-digit quick PIN passcode, then click "Register New Application" to complete registration.',
-  },
-];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -2462,58 +2372,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Column Branding Banner */}
-      <div className="hidden lg:flex relative w-0 flex-1 bg-[var(--navy)] flex-col items-center justify-center h-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--navy-2)] to-[var(--navy)] opacity-90"></div>
-        <div className="relative z-10 flex flex-col items-center justify-center text-white p-12 text-center max-w-3xl mt-[-80px]">
-          <div className="w-24 h-24 bg-[#0a386c] rounded-[24px] flex items-center justify-center mb-10 shadow-[0_10px_40px_rgba(0,0,0,0.2)]">
-            <Building2 className="w-12 h-12 text-[#fbbf24]" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
-            Streamlining Public Service Recruitment
-          </h1>
-          <p className="text-lg text-blue-100/90 max-w-xl leading-relaxed">
-            A modern, efficient, and transparent platform for managing the entire hiring lifecycle.
-            Automated screening, structured evaluation, and seamless onboarding.
-          </p>
-        </div>
-
-        {/* Feature Icons Bottom Row */}
-        <div className="absolute bottom-16 left-0 right-0 w-full flex justify-center gap-12 px-8">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
-              <User className="w-7 h-7 text-[#fbbf24] relative z-10" />
-              <CheckCircle2 className="w-4 h-4 text-[#fbbf24] absolute bottom-3 right-3 z-10" />
-            </div>
-            <span className="text-xs font-semibold text-white/80 tracking-wide">Fair Process</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
-              <ShieldCheck className="w-8 h-8 text-[#fbbf24] relative z-10" />
-            </div>
-            <span className="text-xs font-semibold text-white/80 tracking-wide">Secure Data</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
-              <Clock className="w-8 h-8 text-[#fbbf24] relative z-10" />
-            </div>
-            <span className="text-xs font-semibold text-white/80 tracking-wide">Time Saving</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
-              <BarChart3 className="w-8 h-8 text-[#fbbf24] relative z-10" />
-            </div>
-            <span className="text-xs font-semibold text-white/80 tracking-wide">Data Driven</span>
-          </div>
-        </div>
-      </div>
+      <BrandingBanner />
 
       {/* Reclassification Registration Category Modal */}
       {showCategoryModal && (
@@ -2634,142 +2493,24 @@ export default function Login() {
         </div>
       )}
 
-      {/* Welcome Onboarding Modal */}
-      <div className={`welcome-overlay ${showWelcomeModal ? 'open' : ''}`}>
-        {showWelcomeModal && (
-          <div className="welcome-box">
-            <div className="welcome-badge">
-              {reclassView === 'register' ? (reclassRegType === 'new' ? 'New Application' : 'Incumbent Registration') : 'AGAP Portal'}
-            </div>
-            <h2>
-              {reclassView === 'register'
-                ? (reclassRegType === 'new' ? 'New Reclassification Application' : 'Incumbent Registration')
-                : 'Welcome to the AGAP Portal'}
-            </h2>
-            <p>
-              {reclassView === 'register'
-                ? (reclassRegType === 'new'
-                  ? 'Register your candidate profile, station, qualifications, and credentials to file a new reclassification application.'
-                  : 'Register your official Plantilla Item Number, DepEd email, contact info, and create your credentials to start your reclassification process.')
-                : 'Seamlessly access your portal, submit documentary requirements, and track your evaluation progress from verification through to appointment.'}
-            </p>
-            <div className="welcome-highlights">
-              {reclassView === 'register' ? (
-                reclassRegType === 'new' ? (
-                  <>
-                    <div className="welcome-hi">
-                      <b>Plantilla Item</b>
-                      <span>Verify available reclassification slot item number.</span>
-                    </div>
-                    <div className="welcome-hi">
-                      <b>Profile &amp; Station</b>
-                      <span>Candidate details, station, region, and division.</span>
-                    </div>
-                    <div className="welcome-hi">
-                      <b>Qualifications</b>
-                      <span>Education, eligibility, experience, and training hours.</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="welcome-hi">
-                      <b>Verify Plantilla</b>
-                      <span>Connect to GMIS central records to auto-verify position.</span>
-                    </div>
-                    <div className="welcome-hi">
-                      <b>Contact Info</b>
-                      <span>Official DepEd email &amp; mobile for status alerts.</span>
-                    </div>
-                    <div className="welcome-hi">
-                      <b>Credentials</b>
-                      <span>Secure password &amp; 6-digit quick PIN passcode.</span>
-                    </div>
-                  </>
-                )
-              ) : (
-                <>
-                  <div className="welcome-hi">
-                    <b>Authenticate</b>
-                    <span>Sign in with your Plantilla Item Number, DepEd email, or 6-digit PIN.</span>
-                  </div>
-                  <div className="welcome-hi">
-                    <b>Submit Documents</b>
-                    <span>Upload documentary requirements, CSC forms, and update profile.</span>
-                  </div>
-                  <div className="welcome-hi">
-                    <b>Track Status</b>
-                    <span>Real-time progress from SDO HRMO evaluation to DBM endorsement.</span>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="welcome-actions">
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setShowWelcomeModal(false)}
-              >
-                Skip
-              </button>
-              <button
-                type="button"
-                className="gold"
-                onClick={() => startTour(reclassView)}
-              >
-                {reclassView === 'register' ? 'Show Register Tutorial' : 'Show Login Tutorial'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tour Spotlight & Tooltip */}
-      <div
-        ref={highlightRef}
-        className={`tour-highlight ${tourActive ? 'active' : ''}`}
+      <WelcomeModal
+        open={showWelcomeModal}
+        reclassView={reclassView}
+        reclassRegType={reclassRegType}
+        onSkip={() => setShowWelcomeModal(false)}
+        onStartTour={startTour}
       />
-      {tourActive && (
-        <div
-          ref={tooltipRef}
-          className="tour-tooltip active"
-        >
-          <button
-            type="button"
-            className="tour-skip"
-            onClick={endTour}
-            title="Close tutorial"
-          >
-            ✕
-          </button>
-          <div className="tour-step-label">
-            {getActiveTourSteps()[tourIndex]?.label}
-          </div>
-          <h4>{getActiveTourSteps()[tourIndex]?.title}</h4>
-          <p>{getActiveTourSteps()[tourIndex]?.body}</p>
-          <div className="tour-footer">
-            <div className="tour-progress">
-              Step {tourIndex + 1} of {getActiveTourSteps().length}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="tour-btn secondary"
-                onClick={tourPrev}
-                disabled={tourIndex === 0}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className="tour-btn"
-                onClick={tourNext}
-              >
-                {tourIndex === getActiveTourSteps().length - 1 ? 'Finish' : 'Next'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+      <TourOverlay
+        highlightRef={highlightRef}
+        tooltipRef={tooltipRef}
+        active={tourActive}
+        index={tourIndex}
+        steps={getActiveTourSteps()}
+        onEnd={endTour}
+        onPrev={tourPrev}
+        onNext={tourNext}
+      />
     </div>
   );
 }

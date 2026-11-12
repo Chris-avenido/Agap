@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint && eslint src",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "lint:check": "oxlint"
+    "lint:check": "oxlint && eslint src",
+    "lint:boundaries": "eslint src"
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.19",
@@ -42,8 +43,12 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-boundaries": "^7.4.2",
+    "eslint-plugin-import": "^2.32.0",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
+    "typescript-eslint": "^8.72.2",
     "vite": "^8.1.1"
   }
 }
