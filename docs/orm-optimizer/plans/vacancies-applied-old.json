@@ -1,0 +1,46 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Seq Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Relation Name": "applications",
+      "Alias": "applications",
+      "Startup Cost": 0,
+      "Total Cost": 3209.28,
+      "Plan Rows": 199,
+      "Plan Width": 918,
+      "Actual Startup Time": 0.243,
+      "Actual Total Time": 6.75,
+      "Actual Rows": 71,
+      "Actual Loops": 1,
+      "Filter": "((applicant_id = 512) OR ((applicant_id)::text = '512'::text))",
+      "Rows Removed by Filter": 25593,
+      "Shared Hit Blocks": 2696,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning": {
+      "Shared Hit Blocks": 0,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.081,
+    "Triggers": [],
+    "Execution Time": 6.765
+  }
+]

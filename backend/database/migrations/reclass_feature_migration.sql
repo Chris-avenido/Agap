@@ -61,7 +61,7 @@ ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS nosca_serial_no VARCHAR(150);
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS stage_of_reclassification VARCHAR(100) DEFAULT 'UPDATING OF DOCUMENTS';
 ALTER TABLE reclass_gc ADD COLUMN IF NOT EXISTS new_application BOOLEAN DEFAULT FALSE;
 
-CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'reclass_gc' AND indexdef LIKE '%(item_no)') THEN CREATE INDEX idx_reclass_gc_item_no ON reclass_gc(item_no); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_reclass_gc_region ON reclass_gc(region);
 CREATE INDEX IF NOT EXISTS idx_reclass_gc_division ON reclass_gc(division);
 CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
@@ -112,6 +112,6 @@ ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH
 ALTER TABLE reclass_documents ADD COLUMN IF NOT EXISTS is_test BOOLEAN DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_reclass_docs_app_id ON reclass_documents(reclass_application_id);
-CREATE INDEX IF NOT EXISTS idx_reclass_docs_plantilla ON reclass_documents(plantilla_item_number);
+CREATE INDEX IF NOT EXISTS idx_reclass_documents_item_no ON reclass_documents(plantilla_item_number);
 CREATE INDEX IF NOT EXISTS idx_reclass_docs_title ON reclass_documents(document_title);
 ALTER TABLE gmis_gc_items ADD COLUMN IF NOT EXISTS email VARCHAR(255);

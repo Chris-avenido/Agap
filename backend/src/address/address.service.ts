@@ -1,11 +1,44 @@
 import { pool } from '../database';
 
+/**
+ * Regions change almost never, so they are cached in process memory (this app
+ * has no Redis). Concurrent callers share one in-flight query; a failed query
+ * is not cached. TTL is configurable via ADDRESS_REGIONS_CACHE_TTL_MS (0 disables).
+ */
+const REGIONS_TTL_MS = parseInt(
+  process.env.ADDRESS_REGIONS_CACHE_TTL_MS || String(60 * 60 * 1000),
+  10,
+);
+let regionsCache: { rows: any[]; expiresAt: number } | null = null;
+let regionsInFlight: Promise<any[]> | null = null;
+
 export const AddressService = {
   async getRegions() {
-    const result = await pool.query(
-      'SELECT DISTINCT region AS name FROM all_address ORDER BY name',
-    );
-    return result.rows;
+    if (regionsCache && regionsCache.expiresAt > Date.now()) {
+      return regionsCache.rows;
+    }
+    if (!regionsInFlight) {
+      regionsInFlight = pool
+        .query('SELECT DISTINCT region AS name FROM all_address ORDER BY name')
+        .then((result) => {
+          if (REGIONS_TTL_MS > 0) {
+            regionsCache = {
+              rows: result.rows,
+              expiresAt: Date.now() + REGIONS_TTL_MS,
+            };
+          }
+          return result.rows;
+        })
+        .finally(() => {
+          regionsInFlight = null;
+        });
+    }
+    return regionsInFlight;
+  },
+
+  /** Clears the cached regions (e.g. after the all_address table is reloaded). */
+  clearRegionsCache() {
+    regionsCache = null;
   },
 
   async getProvinces(region: unknown) {

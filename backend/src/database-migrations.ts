@@ -141,7 +141,7 @@ export async function runSchemaMigrations(client: any) {
       WHERE current_stage IS NULL OR current_stage = 'UPDATING_DOCUMENTS';
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_current_stage ON reclass_gc(current_stage);
       ALTER TABLE reclass_gc DROP COLUMN IF EXISTS registered_or_not;
-      CREATE INDEX IF NOT EXISTS idx_reclass_gc_item_no ON reclass_gc(item_no);
+      DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'reclass_gc' AND indexdef LIKE '%(item_no)') THEN CREATE INDEX idx_reclass_gc_item_no ON reclass_gc(item_no); END IF; END $$;
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_email ON reclass_gc(email);
       CREATE INDEX IF NOT EXISTS idx_reclass_gc_school_id ON reclass_gc(school_id);
       DROP INDEX IF EXISTS idx_reclass_gc_update_app;
@@ -361,7 +361,7 @@ export async function runSchemaMigrations(client: any) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS idx_agap_invited_email ON agap_invited(email);
+      DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'agap_invited' AND (indexdef LIKE '%(email)%' OR indexdef LIKE '%(email,%')) THEN CREATE INDEX idx_agap_invited_email ON agap_invited(email); END IF; END $$;
       CREATE INDEX IF NOT EXISTS idx_agap_invited_job_cluster_id ON agap_invited(job_cluster_id);
     `);
 
@@ -407,7 +407,7 @@ export async function runSchemaMigrations(client: any) {
       DROP INDEX IF EXISTS idx_reclass_docs_type;
 
       CREATE INDEX IF NOT EXISTS idx_reclass_docs_app_id ON reclass_documents(reclass_application_id);
-      CREATE INDEX IF NOT EXISTS idx_reclass_docs_plantilla ON reclass_documents(plantilla_item_number);
+      CREATE INDEX IF NOT EXISTS idx_reclass_documents_item_no ON reclass_documents(plantilla_item_number);
       CREATE INDEX IF NOT EXISTS idx_reclass_docs_title ON reclass_documents(document_title);
 
       DROP TABLE IF EXISTS reclass_document_history CASCADE;

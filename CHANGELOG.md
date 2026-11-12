@@ -1,5 +1,16 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-12] [Security/DB] Follow-ups
+- **Removed `GET /api/applicants`** (and `ApplicantsService.findAll`): it was unauthenticated and returned every applicant row including password/passcode hashes. The frontend only uses POST/PUT on this path.
+- **Indexes**: `index_cleanup_migration.sql` also drops redundant prefix indexes on `agap_invited`, `applications`, `conversations` (only when the wider index exists); boot DDL no longer recreates `idx_agap_invited_email` when a wider email index exists.
+- **Deploy**: both GitHub workflows now run `npm run migrate:schema` after the backend build and before the PM2 restart (boot no longer migrates).
+- **Docs**: `docs/orm-optimizer/report-2026-11-12.md` re-run on analyzed data with EXPLAIN plans.
+
+## [2026-11-12] [DB/Perf] ORM optimizer follow-up
+- **Indexes**: new idempotent `backend/database/migrations/index_cleanup_migration.sql` (run by `npm run migrate:schema`) drops duplicate indexes (only when the surviving twin exists), drops the duplicate `unique_saved_cluster` constraint, and indexes 9 unindexed FK columns. Boot DDL now creates `idx_reclass_documents_item_no` instead of `idx_reclass_docs_plantilla`.
+- **Queries**: vacancies applied-clusters query no longer casts `applicant_id::text`; reclass re-upload checklist updates are two bulk UPDATEs; `findByEmail`, applyJob duplicate check, `toggleSavedJob` and the vacancies query select explicit columns. Remaining `SELECT *` sites intentionally kept where the full row (incl. JSON) is consumed.
+- **Address**: `getRegions` cached in memory (1h, `ADDRESS_REGIONS_CACHE_TTL_MS`). **export-backup.js**: pool `max: 2`.
+
 ## [2026-11-12] [Database/Reclass] Adapt to dropped `reclass_gc` identity columns
 - The shared DB dropped `reclass_gc.first_name`, `last_name`, `region`, `division`, `reclass_position` (backup: `reclass_gc_identity_backup`). Names now come from `gmis_gc_items` (via `gmis_id`); region, division and reclass_position from `ref.initial_reclass` (via `item_no`).
 - `applicants.service.ts`: added `RECLASS_GC_FULL` derived table that re-projects those fields; read queries use it. INSERT/UPDATE on `reclass_gc` no longer write the dropped columns (Designate rows are linked via `gmis_id`).

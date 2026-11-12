@@ -341,26 +341,12 @@ class ApplicantsServiceClass {
 
   async findByEmail(email_address: string) {
     const result = await pool.query(
-      'SELECT * FROM applicants WHERE LOWER(TRIM(email_address)) = LOWER(TRIM($1)) LIMIT 1',
+      `SELECT id, applicant_number, email_address, first_name, middle_name, surname,
+              registrant_type, plantilla_item_number
+       FROM applicants WHERE LOWER(TRIM(email_address)) = LOWER(TRIM($1)) LIMIT 1`,
       [email_address],
     );
     return result.rows[0];
-  }
-
-  async findAll() {
-    const result = await pool.query(`
-      SELECT a.*, 
-             COALESCE(
-               json_agg(j.*) FILTER (WHERE j.id IS NOT NULL), 
-               '[]'
-             ) as job_applications
-      FROM applicants a
-      LEFT JOIN applications j ON a.id::text = j.applicant_id
-      WHERE EXISTS (SELECT 1 FROM applications WHERE applicant_id = a.id::text)
-      GROUP BY a.id
-      ORDER BY a.id DESC
-    `);
-    return result.rows;
   }
 
   async login(
@@ -464,7 +450,7 @@ class ApplicantsServiceClass {
     );
 
     const checkResult = await pool.query(
-      'SELECT * FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
+      'SELECT id, status, application_status FROM applications WHERE applicant_id = $1 AND job_cluster_id = $2',
       [applicantId.toString(), jobClusterId],
     );
     const hasActiveApp = checkResult.rows.some((row: any) => {
@@ -664,7 +650,7 @@ class ApplicantsServiceClass {
 
   async toggleSavedJob(applicantId: number, jobClusterId: string) {
     const checkResult = await pool.query(
-      'SELECT * FROM saved_clusters WHERE applicant_id = $1 AND job_cluster_id = $2',
+      'SELECT id, is_saved FROM saved_clusters WHERE applicant_id = $1 AND job_cluster_id = $2',
       [applicantId, jobClusterId],
     );
     const existing = checkResult.rows[0];
@@ -4396,6 +4382,10 @@ class ApplicantsServiceClass {
         [folderGcId || -1, plantillaItemNumber || null],
       );
 
+      // Collected per row, then written with two bulk UPDATEs after the loop.
+      const checklistUpdates: Array<{ id: number; checklist: string }> = [];
+      const plainUpdateIds: number[] = [];
+
       for (const gcRow of gcRows.rows) {
         let checklist = gcRow.document_checklist;
         let isUpdated = false;
@@ -4463,25 +4453,39 @@ class ApplicantsServiceClass {
         }
 
         if (isUpdated) {
-          await pool.query(
-            `UPDATE reclass_gc
-             SET document_checklist = $1,
-                 reupload = true,
-                 new_application = true,
-                 updated_at = NOW()
-             WHERE id = $2`,
-            [JSON.stringify(checklist), gcRow.id],
-          );
+          checklistUpdates.push({
+            id: gcRow.id,
+            checklist: JSON.stringify(checklist),
+          });
         } else {
-          await pool.query(
-            `UPDATE reclass_gc
-             SET reupload = true,
-                 new_application = true,
-                 updated_at = NOW()
-             WHERE id = $1`,
-            [gcRow.id],
-          );
+          plainUpdateIds.push(gcRow.id);
         }
+      }
+
+      if (checklistUpdates.length > 0) {
+        await pool.query(
+          `UPDATE reclass_gc g
+           SET document_checklist = v.checklist::jsonb,
+               reupload = true,
+               new_application = true,
+               updated_at = NOW()
+           FROM unnest($1::int[], $2::text[]) AS v(id, checklist)
+           WHERE g.id = v.id`,
+          [
+            checklistUpdates.map((u) => u.id),
+            checklistUpdates.map((u) => u.checklist),
+          ],
+        );
+      }
+      if (plainUpdateIds.length > 0) {
+        await pool.query(
+          `UPDATE reclass_gc
+           SET reupload = true,
+               new_application = true,
+               updated_at = NOW()
+           WHERE id = ANY($1::int[])`,
+          [plainUpdateIds],
+        );
       }
     } catch (checkErr) {
       console.error('Error updating document_checklist on re-upload:', checkErr);

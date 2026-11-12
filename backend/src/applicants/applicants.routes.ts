@@ -177,18 +177,6 @@ router.post('/apply-job', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
-  try {
-    const applicants = await ApplicantsService.findAll();
-    res.json({ success: true, data: applicants });
-  } catch (error: any) {
-    console.error('Error fetching applicants:', error);
-    res
-      .status(500)
-      .json({ message: error.message || 'Error fetching applicants' });
-  }
-});
-
 router.get('/:id', async (req, res, next) => {
   if (
     [

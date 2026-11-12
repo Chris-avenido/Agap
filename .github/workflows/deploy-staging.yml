@@ -56,6 +56,11 @@ jobs:
           npx prisma generate --schema=database/schema.prisma
           npm run build
 
+          # 4b. Apply idempotent schema migrations once, before the app restarts
+          # (server boot no longer runs them). `set -e` aborts the deploy on failure.
+          echo "--> Running schema migrations..."
+          npm run migrate:schema
+
           # 5. Restart PM2
           echo "--> Restarting PM2 service..."
           cd /mnt/agap-staging

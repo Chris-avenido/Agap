@@ -8,6 +8,8 @@
  * deploys cannot contend on DDL locks.
  */
 import '../src/config/env';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { Pool } from 'pg';
 import { runSchemaMigrations } from '../src/database-migrations';
 
@@ -30,6 +32,12 @@ async function main() {
     // DDL may legitimately exceed the app's statement timeout.
     await client.query('SET statement_timeout = 0');
     await runSchemaMigrations(client);
+    // Idempotent SQL migrations that are safe in a single implicit transaction.
+    for (const file of ['index_cleanup_migration.sql']) {
+      await client.query(
+        readFileSync(join(__dirname, '..', 'database', 'migrations', file), 'utf8'),
+      );
+    }
     console.log('✅ Schema migrations complete.');
   } finally {
     await client

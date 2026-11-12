@@ -53,6 +53,8 @@ const pool = new Pool({
   connectionString: sourceUrl,
   ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 30000,
+  // Single sequential backup session; an explicit cap avoids the default of 10.
+  max: 2,
 });
 
 // Initialize SQLite database connection with resilient driver fallback

@@ -68,8 +68,8 @@ export class VacanciesService {
         : Promise.resolve({ rows: [] }),
       authenticatedApplicantNumId !== null
         ? pool.query(
-            `SELECT * FROM applications WHERE applicant_id = $1 OR applicant_id::text = $2`,
-            [authenticatedApplicantNumId, String(authenticatedApplicantNumId)],
+            `SELECT job_cluster_id, status, application_status FROM applications WHERE applicant_id = $1`,
+            [authenticatedApplicantNumId],
           )
         : Promise.resolve({ rows: [] }),
     ]);
