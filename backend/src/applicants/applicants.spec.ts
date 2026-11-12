@@ -518,4 +518,3 @@ describe('Reclassification Position Salary Grade Resolution', () => {
     expect(getSalaryGradeForPosition('School Counselor Associate I')).toBe('11');
   });
 });
-

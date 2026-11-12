@@ -1,5 +1,29 @@
 # AGAP Portal — Changelog & Architecture Notes
 
+## [2026-11-12] [Database/Reclass] Adapt to dropped `reclass_gc` identity columns
+- The shared DB dropped `reclass_gc.first_name`, `last_name`, `region`, `division`, `reclass_position` (backup: `reclass_gc_identity_backup`). Names now come from `gmis_gc_items` (via `gmis_id`); region, division and reclass_position from `ref.initial_reclass` (via `item_no`).
+- `applicants.service.ts`: added `RECLASS_GC_FULL` derived table that re-projects those fields; read queries use it. INSERT/UPDATE on `reclass_gc` no longer write the dropped columns (Designate rows are linked via `gmis_id`).
+- `database-migrations.ts`: startup migration no longer creates/indexes/syncs the dropped columns, no longer re-adds them, and the trigger function no longer references them. `gmis_gc_items` now ensures `region`/`division` exist before indexing.
+
+## [2026-11-12] [Database] Synchronize First and Last Names (`public.reclass_gc` <- `ref.gc_names`) — SUPERSEDED: columns dropped, see entry above
+- **Database Migration & Synchronization (`backend/database/migrations/sync_reclass_region_division_disparities.sql` & `backend/src/database-migrations.ts`)**:
+  - Formulated a read-only diagnostic `SELECT` scan joining `public.reclass_gc` and `ref.gc_names` on `reclass_gc.item_no = gc_names."PLANTILLA ITEM NUMBER"` to detect flipped or mismatched `first_name` and `last_name` values against `ref.gc_names.incumbent` (`'LAST_NAME, FIRST_NAME'`).
+  - Added an idempotent `UPDATE` statement (`WHERE reclass_gc.first_name IS DISTINCT FROM ... OR reclass_gc.last_name IS DISTINCT FROM ...`) extracting the canonical `last_name` (before comma) and `first_name` (after comma) from `ref.gc_names.incumbent`, correcting 65 records in `public.reclass_gc`.
+
+## [2026-11-12] [Reclass] Fix "Unassigned" Assessed Position Display Across Database, Backend, and Frontend (reclass_gc.reclass_position sync superseded: column dropped)
+- **Database Layer (`backend/database/migrations/sync_reclass_gmis_disparities.sql` & `backend/src/database-migrations.ts`)**:
+  - Added an idempotent `UPDATE` synchronizing `public.gmis_gc_items.initial_assessment` with `public.reclass_gc.reclass_position` where `gmis_gc_items.psi_cd = reclass_gc.item_no` and `UPPER(TRIM(gmis_gc_items.initial_assessment)) IN ('UNASSIGNED', '#N/A', 'N/A', 'NULL', '', '—')` (updating 9 stale `'Unassigned'` records including `OSEC-DECSB-GUIDC2-750158-2016` to `'School Counselor IV'`).
+- **Backend API Layer (`backend/src/applicants/applicants.service.ts`)**:
+  - Updated `ApplicantsService.getReclassDetails` so `initialPosition` explicitly filters out `'UNASSIGNED'`, `'#N/A'`, `'N/A'`, `'NULL'`, and `'—'` (case-insensitive) and prioritizes `reclass_gc.reclass_position` when `gmis_gc_items.initial_assessment` is invalid or empty.
+- **Frontend UI Layer (`frontend/src/pages/ApplicantDashboard.tsx`)**:
+  - Updated `rawInitial` and `initialAssessment` in the Reclassification Status card to filter out `'UNASSIGNED'`, `'#N/A'`, `'N/A'`, `'NULL'`, and `'—'` (case-insensitive) before falling back to `reclassData.reclass_position`.
+
+## [2026-11-12] [Database] Synchronize Region, Division, and Reclass Position Disparities (`public.reclass_gc` <- `ref.initial_reclass`)
+- **Database Migration & Synchronization (`backend/database/migrations/sync_reclass_region_division_disparities.sql` & `backend/src/database-migrations.ts`)**:
+  - Formulated read-only diagnostic `SELECT` scans joining `public.reclass_gc` and `ref.initial_reclass` on `reclass_gc.item_no = initial_reclass.psi_cd` to identify records where `region`, `division`, or `reclass_position` (e.g., `OSEC-DECSB-GUIDC2-750158-2016`) are missing or mismatched.
+  - Updated `public.trg_uppercase_reclass_gc()` so `region`, `division`, and `reclass_position` use `TRIM()` instead of `UPPER(TRIM())`, preserving exact canonical mixed-case values (e.g., `'Region VI - Western Visayas'`, `'Division of Iloilo'`, `'School Counselor IV'`).
+  - Added idempotent `UPDATE` statements (`WHERE reclass_gc.region IS DISTINCT FROM initial_reclass.region OR reclass_gc.division IS DISTINCT FROM initial_reclass.division` and `WHERE reclass_gc.reclass_position IS DISTINCT FROM initial_reclass.reclass_position`) that overwrite and backfill `public.reclass_gc` with canonical values from `ref.initial_reclass`.
+
 ## [2026-11-10] [Reclass] Permit Registration & Account Claiming for Records with NULL Credentials (HTTP 409 Resolution)
 - **Database Layer**:
   - Ensured `email`, `password`, `password_hash`, and `passcode` columns in `reclass_gc` and `gmis_gc_items` safely allow `NULL` (nullable without NOT NULL constraint) via idempotent migration script `backend/database/migrations/allow_null_credentials_reclass_gmis.sql` and `runSchemaMigrations`.
